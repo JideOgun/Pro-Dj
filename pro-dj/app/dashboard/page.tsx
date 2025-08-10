@@ -1,8 +1,36 @@
-export default function DashboardPage() {
-    return (
-        <main className="min-h-screen p-8">
-            <h1 className="text-2xl font-semibold">Admin Dashbaord</h1>
-            <p className="opacity-70 mt-2">If you can see this, the route exists. Next we&apos;ll guard it.</p>
-        </main>
-    )
+import styles from "./dashboard.module.css";
+import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+
+export default async function DashboardPage() {
+  const mixCount = await prisma.mix.count();
+  const [postCount, bookingCount] = await Promise.all([
+    prisma.post.count(),
+    prisma.booking.count(),
+  ]);
+
+  return (
+    <main className={styles.wrapper}>
+      <h1 className={styles.title}>Admin Dashbaord</h1>
+      <div className={styles.grid}>
+        <div className={`${styles.card} ${styles.col4}`}>
+          <div>Total Mixes</div>
+          <div className={styles.kpi}>{mixCount}</div>
+        </div>
+        <div className={`${styles.card} ${styles.col4}`}>
+          <div>Blog Posts</div>
+          <div className={styles.kpi}>{postCount}</div>
+        </div>
+        <div className={`${styles.card} ${styles.col4}`}>
+          <div>Bookings</div>
+          <div className={styles.kpi}>{bookingCount}</div>
+        </div>
+      </div>
+      <div style={{ marginTop: "1rem" }}>
+        <Link href="/dashboard/media">
+          <button className={styles.button}>Upload Mix</button>
+        </Link>
+      </div>
+    </main>
+  );
 }

@@ -1,0 +1,96 @@
+.wrapper {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #0b0b0b;
+    color: #fff;
+    padding: 2rem;
+  }
+  
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: #121212;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  
+  .title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+  }
+  
+  .subtitle {
+    opacity: 0.7;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  
+  .stack {
+    display: grid;
+    gap: 0.75rem;
+  }
+  
+  .input {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid #2a2a2a;
+    background: #181818;
+    color: #fff;
+    outline: none;
+  }
+  
+  .input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.2);
+  }
+  
+  .row {
+    display: grid;
+    gap: 0.5rem;
+  }
+  
+  .button {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid #2a2a2a;
+    background: #7c3aed; /* primary */
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .button:hover {
+    filter: brightness(1.05);
+  }
+  
+  .ghost {
+    background: transparent;
+  }
+  
+  .separator {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    opacity: 0.7;
+    margin: 0.5rem 0;
+  }
+  
+  .separator::before,
+  .separator::after {
+    content: "";
+    height: 1px;
+    background: #2a2a2a;
+  }
+  
+  .error {
+    color: #f87171;
+    font-size: 0.9rem;
+  }
+  
