@@ -55,6 +55,29 @@ async function main() {
       });
     }
   }
+
+  // Clear old rows so we don't get duplicates while testing
+  await prisma.pricing.deleteMany();
+
+  await prisma.pricing.createMany({
+    data: [
+      // Wedding packages
+      { type: "Wedding", key: "silver", label: "Silver Package", priceCents: 50000, sortOrder: 1 },
+      { type: "Wedding", key: "gold", label: "Gold Package", priceCents: 75000, sortOrder: 2 },
+      { type: "Wedding", key: "platinum", label: "Platinum Package", priceCents: 100000, sortOrder: 3 },
+
+      // Club Night packages
+      { type: "Club", key: "2hr", label: "2 Hours", priceCents: 20000, sortOrder: 1 },
+      { type: "Club", key: "3hr", label: "3 Hours", priceCents: 30000, sortOrder: 2 },
+      { type: "Club", key: "4hr", label: "4 Hours", priceCents: 40000, sortOrder: 3 },
+
+      // Corporate Event packages
+      { type: "Corporate", key: "halfday", label: "Half Day", priceCents: 60000, sortOrder: 1 },
+      { type: "Corporate", key: "fullday", label: "Full Day", priceCents: 120000, sortOrder: 2 },
+    ],
+  });
+
+  console.log("✅ Pricing seeded successfully");
 }
 
 main()

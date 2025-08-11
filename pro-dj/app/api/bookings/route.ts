@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import { BOOKING_CONFIG } from "@/lib/booking-config";
 
 // GET admin only: list bookings
 export async function GET() {
@@ -33,21 +34,41 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
-    const { eventType, eventDate, message } = body || {};
-    if (!eventType || !eventDate || !message) {
+    const { bookingType, packageKey, eventDate, message, extra } = body || {};
+    if (!bookingType || packageKey || !eventDate || !message) {
       return NextResponse.json(
         { ok: false, error: "Missing fields" },
         { status: 400 }
       );
     }
+
+    // computing the price safely on the server
+    const cfg = BOOKING_CONFIG[bookingType as keyof typeof BOOKING_CONFIG];
+    const pack = cfg?.packages.find((pkg) => pkg.key === packageKey);
+    if (!cfg || !pack) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid type or package" },
+        { status: 400 }
+      );
+    }
+
+    const quotedPriceCents = pack.priceCents;
+
     const booking = await prisma.booking.create({
       data: {
         userId: String(session.user?.id),
-        eventType,
+        eventType: bookingType,
         eventDate: new Date(eventDate),
         message,
+        packageKey,
+        quotedPriceCents,
+        details: extra
       },
     });
+
+    // TODO soon: save quotedPriceCents, packageKey, bookingType, and extra
+    // For now, just log to confirm:
+    console.log({ bookingType, packageKey, quotedPriceCents, extra });
 
     // TODO validate body with Zod and insert record
     return NextResponse.json({ ok: true, data: booking }, { status: 201 });

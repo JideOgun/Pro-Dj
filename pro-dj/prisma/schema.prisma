@@ -35,6 +35,10 @@ model Booking {
   message   String
   isPaid    Boolean  @default(false)
   createdAt DateTime @default(now())
+  bookingType String?
+  packageKey String?
+  quotedPriceCents Int?
+  details Json?
 }
 
 model Mix {
@@ -69,6 +73,24 @@ model Comment {
   postId String?
   post   Post?   @relation(fields: [postId], references: [id])
 }
+
+model Pricing {
+  id         String   @id @default(uuid())
+  type       String   // "Wedding" | "Club Night" | ...
+  key        String   // "silver" | "gold" | "2hr" | ...
+  label      String   // UI label shown in the dropdown
+  priceCents Int
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+
+  // v2 (multi-DJ): add this later
+  // djId     String?
+  // dj       DjProfile? @relation(fields: [djId], references: [id])
+
+  @@unique([type, key]) // one package per type+key
+  @@index([type, sortOrder])
+}
+
 
 enum Role {
   ADMIN

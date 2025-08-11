@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { BOOKING_CONFIG, type BookingType } from "@/lib/booking-config";
 import toast from "react-hot-toast";
 
 export default function BookPage() {
@@ -15,6 +16,11 @@ export default function BookPage() {
   const [msg, setMsg] = useState("");
   const router = useRouter();
 
+  const [bookingType, setBookingType] = useState<BookingType | "">("");
+  const [packageKey, setPackageKey] = useState("");
+  const [extra, setExtra] = useState<Record<string, string>>({});
+  const typeConfig = bookingType ? BOOKING_CONFIG[bookingType] : null;
+
   useEffect(() => {
     const type = params.get("type");
     if (type) setEventType(type);
@@ -26,7 +32,7 @@ export default function BookPage() {
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventType, eventDate, message }),
+      body: JSON.stringify({ bookingType, packageKey, eventDate, message, extra }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -64,6 +70,43 @@ export default function BookPage() {
           onChange={(e) => setEventType(e.target.value)}
           required
         />
+        <select
+          value={bookingType}
+          onChange={(e) => setBookingType(e.target.value as BookingType)}
+          required
+        >
+          <option value="">Select Booking Type</option>
+          {Object.keys(BOOKING_CONFIG).map((type) => {
+            return (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            );
+          })}
+        </select>
+        {typeConfig && (
+          <select
+            value={packageKey}
+            onChange={(e) => setPackageKey(e.target.value)}
+            required
+          >
+            <option value="">Choose a package</option>
+            {typeConfig.packages.map((pkg) => (
+              <option key={pkg.key} value={pkg.key}>
+                {pkg.label}
+              </option>
+            ))}
+          </select>
+        )}
+        {typeConfig?.extraFields.map((field) => (
+          <input
+            key={field}
+            placeholder={field}
+            value={extra[field] ?? ""}
+            onChange={(e) => setExtra({ ...extra, [field]: e.target.value })}
+          />
+        ))}
+
         <input
           type="date"
           value={eventDate}
