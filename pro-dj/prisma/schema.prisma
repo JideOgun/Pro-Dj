@@ -5,73 +5,73 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-provider = "prisma-client-js"
-output = "../app/generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
-provider = "postgresql"
-url = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-id String @id @default(uuid())
-email  String  @unique
-name  String?
-password  String?
-googleId  String?
-role Role @default(CLIENT)
-bookings Booking[]
-comments Comment[] @relation("UserComments")
-createdAt DateTime @default(now())
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  password  String?
+  googleId  String?
+  role      Role      @default(CLIENT)
+  bookings  Booking[]
+  comments  Comment[] @relation("UserComments")
+  createdAt DateTime  @default(now())
 }
 
 model Booking {
-id String @id @default(uuid())
-userId String @unique
-user User @relation (fields: [userId], references: [id])
-eventType String
-eventDate DateTime
-message String
-isPaid Boolean @default (false)
-createdAt DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventType String
+  eventDate DateTime
+  message   String
+  isPaid    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Mix {
-id String @id @default(uuid())
-title String
-description String
-url String
-tags String[]
-uploadedAt DateTime @default(now())
-comments Comment[]
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  url         String
+  tags        String[]
+  uploadedAt  DateTime  @default(now())
+  comments    Comment[]
 }
 
 model Post {
-id String @id @default(uuid())
-title String
-content String
-coverImage String
-createdAt DateTime @default(now())
-comments Comment[]
+  id         String    @id @default(uuid())
+  title      String
+  content    String
+  coverImage String
+  createdAt  DateTime  @default(now())
+  comments   Comment[]
 }
 
 model Comment {
-id String @id @default(uuid())
-content String
-createdAt DateTime @default(now())
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
 
-//relations
-userId String
-user User @relation("UserComments", fields:[userId], references: [id])
-mixId String?
-mix Mix? @relation(fields:[mixId], references:[id])
-postId String?
-post Post? @relation(fields:[postId], references:[id])
+  //relations
+  userId String
+  user   User    @relation("UserComments", fields: [userId], references: [id])
+  mixId  String?
+  mix    Mix?    @relation(fields: [mixId], references: [id])
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id])
 }
 
 enum Role {
-ADMIN
-DJ
-CLIENT
+  ADMIN
+  DJ
+  CLIENT
 }
