@@ -1,6 +1,7 @@
 import styles from "./dashboard.module.css";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Subnav from "./Subnav";
 
 export default async function DashboardPage() {
   const mixCount = await prisma.mix.count();
@@ -12,6 +13,7 @@ export default async function DashboardPage() {
   return (
     <main className={styles.wrapper}>
       <h1 className={styles.title}>Admin Dashbaord</h1>
+      <Subnav />
       <div className={styles.grid}>
         <div className={`${styles.card} ${styles.col4}`}>
           <div>Total Mixes</div>

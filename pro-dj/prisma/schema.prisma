@@ -72,5 +72,6 @@ post Post? @relation(fields:[postId], references:[id])
 
 enum Role {
 ADMIN
+DJ
 CLIENT
 }
