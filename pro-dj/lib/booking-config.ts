@@ -1,4 +1,4 @@
-export type BookingType = "Wedding" | "Club Night" | "Corporate" | "Birthday" | "Private Party";
+export type BookingType = "Wedding" | "Club" | "Corporate" | "Birthday" | "Private Party";
 
 export const BOOKING_CONFIG = {
   "Wedding": {
@@ -9,7 +9,7 @@ export const BOOKING_CONFIG = {
     ],
     extraFields: ["venueName", "guestCount"], // simple identifiers
   },
-  "Club Night": {
+  "Club": {
     packages: [
       { key: "2hr",  label: "2 hours", priceCents: 30000 },
       { key: "3hr",  label: "3 hours", priceCents: 40000 },
@@ -26,13 +26,15 @@ export const BOOKING_CONFIG = {
   },
   "Birthday": {
     packages: [
-      { key: "standard", label: "Standard (3 hrs)", priceCents: 60000 },
+      { key: "birthday_basic", label: "Basic Birthday Package (2 hours)", priceCents: 20000 },
+      { key: "birthday_premium", label: "Premium Birthday Package (4 hours, lighting)", priceCents: 40000 }
     ],
     extraFields: ["ageIfKids"],
   },
   "Private Party": {
     packages: [
-      { key: "house", label: "House Party (3 hrs)", priceCents: 50000 },
+      { key: "private_basic", label: "Basic Private Party (3 hours)", priceCents: 50000 },
+      { key: "private_vip", label: "VIP Private Party (5 hours, lighting + MC)", priceCents: 50000 }
     ],
     extraFields: [],
   },

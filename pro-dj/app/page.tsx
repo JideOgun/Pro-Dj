@@ -19,7 +19,7 @@ export default function Home() {
           </a>
           <div className={styles.dropdown} aria-label="Event types">
             <a className={styles.item} href="/book?type=Wedding">Wedding</a>
-            <a className={styles.item} href="/book?type=Club%20Night">Club Night</a>
+            <a className={styles.item} href="/book?type=Club%20Night">Club</a>
             <a className={styles.item} href="/book?type=Corporate">Corporate</a>
             <a className={styles.item} href="/book?type=Birthday">Birthday</a>
             <a className={styles.item} href="/book?type=Private%20Party">Private Party</a>
@@ -33,7 +33,7 @@ export default function Home() {
           </summary>
           <div className={styles.panel} aria-label="Event types">
             <a className={styles.menuItem} href="/book?type=Wedding">Wedding</a>
-            <a className={styles.menuItem} href="/book?type=Club%20Night">Club Night</a>
+            <a className={styles.menuItem} href="/book?type=Club%20Night">Club</a>
             <a className={styles.menuItem} href="/book?type=Corporate">Corporate</a>
             <a className={styles.menuItem} href="/book?type=Birthday">Birthday</a>
             <a className={styles.menuItem} href="/book?type=Private%20Party">Private Party</a>

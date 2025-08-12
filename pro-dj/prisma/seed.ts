@@ -66,7 +66,7 @@ async function main() {
       { type: "Wedding", key: "gold", label: "Gold Package", priceCents: 75000, sortOrder: 2 },
       { type: "Wedding", key: "platinum", label: "Platinum Package", priceCents: 100000, sortOrder: 3 },
 
-      // Club Night packages
+      // Club packages
       { type: "Club", key: "2hr", label: "2 Hours", priceCents: 20000, sortOrder: 1 },
       { type: "Club", key: "3hr", label: "3 Hours", priceCents: 30000, sortOrder: 2 },
       { type: "Club", key: "4hr", label: "4 Hours", priceCents: 40000, sortOrder: 3 },
@@ -74,6 +74,42 @@ async function main() {
       // Corporate Event packages
       { type: "Corporate", key: "halfday", label: "Half Day", priceCents: 60000, sortOrder: 1 },
       { type: "Corporate", key: "fullday", label: "Full Day", priceCents: 120000, sortOrder: 2 },
+
+      // Private Party Packages
+      {
+        type: "Private Party",
+        key: "private_basic",
+        label: "Basic Private Party (3 hours)",
+        priceCents: 30000,
+        sortOrder: 1,
+        isActive: true,
+      },
+      {
+        type: "Private Party",
+        key: "private_vip",
+        label: "VIP Private Party (5 hours, lighting + MC)",
+        priceCents: 60000,
+        sortOrder: 2,
+        isActive: true,
+      },
+
+      // Birthday Packages
+      {
+        type: "Birthday",
+        key: "birthday_basic",
+        label: "Basic Birthday Package (2 hours)",
+        priceCents: 20000,
+        sortOrder: 1,
+        isActive: true,
+      },
+      {
+        type: "Birthday",
+        key: "birthday_premium",
+        label: "Premium Birthday Package (4 hours, lighting)",
+        priceCents: 40000,
+        sortOrder: 2,
+        isActive: true,
+      },
     ],
   });
 

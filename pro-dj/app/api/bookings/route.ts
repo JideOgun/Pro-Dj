@@ -34,8 +34,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
+    console.log(body);
+    debugger;
     const { bookingType, packageKey, eventDate, message, extra } = body || {};
-    if (!bookingType || packageKey || !eventDate || !message) {
+    if (!bookingType || !packageKey || !eventDate || !message) {
       return NextResponse.json(
         { ok: false, error: "Missing fields" },
         { status: 400 }
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
     // computing the price safely on the server
     const cfg = BOOKING_CONFIG[bookingType as keyof typeof BOOKING_CONFIG];
     const pack = cfg?.packages.find((pkg) => pkg.key === packageKey);
+    debugger;
     if (!cfg || !pack) {
       return NextResponse.json(
         { ok: false, error: "Invalid type or package" },
