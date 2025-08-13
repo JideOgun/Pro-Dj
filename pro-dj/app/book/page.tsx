@@ -21,6 +21,7 @@ export default function BookPage() {
   >([]);
   const [packageKey, setPackageKey] = useState("");
   const [extra, setExtra] = useState<Record<string, string>>({});
+  const [contactEmail, setContactEmail] = useState("");
   const typeConfig = bookingType ? BOOKING_CONFIG[bookingType] : null;
 
   // load types from db
@@ -69,6 +70,7 @@ export default function BookPage() {
         packageKey,
         eventDate,
         message,
+        extra: { contactEmail },
       }),
     });
     const data = await res.json();
@@ -142,6 +144,13 @@ export default function BookPage() {
           type="date"
           value={eventDate}
           onChange={(e) => setEventDate(e.target.value)}
+          required
+        />
+        <input
+          type="email"
+          placeholder="adefreshkid@icloud.com"
+          value={contactEmail}
+          onChange={(e) => setContactEmail(e.target.value)}
           required
         />
         <textarea

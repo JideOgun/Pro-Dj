@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
 import Stripe from "stripe";
 import { sendMail } from "@/lib/email";
+import { acceptEmailHtml } from "@/lib/emails";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-07-30.basil",
@@ -10,13 +11,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function PATCH(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });
   const booking = await prisma.booking.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { user: { select: { email: true, name: true } } },
   });
   if (!booking)
@@ -67,17 +69,22 @@ export async function PATCH(
   // ...after creating `session` and updating booking to ACCEPTED:
   const payLink = session.url ?? null;
 
+  const clientEmail =
+    ((booking.details as Record<string, unknown>)?.contactEmail as string) || // prefer typed-in email
+    booking.user?.email || // fallback to account email
+    "";
+
   // Email the client (soft-fail if not configured)
-  if (booking.user?.email && payLink) {
+  if (clientEmail && payLink) {
     await sendMail(
-      booking.user.email,
-      "Your booking request was accepted — complete payment",
-      `<p>Hey ${booking.user?.name ?? ""},</p>
-     <p>Your ${booking.eventType} on <b>${booking.eventDate
-        .toISOString()
-        .slice(0, 10)}</b> was accepted.</p>
-     <p>Please complete payment to confirm:</p>
-     <p><a href="${payLink}">Pay now</a></p>`
+      clientEmail,
+      "Your booking was accepted — complete payment",
+      acceptEmailHtml({
+        name: booking.user?.name,
+        eventType: booking.eventType,
+        eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+        payLink,
+      })
     );
   }
 

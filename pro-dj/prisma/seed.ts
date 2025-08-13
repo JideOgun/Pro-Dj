@@ -19,6 +19,28 @@ async function main() {
     },
   });
 
+  // Create a test client user
+  const CLIENT_PASSWORD = "password";
+  const CLIENT_EMAIL = "adefreshkid@icloud.com";
+  const clientHashedPassword = await bcrypt.hash(CLIENT_PASSWORD, 10);
+
+  const client = await prisma.user.upsert({
+    where: { email: CLIENT_EMAIL },
+    update: { role: Role.CLIENT },
+    create: {
+      email: CLIENT_EMAIL,
+      name: "Test Client",
+      password: clientHashedPassword,
+      role: Role.CLIENT,
+    },
+  });
+
+  console.log("✅ Client user created/updated:", {
+    email: client.email,
+    name: client.name,
+    role: client.role,
+  });
+
   const mixCount = await prisma.mix.count();
   if (mixCount === 0) {
     await prisma.mix.createMany({
@@ -62,18 +84,66 @@ async function main() {
   await prisma.pricing.createMany({
     data: [
       // Wedding packages
-      { type: "Wedding", key: "silver", label: "Silver Package", priceCents: 50000, sortOrder: 1 },
-      { type: "Wedding", key: "gold", label: "Gold Package", priceCents: 75000, sortOrder: 2 },
-      { type: "Wedding", key: "platinum", label: "Platinum Package", priceCents: 100000, sortOrder: 3 },
+      {
+        type: "Wedding",
+        key: "silver",
+        label: "Silver Package",
+        priceCents: 50000,
+        sortOrder: 1,
+      },
+      {
+        type: "Wedding",
+        key: "gold",
+        label: "Gold Package",
+        priceCents: 75000,
+        sortOrder: 2,
+      },
+      {
+        type: "Wedding",
+        key: "platinum",
+        label: "Platinum Package",
+        priceCents: 100000,
+        sortOrder: 3,
+      },
 
       // Club packages
-      { type: "Club", key: "2hr", label: "2 Hours", priceCents: 20000, sortOrder: 1 },
-      { type: "Club", key: "3hr", label: "3 Hours", priceCents: 30000, sortOrder: 2 },
-      { type: "Club", key: "4hr", label: "4 Hours", priceCents: 40000, sortOrder: 3 },
+      {
+        type: "Club",
+        key: "2hr",
+        label: "2 Hours",
+        priceCents: 20000,
+        sortOrder: 1,
+      },
+      {
+        type: "Club",
+        key: "3hr",
+        label: "3 Hours",
+        priceCents: 30000,
+        sortOrder: 2,
+      },
+      {
+        type: "Club",
+        key: "4hr",
+        label: "4 Hours",
+        priceCents: 40000,
+        sortOrder: 3,
+      },
 
       // Corporate Event packages
-      { type: "Corporate", key: "halfday", label: "Half Day", priceCents: 60000, sortOrder: 1 },
-      { type: "Corporate", key: "fullday", label: "Full Day", priceCents: 120000, sortOrder: 2 },
+      {
+        type: "Corporate",
+        key: "halfday",
+        label: "Half Day",
+        priceCents: 60000,
+        sortOrder: 1,
+      },
+      {
+        type: "Corporate",
+        key: "fullday",
+        label: "Full Day",
+        priceCents: 120000,
+        sortOrder: 2,
+      },
 
       // Private Party Packages
       {
