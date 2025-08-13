@@ -34,9 +34,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null);
-    console.log(body);
-    debugger;
-    const { bookingType, packageKey, eventDate, message, extra } = body || {};
+    const bookingType = String(body?.bookingType ?? "").trim();
+    const packageKey = String(body?.packageKey ?? "").trim();
+    const eventDate = String(body?.eventDate ?? "").trim();
+    const message = String(body?.message ?? "").trim();
+    const extra = body?.extra ?? null; // optional future use
+
     if (!bookingType || !packageKey || !eventDate || !message) {
       return NextResponse.json(
         { ok: false, error: "Missing fields" },
@@ -44,18 +47,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // computing the price safely on the server
-    const cfg = BOOKING_CONFIG[bookingType as keyof typeof BOOKING_CONFIG];
-    const pack = cfg?.packages.find((pkg) => pkg.key === packageKey);
-    debugger;
-    if (!cfg || !pack) {
+    // Look up the package in DB (single source of truth)
+    const pkg = await prisma.pricing.findFirst({
+      where: { type: bookingType, key: packageKey, isActive: true },
+      select: { priceCents: true, label: true },
+    });
+    if (!pkg) {
       return NextResponse.json(
         { ok: false, error: "Invalid type or package" },
         { status: 400 }
       );
     }
-
-    const quotedPriceCents = pack.priceCents;
 
     const booking = await prisma.booking.create({
       data: {
@@ -64,17 +66,12 @@ export async function POST(req: Request) {
         eventDate: new Date(eventDate),
         message,
         packageKey,
-        quotedPriceCents,
-        details: extra
+        quotedPriceCents: pkg.priceCents,
+        details: extra,
       },
     });
 
-    // TODO soon: save quotedPriceCents, packageKey, bookingType, and extra
-    // For now, just log to confirm:
-    console.log({ bookingType, packageKey, quotedPriceCents, extra });
-
-    // TODO validate body with Zod and insert record
-    return NextResponse.json({ ok: true, data: booking }, { status: 201 });
+    return NextResponse.json({ ok: true, data: booking, quotedPriceCents: pkg.priceCents }, { status: 201 });
   } catch (error: unknown) {
     console.log("POST /api/bookings error:", error);
     const errorMessage =

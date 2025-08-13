@@ -39,6 +39,11 @@ model Booking {
   packageKey String?
   quotedPriceCents Int?
   details Json?
+  status BookingStatus @default(PENDING)
+  checkoutSessionId String? // Stripe session used to payment
+  paidAt DateTime?
+
+  @@index([status])
 }
 
 model Mix {
@@ -96,4 +101,12 @@ enum Role {
   ADMIN
   DJ
   CLIENT
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED  // waiting on payment
+  DECLINED
+  CONFIRMED   // paid
+  CANCELLED
 }
