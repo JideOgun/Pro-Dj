@@ -56,6 +56,14 @@ export default function SuccessPage() {
     }
 
     fetchBooking();
+
+    // Refresh booking data every 2 seconds to catch webhook updates
+    const interval = setInterval(() => {
+      fetchBooking();
+    }, 2000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(interval);
   }, [bookingId]);
 
   if (loading) {

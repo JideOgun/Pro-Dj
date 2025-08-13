@@ -34,44 +34,65 @@ export async function POST(req: Request) {
     );
   }
 
+  console.log("📨 Stripe webhook received:", event.type);
+
   if (event.type === "checkout.session.completed") {
+    console.log("🔄 Stripe webhook: checkout.session.completed received");
     const session = event.data.object as Stripe.Checkout.Session;
     const bookingId = session.metadata?.bookingId;
-    if (bookingId) {
-      const booking = await prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: "CONFIRMED", isPaid: true, paidAt: new Date() },
-        include: { user: { select: { email: true, name: true } } },
-      });
+    console.log("📋 Booking ID from metadata:", bookingId);
 
-      // emails: client + DJ
-      const clientEmail =
-        ((booking.details as Record<string, unknown>)
-          ?.contactEmail as string) ||
-        booking.user?.email ||
-        "";
-      if (clientEmail) {
-        await sendMail(
-          clientEmail,
-          "Payment received — booking confirmed 🎉",
-          clientConfirmedHtml({
-            eventType: booking.eventType,
-            eventDateISO: booking.eventDate.toISOString().slice(0, 10),
-          })
+    if (bookingId) {
+      try {
+        console.log("🔄 Updating booking status to CONFIRMED...");
+        const booking = await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: "CONFIRMED", isPaid: true, paidAt: new Date() },
+          include: { user: { select: { email: true, name: true } } },
+        });
+        console.log(
+          "✅ Booking updated successfully:",
+          booking.id,
+          booking.status
         );
-      }
-      const djEmail = process.env.DJ_NOTIFY_EMAIL || "";
-      if (djEmail) {
-        await sendMail(
-          djEmail,
-          "New confirmed booking",
-          djConfirmedHtml({
-            eventType: booking.eventType,
-            eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+
+        // emails: client + DJ
+        const clientEmail =
+          ((booking.details as Record<string, unknown>)
+            ?.contactEmail as string) ||
+          booking.user?.email ||
+          "";
+        if (clientEmail) {
+          await sendMail(
             clientEmail,
-          })
+            "Payment received — booking confirmed 🎉",
+            clientConfirmedHtml({
+              eventType: booking.eventType,
+              eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+            })
+          );
+        }
+        const djEmail = process.env.DJ_NOTIFY_EMAIL || "";
+        if (djEmail) {
+          await sendMail(
+            djEmail,
+            "New confirmed booking",
+            djConfirmedHtml({
+              eventType: booking.eventType,
+              eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+              clientEmail,
+            })
+          );
+        }
+      } catch (error) {
+        console.error("❌ Error updating booking:", error);
+        return NextResponse.json(
+          { ok: false, error: "Failed to update booking" },
+          { status: 500 }
         );
       }
+    } else {
+      console.log("⚠️ No booking ID found in session metadata");
     }
   }
 
