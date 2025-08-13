@@ -44,7 +44,7 @@ export default function Navbar() {
               Register
             </Link>
             <span className={styles.separator}>|</span>
-            <Link href="/auth/login" className={styles.btn}>
+            <Link href="/login" className={styles.btn}>
               Login
             </Link>
           </>

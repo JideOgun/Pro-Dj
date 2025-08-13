@@ -76,7 +76,7 @@ export default function BookPage() {
     const data = await res.json();
     if (res.ok) {
       toast.success("Booking request sent");
-      setTimeout(() => router.push("/dashboard/bookings"), 1500);
+      setTimeout(() => router.push("/dashboard/client"), 1500);
     }
 
     setMsg(res.ok ? "Request Sent 🎉" : data?.error ?? "Failed");

@@ -9,9 +9,17 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  const role = session?.user?.role;
-  if (!role || role !== "ADMIN") {
-    redirect("/login");
+
+  if (!session?.user) {
+    redirect("/auth/login");
   }
+
+  const role = session.user.role;
+
+  // Allow ADMIN, DJ, and CLIENT users
+  if (!role || (role !== "ADMIN" && role !== "DJ" && role !== "CLIENT")) {
+    redirect("/auth/login");
+  }
+
   return <section>{children}</section>;
 }
