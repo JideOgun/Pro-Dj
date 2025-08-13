@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -16,6 +16,12 @@ interface Booking {
   createdAt: string;
   isPaid: boolean;
   paidAt: string | null;
+  userId: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string | null;
+  };
 }
 
 export default function SuccessPage() {
@@ -234,19 +240,52 @@ export default function SuccessPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/"
-            className="bg-violet-600 hover:bg-violet-700 px-6 py-3 rounded-lg text-center"
-          >
-            Return to Homepage
-          </Link>
-          {session?.user && (
-            <Link
-              href="/dashboard/bookings"
-              className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg text-center"
-            >
-              View All Bookings
-            </Link>
+          {session?.user && booking && session.user.id === booking.userId ? (
+            <>
+              {/* Current user owns this booking - show normal actions */}
+              <Link
+                href="/"
+                className="bg-violet-600 hover:bg-violet-700 px-6 py-3 rounded-lg text-center"
+              >
+                Return to Homepage
+              </Link>
+              <Link
+                href={
+                  session.user.role === "CLIENT"
+                    ? "/dashboard/client"
+                    : "/dashboard/bookings"
+                }
+                className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg text-center"
+              >
+                View All Bookings
+              </Link>
+            </>
+          ) : session?.user && booking && session.user.id !== booking.userId ? (
+            <>
+              {/* Current user is different from booking owner - only allow sign out */}
+              <div className="text-center w-full">
+                <p className="text-yellow-400 mb-4">
+                  ⚠️ You are logged in as a different user than the one who made
+                  this payment.
+                </p>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg text-center"
+                >
+                  Sign Out & Sign In as Correct User
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* No user logged in - show return to homepage */}
+              <Link
+                href="/"
+                className="bg-violet-600 hover:bg-violet-700 px-6 py-3 rounded-lg text-center"
+              >
+                Return to Homepage
+              </Link>
+            </>
           )}
         </div>
       </div>

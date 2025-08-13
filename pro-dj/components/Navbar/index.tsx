@@ -7,7 +7,7 @@ import Link from "next/link";
 export default function Navbar() {
   const { data } = useSession();
   const role = data?.user?.role ?? "GUEST";
-  const showDashbaord = role === "DJ" || role === "ADMIN";
+  const showDashboard = role === "DJ" || role === "ADMIN" || role === "CLIENT";
 
   return (
     <nav className={styles.bar}>
@@ -33,7 +33,7 @@ export default function Navbar() {
         )}
       </div>
       <div>
-        {showDashbaord && (
+        {showDashboard && (
           <Link href="/dashboard" className={styles.link}>
             Dashboard
           </Link>
