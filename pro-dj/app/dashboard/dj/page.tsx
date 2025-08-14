@@ -1,31 +1,40 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
+import BookingCalendar from "@/components/BookingCalendar";
 
 export default async function DjDashboardPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect("/auth/login");
+    redirect("/auth");
   }
 
   if (session.user.role !== "DJ") {
     redirect("/dashboard");
   }
 
-  // Get DJ profile and bookings
-  const [djProfile, bookings] = await Promise.all([
-    prisma.djProfile.findUnique({
-      where: { userId: session.user.id },
-    }),
-    prisma.booking.findMany({
-      where: { djId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { email: true, name: true } } },
-    }),
-  ]);
+  // Get DJ profile first
+  const djProfile = await prisma.djProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!djProfile) {
+    redirect("/dj/register");
+  }
+
+  // Get bookings using DjProfile.id
+  const bookings = await prisma.booking.findMany({
+    where: { djId: djProfile.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: { select: { email: true, name: true } },
+      dj: { select: { stageName: true } },
+    },
+  });
 
   if (!djProfile) {
     redirect("/dj/register");
@@ -72,6 +81,9 @@ export default async function DjDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Role Switcher */}
+        <ClientRoleSwitcher />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
@@ -167,6 +179,47 @@ export default async function DjDashboardPage() {
           </div>
         </div>
 
+        {/* Booking Calendar */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 mb-8 shadow-2xl border border-gray-700">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-violet-400 mb-1">
+                📅 Your Booking Calendar
+              </h2>
+              <p className="text-gray-400 text-sm">
+                Interactive calendar with all your DJ bookings
+              </p>
+            </div>
+            <Link
+              href="/dashboard/dj/calendar"
+              className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
+            >
+              View Full Calendar →
+            </Link>
+          </div>
+          <div className="h-[400px]">
+            <BookingCalendar bookings={bookings} />
+          </div>
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span className="text-gray-300">Pending</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-gray-300">Confirmed</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-gray-300">Declined</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-300">Accepted</span>
+            </div>
+          </div>
+        </div>
+
         {/* Recent Bookings */}
         <div className="bg-gray-800 rounded-lg p-6">
           <div className="flex justify-between items-center mb-6">
@@ -241,7 +294,7 @@ export default async function DjDashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid md:grid-cols-3 gap-4">
+        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             href="/dj/profile/edit"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
@@ -261,6 +314,17 @@ export default async function DjDashboardPage() {
             <h3 className="font-semibold mb-2">Manage Bookings</h3>
             <p className="text-gray-400 text-sm">
               View and respond to booking requests
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/dj/calendar"
+            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          >
+            <div className="text-3xl mb-2">📅</div>
+            <h3 className="font-semibold mb-2">Full Calendar</h3>
+            <p className="text-gray-400 text-sm">
+              View your complete booking calendar
             </p>
           </Link>
 

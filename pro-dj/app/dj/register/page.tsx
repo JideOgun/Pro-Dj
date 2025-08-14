@@ -20,6 +20,17 @@ export default function DjRegisterPage() {
     basePriceCents: 0,
     profileImage: "",
     portfolio: [] as string[],
+    customGenres: "",
+    specialties: "",
+    equipment: "",
+    languages: [] as string[],
+    availability: "",
+    socialLinks: {
+      instagram: "",
+      youtube: "",
+      soundcloud: "",
+      website: "",
+    },
   });
 
   const availableGenres = [
@@ -40,6 +51,39 @@ export default function DjRegisterPage() {
     "Country",
     "Gospel",
     "Classical",
+    "Trap",
+    "Dubstep",
+    "Trance",
+    "Disco",
+    "Funk",
+    "Soul",
+    "Alternative",
+    "Indie",
+    "Electronic",
+    "World Music",
+    "Folk",
+    "Punk",
+    "Metal",
+    "Other",
+  ];
+
+  const availableLanguages = [
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Italian",
+    "Portuguese",
+    "Russian",
+    "Chinese",
+    "Japanese",
+    "Korean",
+    "Arabic",
+    "Hindi",
+    "Swahili",
+    "Yoruba",
+    "Igbo",
+    "Hausa",
     "Other",
   ];
 
@@ -49,6 +93,25 @@ export default function DjRegisterPage() {
       genres: prev.genres.includes(genre)
         ? prev.genres.filter((g) => g !== genre)
         : [...prev.genres, genre],
+    }));
+  };
+
+  const handleLanguageToggle = (language: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      languages: prev.languages.includes(language)
+        ? prev.languages.filter((l) => l !== language)
+        : [...prev.languages, language],
+    }));
+  };
+
+  const handleSocialLinkChange = (platform: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      socialLinks: {
+        ...prev.socialLinks,
+        [platform]: value,
+      },
     }));
   };
 
@@ -155,7 +218,7 @@ export default function DjRegisterPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Music Genres *
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
                 {availableGenres.map((genre) => (
                   <label
                     key={genre}
@@ -168,6 +231,70 @@ export default function DjRegisterPage() {
                       className="rounded border-gray-600 text-violet-600 focus:ring-violet-500"
                     />
                     <span className="text-sm text-gray-300">{genre}</span>
+                  </label>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={formData.customGenres}
+                onChange={(e) =>
+                  setFormData({ ...formData, customGenres: e.target.value })
+                }
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                placeholder="Add custom genres (comma separated)"
+              />
+            </div>
+
+            {/* Specialties */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Specialties & Unique Skills
+              </label>
+              <textarea
+                value={formData.specialties}
+                onChange={(e) =>
+                  setFormData({ ...formData, specialties: e.target.value })
+                }
+                rows={3}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                placeholder="e.g., Live remixing, MC skills, bilingual announcements, special effects, lighting coordination..."
+              />
+            </div>
+
+            {/* Equipment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Equipment & Setup
+              </label>
+              <textarea
+                value={formData.equipment}
+                onChange={(e) =>
+                  setFormData({ ...formData, equipment: e.target.value })
+                }
+                rows={3}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                placeholder="e.g., Pioneer CDJ-3000, DJM-900NXS2, Professional lighting rig, smoke machines..."
+              />
+            </div>
+
+            {/* Languages */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Languages Spoken
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                {availableLanguages.map((language) => (
+                  <label
+                    key={language}
+                    className="flex items-center space-x-2 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.languages.includes(language)}
+                      onChange={() => handleLanguageToggle(language)}
+                      className="rounded border-gray-600 text-violet-600 focus:ring-violet-500"
+                    />
+                    <span className="text-sm text-gray-300">{language}</span>
                   </label>
                 ))}
               </div>
@@ -251,6 +378,67 @@ export default function DjRegisterPage() {
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 placeholder="0.00"
               />
+            </div>
+
+            {/* Availability */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Availability & Schedule
+              </label>
+              <textarea
+                value={formData.availability}
+                onChange={(e) =>
+                  setFormData({ ...formData, availability: e.target.value })
+                }
+                rows={3}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                placeholder="e.g., Available weekends, weekdays after 6 PM, 24-hour notice required, flexible for special events..."
+              />
+            </div>
+
+            {/* Social Links */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Social Media & Links
+              </label>
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  value={formData.socialLinks.instagram}
+                  onChange={(e) =>
+                    handleSocialLinkChange("instagram", e.target.value)
+                  }
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Instagram URL"
+                />
+                <input
+                  type="url"
+                  value={formData.socialLinks.youtube}
+                  onChange={(e) =>
+                    handleSocialLinkChange("youtube", e.target.value)
+                  }
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="YouTube URL"
+                />
+                <input
+                  type="url"
+                  value={formData.socialLinks.soundcloud}
+                  onChange={(e) =>
+                    handleSocialLinkChange("soundcloud", e.target.value)
+                  }
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="SoundCloud URL"
+                />
+                <input
+                  type="url"
+                  value={formData.socialLinks.website}
+                  onChange={(e) =>
+                    handleSocialLinkChange("website", e.target.value)
+                  }
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Website URL"
+                />
+              </div>
             </div>
 
             {/* Profile Image URL */}

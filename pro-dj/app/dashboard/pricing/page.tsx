@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function PricingPage() {
   const gate = await requireAdmin();
   if (!gate.ok) {
-    redirect("/auth/login");
+    redirect("/auth");
   }
 
   const rows = await prisma.pricing.findMany({

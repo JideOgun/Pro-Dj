@@ -1,21 +1,35 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
 
 export default async function ClientDashboardPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect("/auth/login");
+    redirect("/auth");
   }
 
   // Get user's bookings
   const bookings = await prisma.booking.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: { user: { select: { email: true, name: true } } },
+    include: {
+      user: { select: { email: true, name: true } },
+      dj: { select: { stageName: true, genres: true } },
+    },
+  });
+
+  // Get unread notifications
+  const notifications = await prisma.notification.findMany({
+    where: {
+      userId: session.user.id,
+      isRead: false,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
   });
 
   const formatDate = (date: Date) => {
@@ -53,6 +67,9 @@ export default async function ClientDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Role Switcher */}
+        <ClientRoleSwitcher />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
@@ -69,8 +86,88 @@ export default async function ClientDashboardPage() {
               💡 <strong>Quick tip:</strong> Need to book another event? Click
               &quot;New Booking&quot; below or head to the homepage!
             </p>
+            <p className="text-violet-200 text-sm mt-2">
+              🎵 <strong>Multi-DJ Bookings:</strong> You can now book multiple
+              DJs for the same event with different time slots. Each DJ will
+              receive their own booking request.
+            </p>
           </div>
         </div>
+
+        {/* Notifications */}
+        {notifications.length > 0 && (
+          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4 text-yellow-400">
+              ⚠️ Important Notifications
+            </h2>
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className="bg-gray-800/50 rounded-lg p-4"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-white mb-1">
+                        {notification.title}
+                      </h3>
+                      <p className="text-gray-300 text-sm mb-2">
+                        {notification.message}
+                      </p>
+                      {notification.data &&
+                        typeof notification.data === "object" && (
+                          <div className="text-xs text-gray-400">
+                            {"reason" in notification.data &&
+                              notification.data.reason && (
+                                <p>
+                                  <strong>Reason:</strong>{" "}
+                                  {String(notification.data.reason)}
+                                </p>
+                              )}
+                            {"suggestions" in notification.data &&
+                              Array.isArray(notification.data.suggestions) && (
+                                <div className="mt-2">
+                                  <p className="font-medium text-yellow-300 mb-1">
+                                    Recovery Options:
+                                  </p>
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {notification.data.suggestions.map(
+                                      (suggestion, index: number) => {
+                                        const typedSuggestion = suggestion as {
+                                          message: string;
+                                        };
+                                        return (
+                                          <li key={index} className="text-xs">
+                                            {typedSuggestion.message}
+                                          </li>
+                                        );
+                                      }
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                          </div>
+                        )}
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(notification.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {notification.actionUrl && (
+                    <div className="mt-3">
+                      <Link
+                        href={notification.actionUrl}
+                        className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                      >
+                        Take Action
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* User Info Card */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
@@ -137,6 +234,7 @@ export default async function ClientDashboardPage() {
                     <th className="p-3 text-gray-300">Event Date</th>
                     <th className="p-3 text-gray-300">Event Type</th>
                     <th className="p-3 text-gray-300">Package</th>
+                    <th className="p-3 text-gray-300">Assigned DJ</th>
                     <th className="p-3 text-gray-300">Quote</th>
                     <th className="p-3 text-gray-300">Status</th>
                     <th className="p-3 text-gray-300">Created</th>
@@ -155,6 +253,25 @@ export default async function ClientDashboardPage() {
                       </td>
                       <td className="p-3">{booking.eventType}</td>
                       <td className="p-3">{booking.packageKey || "Custom"}</td>
+                      <td className="p-3">
+                        {booking.dj ? (
+                          <div>
+                            <div className="font-medium text-violet-300">
+                              {booking.dj.stageName}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {booking.dj.genres.slice(0, 2).join(", ")}
+                              {booking.dj.genres.length > 2 && "..."}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">
+                            {booking.status === "PENDING"
+                              ? "Awaiting assignment"
+                              : "TBD"}
+                          </span>
+                        )}
+                      </td>
                       <td className="p-3 font-medium">
                         {formatPrice(booking.quotedPriceCents)}
                       </td>

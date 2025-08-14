@@ -53,7 +53,14 @@ export async function isDjAvailable(
 export async function getAvailableDjs(
   startTime: Date,
   endTime: Date
-): Promise<unknown[]> {
+): Promise<
+  Array<{
+    id: string;
+    stageName: string;
+    genres: string[];
+    basePriceCents: number | null;
+  }>
+> {
   const allDjs = await prisma.djProfile.findMany({
     where: { isActive: true },
     include: {
@@ -87,11 +94,6 @@ export function validateBookingTime(
     return { valid: false, error: "Booking cannot be in the past" };
   }
 
-  // Check if end time is after start time
-  if (endTime <= startTime) {
-    return { valid: false, error: "End time must be after start time" };
-  }
-
   // Check if booking is too far in the future (e.g., 2 years)
   const twoYearsFromNow = new Date();
   twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
@@ -102,13 +104,20 @@ export function validateBookingTime(
     };
   }
 
-  // Check if booking duration is reasonable (e.g., 1-12 hours)
+  // Calculate duration in hours, handling overnight events
   const durationHours =
     (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-  if (durationHours < 1) {
+
+  // For overnight events, if end time is before start time, it means it goes into the next day
+  // In this case, we need to add 24 hours to get the correct duration
+  const adjustedDurationHours =
+    endTime < startTime ? durationHours + 24 : durationHours;
+
+  // Check if booking duration is reasonable (e.g., 1-12 hours)
+  if (adjustedDurationHours < 1) {
     return { valid: false, error: "Booking must be at least 1 hour long" };
   }
-  if (durationHours > 12) {
+  if (adjustedDurationHours > 12) {
     return { valid: false, error: "Booking cannot exceed 12 hours" };
   }
 
@@ -134,5 +143,10 @@ export function formatTimeRange(startTime: Date, endTime: Date): string {
  * Calculate booking duration in hours
  */
 export function getBookingDuration(startTime: Date, endTime: Date): number {
-  return (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+  const durationHours =
+    (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+
+  // For overnight events, if end time is before start time, it means it goes into the next day
+  // In this case, we need to add 24 hours to get the correct duration
+  return endTime < startTime ? durationHours + 24 : durationHours;
 }

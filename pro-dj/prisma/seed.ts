@@ -10,13 +10,23 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
-    update: { role: Role.ADMIN },
+    update: {
+      role: Role.ADMIN,
+      password: hashedPassword, // Update password too
+    },
     create: {
       email: ADMIN_EMAIL,
       name: "Jay Baba",
       password: hashedPassword,
       role: Role.ADMIN,
     },
+  });
+
+  console.log("✅ Admin user created/updated:", {
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+    hasPassword: !!admin.password,
   });
 
   // Create a test client user
@@ -90,6 +100,7 @@ async function main() {
         label: "Silver Package",
         priceCents: 50000,
         sortOrder: 1,
+        isActive: true,
       },
       {
         type: "Wedding",
@@ -97,6 +108,7 @@ async function main() {
         label: "Gold Package",
         priceCents: 75000,
         sortOrder: 2,
+        isActive: true,
       },
       {
         type: "Wedding",
@@ -104,6 +116,7 @@ async function main() {
         label: "Platinum Package",
         priceCents: 100000,
         sortOrder: 3,
+        isActive: true,
       },
 
       // Club packages
@@ -113,6 +126,7 @@ async function main() {
         label: "2 Hours",
         priceCents: 20000,
         sortOrder: 1,
+        isActive: true,
       },
       {
         type: "Club",
@@ -120,6 +134,7 @@ async function main() {
         label: "3 Hours",
         priceCents: 30000,
         sortOrder: 2,
+        isActive: true,
       },
       {
         type: "Club",
@@ -127,6 +142,7 @@ async function main() {
         label: "4 Hours",
         priceCents: 40000,
         sortOrder: 3,
+        isActive: true,
       },
 
       // Corporate Event packages
@@ -136,6 +152,7 @@ async function main() {
         label: "Half Day",
         priceCents: 60000,
         sortOrder: 1,
+        isActive: true,
       },
       {
         type: "Corporate",
@@ -143,6 +160,7 @@ async function main() {
         label: "Full Day",
         priceCents: 120000,
         sortOrder: 2,
+        isActive: true,
       },
 
       // Private Party Packages
@@ -184,6 +202,91 @@ async function main() {
   });
 
   console.log("✅ Pricing seeded successfully");
+
+  // Create test DJs
+  const testDjs = [
+    {
+      email: "osean@test.com",
+      name: "OSEAN",
+      password: "password",
+      stageName: "OSEAN",
+      genres: ["Afrobeats", "Amapiano", "Hip Hop"],
+      bio: "Professional DJ with 5+ years of experience in Afrobeats and Amapiano. Known for high-energy performances and crowd engagement.",
+      experience: 5,
+      location: "Lagos, Nigeria",
+      travelRadius: 50,
+      basePriceCents: 25000,
+    },
+    {
+      email: "jamiedred@test.com",
+      name: "JAMIE DRED",
+      password: "password",
+      stageName: "JAMIE DRED",
+      genres: ["House", "Techno", "EDM"],
+      bio: "International DJ specializing in House and Techno music. Has performed at major clubs and festivals worldwide.",
+      experience: 8,
+      location: "London, UK",
+      travelRadius: 100,
+      basePriceCents: 35000,
+    },
+    {
+      email: "djto@test.com",
+      name: "DJ T.O",
+      password: "password",
+      stageName: "DJ T.O",
+      genres: ["R&B", "Hip Hop", "Reggae"],
+      bio: "Versatile DJ with expertise in R&B, Hip Hop, and Reggae. Perfect for weddings, corporate events, and private parties.",
+      experience: 6,
+      location: "Toronto, Canada",
+      travelRadius: 75,
+      basePriceCents: 30000,
+    },
+  ];
+
+  for (const djData of testDjs) {
+    const hashedPassword = await bcrypt.hash(djData.password, 10);
+
+    const dj = await prisma.user.upsert({
+      where: { email: djData.email },
+      update: {
+        role: Role.DJ,
+        name: djData.name,
+        password: hashedPassword,
+      },
+      create: {
+        email: djData.email,
+        name: djData.name,
+        password: hashedPassword,
+        role: Role.DJ,
+      },
+    });
+
+    // Create DJ profile
+    await prisma.djProfile.upsert({
+      where: { userId: dj.id },
+      update: {
+        stageName: djData.stageName,
+        genres: djData.genres,
+        bio: djData.bio,
+        experience: djData.experience,
+        location: djData.location,
+        travelRadius: djData.travelRadius,
+        basePriceCents: djData.basePriceCents,
+      },
+      create: {
+        userId: dj.id,
+        stageName: djData.stageName,
+        genres: djData.genres,
+        bio: djData.bio,
+        experience: djData.experience,
+        location: djData.location,
+        travelRadius: djData.travelRadius,
+        basePriceCents: djData.basePriceCents,
+      },
+    });
+
+    console.log(`✅ DJ created: ${djData.stageName} (${djData.email})`);
+  }
 }
 
 main()

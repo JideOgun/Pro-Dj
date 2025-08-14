@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
+import BookingCalendar from "@/components/BookingCalendar";
 
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -96,6 +98,9 @@ export default async function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Role Switcher */}
+        <ClientRoleSwitcher />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
@@ -232,69 +237,44 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Calendar Overview */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-violet-400">
-              Calendar Overview
-            </h2>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 mb-8 shadow-2xl border border-gray-700">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-violet-400 mb-1">
+                📅 Booking Calendar
+              </h2>
+              <p className="text-gray-400 text-sm">
+                Interactive calendar with all your DJ bookings
+              </p>
+            </div>
             <Link
               href="/dashboard/admin/calendar"
-              className="text-violet-400 hover:text-violet-300 text-sm"
+              className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
             >
               View Full Calendar →
             </Link>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-4">
-            {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-              <div
-                key={day}
-                className="text-center text-gray-400 text-xs font-medium py-1"
-              >
-                {day}
-              </div>
-            ))}
+          <div className="h-[500px]">
+            <BookingCalendar bookings={recentBookings} />
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: 35 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() - date.getDay() + i);
-              const dayBookings = recentBookings.filter((booking) => {
-                const bookingDate = new Date(booking.eventDate);
-                return bookingDate.toDateString() === date.toDateString();
-              });
-
-              return (
-                <div
-                  key={i}
-                  className={`h-8 text-xs flex items-center justify-center rounded ${
-                    date.toDateString() === new Date().toDateString()
-                      ? "bg-violet-600 text-white"
-                      : dayBookings.length > 0
-                      ? "bg-green-600/30 text-green-200"
-                      : "bg-gray-700/50 text-gray-300"
-                  }`}
-                  title={
-                    dayBookings.length > 0
-                      ? `${dayBookings.length} booking(s)`
-                      : "No bookings"
-                  }
-                >
-                  {date.getDate()}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 flex space-x-4 text-xs text-gray-400">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-violet-600 rounded mr-2"></div>
-              Today
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center bg-gray-700/50 px-3 py-2 rounded-lg">
+              <div className="w-4 h-4 bg-yellow-500 rounded-full mr-3 shadow-lg"></div>
+              <span className="font-medium">Pending</span>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-600/30 rounded mr-2"></div>
-              Has Bookings
+            <div className="flex items-center bg-gray-700/50 px-3 py-2 rounded-lg">
+              <div className="w-4 h-4 bg-green-500 rounded-full mr-3 shadow-lg"></div>
+              <span className="font-medium">Confirmed</span>
+            </div>
+            <div className="flex items-center bg-gray-700/50 px-3 py-2 rounded-lg">
+              <div className="w-4 h-4 bg-blue-500 rounded-full mr-3 shadow-lg"></div>
+              <span className="font-medium">Accepted</span>
+            </div>
+            <div className="flex items-center bg-gray-700/50 px-3 py-2 rounded-lg">
+              <div className="w-4 h-4 bg-red-500 rounded-full mr-3 shadow-lg"></div>
+              <span className="font-medium">Declined</span>
             </div>
           </div>
         </div>

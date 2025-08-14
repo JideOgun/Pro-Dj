@@ -30,6 +30,9 @@ djProfile DjProfile?
 // Reviews relation
 reviews Review[] @relation("UserReviews")
 
+// Notifications relation
+notifications Notification[] @relation("UserNotifications")
+
 createdAt DateTime @default(now())
 }
 
@@ -59,6 +62,9 @@ paidAt DateTime?
 
 // Review relation
 review Review?
+
+// Recovery relation
+recovery BookingRecovery[] @relation("OriginalBooking")
 
 @@index([status])
 @@index([djId])
@@ -130,9 +136,19 @@ user User @relation(fields: [userId], references: [id])
 stageName String
 bio String?
 genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"]
+customGenres String? // additional genres not in the main list
 experience Int // years of experience
 location String?
 travelRadius Int? // miles willing to travel
+
+// Specialties & Skills
+specialties String? // unique skills and specialties
+equipment String? // equipment and setup details
+languages String[] // languages spoken
+availability String? // availability schedule and preferences
+
+// Social Media & Links
+socialLinks Json? // {instagram, youtube, soundcloud, website}
 
 // Media
 profileImage String?
@@ -154,6 +170,7 @@ reviewCount Int @default(0)
 bookings Booking[]
 pricing Pricing[]
 reviews Review[]
+recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -182,4 +199,39 @@ ACCEPTED // waiting on payment
 DECLINED
 CONFIRMED // paid
 CANCELLED
+}
+
+model Notification {
+id String @id @default(uuid())
+userId String
+user User @relation("UserNotifications", fields: [userId], references: [id])
+
+type String // "BOOKING_DECLINED", "DJ_CANCELLED", "RECOVERY_SUGGESTION", etc.
+title String
+message String
+data Json? // additional data like suggested DJs, recovery options
+isRead Boolean @default(false)
+actionUrl String? // URL to take action (e.g., book new DJ)
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([userId, isRead])
+@@index([createdAt])
+}
+
+model BookingRecovery {
+id String @id @default(uuid())
+originalBookingId String
+originalBooking Booking @relation("OriginalBooking", fields: [originalBookingId], references: [id])
+
+recoveryType String // "EXTEND_DJ", "NEW_DJ", "REFUND"
+suggestedDjId String?
+suggestedDj DjProfile? @relation("SuggestedDj", fields: [suggestedDjId], references: [id])
+
+status String // "PENDING", "ACCEPTED", "DECLINED"
+clientResponse String? // client's response to recovery suggestion
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 }

@@ -1,16 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 
 const djProfileSchema = z.object({
   stageName: z.string().min(1, "Stage name is required").max(100),
   bio: z.string().max(1000).optional(),
   genres: z.array(z.string()).min(1, "At least one genre is required"),
+  customGenres: z.string().max(200).optional(),
   experience: z.number().min(0).max(50),
   location: z.string().min(1, "Location is required").max(200),
   travelRadius: z.number().min(0).max(500).optional(),
+  specialties: z.string().max(500).optional(),
+  equipment: z.string().max(500).optional(),
+  languages: z.array(z.string()).optional(),
+  availability: z.string().max(500).optional(),
+  socialLinks: z
+    .object({
+      instagram: z.string().url().optional().or(z.literal("")),
+      youtube: z.string().url().optional().or(z.literal("")),
+      soundcloud: z.string().url().optional().or(z.literal("")),
+      website: z.string().url().optional().or(z.literal("")),
+    })
+    .optional(),
   basePriceCents: z.number().min(0).optional(),
   profileImage: z.union([z.string().url(), z.literal("")]).optional(),
   portfolio: z.array(z.string()).optional(),
@@ -49,9 +62,15 @@ export async function POST(req: Request) {
         stageName: validatedData.stageName,
         bio: validatedData.bio,
         genres: validatedData.genres,
+        customGenres: validatedData.customGenres,
         experience: validatedData.experience,
         location: validatedData.location,
         travelRadius: validatedData.travelRadius || 50,
+        specialties: validatedData.specialties,
+        equipment: validatedData.equipment,
+        languages: validatedData.languages || [],
+        availability: validatedData.availability,
+        socialLinks: validatedData.socialLinks,
         basePriceCents: validatedData.basePriceCents,
         profileImage: validatedData.profileImage || null,
         portfolio: validatedData.portfolio || [],

@@ -4,8 +4,9 @@ import { requireAdmin } from "@/lib/auth-guard";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json(
@@ -31,7 +32,7 @@ export async function PATCH(
   if (typeof body.sortOrder === "number") data.sortOrder = body.sortOrder;
 
   const updated = await prisma.pricing.update({
-    where: { id: params.id },
+    where: { id },
     data,
   });
 
