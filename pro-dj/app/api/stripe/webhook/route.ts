@@ -7,12 +7,18 @@ import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/emails";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  console.log("🔍 Webhook request received");
+
   const sig = req.headers.get("stripe-signature");
-  if (!sig)
+  console.log("📝 Signature header present:", !!sig);
+
+  if (!sig) {
+    console.log("❌ Missing signature header");
     return NextResponse.json(
       { ok: false, error: "Missing signature" },
       { status: 400 }
     );
+  }
 
   const buf = await req.arrayBuffer();
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -21,13 +27,21 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event;
   try {
+    console.log("🔐 Attempting to verify webhook signature...");
+    console.log(
+      "🔑 Webhook secret length:",
+      process.env.STRIPE_WEBHOOK_SECRET?.length || 0
+    );
+
     event = stripe.webhooks.constructEvent(
       Buffer.from(buf),
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
+    console.log("✅ Webhook signature verified successfully");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ Webhook signature verification failed:", errorMessage);
     return NextResponse.json(
       { ok: false, error: `Webhook Error: ${errorMessage}` },
       { status: 400 }

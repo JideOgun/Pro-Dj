@@ -277,7 +277,7 @@ export default function SuccessPage() {
                   this payment.
                 </p>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => signOut({ callbackUrl: "/auth/login" })}
                   className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg text-center"
                 >
                   Sign Out & Sign In as Correct User

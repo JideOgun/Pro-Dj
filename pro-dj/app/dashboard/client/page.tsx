@@ -56,11 +56,20 @@ export default async function ClientDashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            Welcome, {session.user.name || session.user.email}!
+            Welcome back,{" "}
+            {session.user.name || session.user.email?.split("@")[0] || "there"}!
+            👋
           </h1>
-          <p className="text-gray-300">
-            Manage your bookings and view your account information
+          <p className="text-gray-300 mb-4">
+            Ready to create more amazing events? Here&apos;s everything you need
+            to manage your bookings.
           </p>
+          <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-4">
+            <p className="text-violet-200 text-sm">
+              💡 <strong>Quick tip:</strong> Need to book another event? Click
+              &quot;New Booking&quot; below or head to the homepage!
+            </p>
+          </div>
         </div>
 
         {/* User Info Card */}
