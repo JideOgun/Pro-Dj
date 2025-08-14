@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SocketProvider, useSocketContext } from "@/components/SocketProvider";
 
 interface Booking {
   id: string;
@@ -24,12 +25,15 @@ interface Booking {
   };
 }
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get WebSocket context
+  const { socket, isConnected } = useSocketContext();
 
   const bookingId = searchParams.get("bid");
 
@@ -56,15 +60,29 @@ export default function SuccessPage() {
     }
 
     fetchBooking();
-
-    // Refresh booking data every 2 seconds to catch webhook updates
-    const interval = setInterval(() => {
-      fetchBooking();
-    }, 2000);
-
-    // Clean up interval on unmount
-    return () => clearInterval(interval);
   }, [bookingId]);
+
+  // Listen for real-time booking status changes via WebSocket
+  useEffect(() => {
+    if (!socket || !isConnected || !bookingId) return;
+
+    const handleBookingStatusChange = (data: {
+      bookingId: string;
+      status: string;
+    }) => {
+      if (data.bookingId === bookingId) {
+        setBooking((prev) => (prev ? { ...prev, status: data.status } : null));
+      }
+    };
+
+    // Set up WebSocket listener
+    socket.on("booking-status-changed", handleBookingStatusChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      socket.off("booking-status-changed", handleBookingStatusChange);
+    };
+  }, [socket, isConnected, bookingId]);
 
   if (loading) {
     return (
@@ -298,5 +316,19 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrapper component to provide Socket context
+export default function SuccessPage() {
+  const { data: session } = useSession();
+
+  return (
+    <SocketProvider
+      userId={session?.user?.id}
+      role={session?.user?.role || "CLIENT"}
+    >
+      <SuccessPageContent />
+    </SocketProvider>
   );
 }

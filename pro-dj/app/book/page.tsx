@@ -149,6 +149,49 @@ export default function BookPage() {
       return;
     }
 
+    // Check for overlapping time slots between selected DJs
+    const timeSlots = selectedDjs.map((dj) => ({
+      djName: dj.dj.stageName,
+      startTime: dj.startTime,
+      endTime: dj.endTime,
+    }));
+
+    for (let i = 0; i < timeSlots.length; i++) {
+      for (let j = i + 1; j < timeSlots.length; j++) {
+        const slot1 = timeSlots[i];
+        const slot2 = timeSlots[j];
+
+        // Check for exact same time slots
+        if (
+          slot1.startTime === slot2.startTime &&
+          slot1.endTime === slot2.endTime
+        ) {
+          setMsg(
+            `${slot1.djName} and ${slot2.djName} have the same time slot. Please adjust the times to avoid conflicts.`
+          );
+          return;
+        }
+
+        // Check for overlapping time slots
+        const start1 = new Date(`2000-01-01T${slot1.startTime}`);
+        const end1 = new Date(`2000-01-01T${slot1.endTime}`);
+        const start2 = new Date(`2000-01-01T${slot2.startTime}`);
+        const end2 = new Date(`2000-01-01T${slot2.endTime}`);
+
+        // Handle overnight events
+        if (end1 < start1) end1.setDate(end1.getDate() + 1);
+        if (end2 < start2) end2.setDate(end2.getDate() + 1);
+
+        // Check for overlap
+        if (start1 < end2 && start2 < end1) {
+          setMsg(
+            `${slot1.djName} (${slot1.startTime}-${slot1.endTime}) and ${slot2.djName} (${slot2.startTime}-${slot2.endTime}) have overlapping time slots. Please adjust the times to avoid conflicts.`
+          );
+          return;
+        }
+      }
+    }
+
     // Create multiple bookings - one for each DJ
     const bookingPromises = selectedDjs.map((djBooking) =>
       fetch("/api/bookings", {
@@ -172,6 +215,9 @@ export default function BookPage() {
       const results = await Promise.all(responses.map((res) => res.json()));
 
       const successCount = results.filter((result) => result.ok).length;
+      const failedBookings = results
+        .map((result, index) => ({ result, index }))
+        .filter(({ result }) => !result.ok);
 
       if (successCount === selectedDjs.length) {
         toast.success(
@@ -180,17 +226,48 @@ export default function BookPage() {
           } sent successfully!`
         );
         setTimeout(() => router.push("/dashboard/client"), 1500);
+        setMsg("All Requests Sent 🎉");
       } else {
-        toast.error(
-          `Some bookings failed. ${successCount}/${selectedDjs.length} successful.`
-        );
-      }
+        // Show specific error messages for failed bookings
+        const errorMessages = failedBookings.map(({ result, index }) => {
+          const dj = selectedDjs[index];
+          const djName = dj.dj.stageName;
 
-      setMsg(
-        successCount === selectedDjs.length
-          ? "All Requests Sent 🎉"
-          : "Some requests failed"
-      );
+          if (
+            result.error === "Selected DJ is not available for this time slot"
+          ) {
+            return `${djName} is not available for the selected time slot`;
+          }
+
+          if (
+            result.error ===
+            "This time slot conflicts with another DJ booking for the same event"
+          ) {
+            // Extract conflicting DJ information from the response
+            const conflictingBookings = result.conflictingBookings || [];
+            const conflictingDjs = conflictingBookings
+              .map((booking: { djName?: string }) => booking.djName)
+              .filter(Boolean)
+              .filter((name: string) => name !== djName); // Remove the current DJ from the list
+
+            if (conflictingDjs.length > 0) {
+              // Multi-DJ conflict
+              return `${djName}'s time slot conflicts with ${conflictingDjs.join(
+                ", "
+              )}. Please adjust the times to avoid overlaps.`;
+            } else {
+              // Single DJ conflict (same DJ has another booking at this time)
+              return `${djName} already has another booking at this time. Please select a different time slot.`;
+            }
+          }
+
+          return `${djName}: ${result.error || "Booking failed"}`;
+        });
+
+        const errorMessage = errorMessages.join(". ");
+        toast.error(errorMessage);
+        setMsg(errorMessage);
+      }
     } catch (error) {
       toast.error("Failed to send booking requests");
       setMsg("Failed to send requests");
@@ -257,6 +334,19 @@ export default function BookPage() {
 
         {/* Main Form */}
         <div className="bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
+          {/* Status Message - Moved to top for better visibility */}
+          {msg && (
+            <div
+              className={`mb-6 p-4 rounded-lg text-center font-medium ${
+                msg.includes("🎉")
+                  ? "bg-green-900/50 text-green-200 border border-green-500/30"
+                  : "bg-red-900/50 text-red-200 border border-red-500/30"
+              }`}
+            >
+              {msg}
+            </div>
+          )}
+
           <form onSubmit={submit} className="space-y-6">
             {/* Event Type Selection */}
             <div>
@@ -622,19 +712,6 @@ export default function BookPage() {
               Submit Booking Request
             </button>
           </form>
-
-          {/* Status Message */}
-          {msg && (
-            <div
-              className={`mt-6 p-4 rounded-lg text-center ${
-                msg.includes("🎉")
-                  ? "bg-green-900/50 text-green-200 border border-green-500/30"
-                  : "bg-red-900/50 text-red-200 border border-red-500/30"
-              }`}
-            >
-              {msg}
-            </div>
-          )}
         </div>
 
         {/* Info Section */}

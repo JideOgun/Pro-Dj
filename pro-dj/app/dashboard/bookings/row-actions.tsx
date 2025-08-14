@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useSocketContext } from "../../../components/SocketProvider";
 
 interface PaymentLinkModalProps {
   isOpen: boolean;
@@ -85,15 +86,22 @@ export default function Actions({
   status,
   checkoutSessionId,
   onStatusChange,
+  userId,
+  userRole,
 }: {
   id: string;
   status: string;
   checkoutSessionId?: string | null;
   onStatusChange?: (bookingId: string, newStatus: string) => void;
+  userId?: string;
+  userRole?: string;
 }) {
   const router = useRouter();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
+
+  // Get WebSocket context for emitting updates
+  const { emitBookingUpdate } = useSocketContext();
 
   async function run(kind: "accept" | "decline") {
     // Optimistic update - happens immediately
@@ -118,6 +126,10 @@ export default function Actions({
       toast.error(j?.error ?? `Failed to ${kind}`);
       return;
     }
+
+    // Emit WebSocket event for real-time updates
+    const newStatus = kind === "accept" ? "ACCEPTED" : "DECLINED";
+    emitBookingUpdate(id, newStatus);
   }
 
   async function showPaymentLink() {

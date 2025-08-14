@@ -107,6 +107,7 @@ export default async function BookingsPage() {
         <BookingsTable
           initialBookings={bookings}
           userRole={session.user.role}
+          userId={session.user.id}
         />
       </div>
     </div>

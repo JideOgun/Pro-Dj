@@ -1,0 +1,4 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "ignorePatterns": ["server.js", "lib/socket-server.js"]
+}

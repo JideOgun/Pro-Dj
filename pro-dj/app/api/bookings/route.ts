@@ -8,6 +8,7 @@ import {
   validateBookingTime,
   isDjAvailable,
   getAvailableDjs,
+  checkEventTimeConflicts,
 } from "@/lib/booking-utils";
 
 // GET admin and DJ: list bookings
@@ -129,14 +130,40 @@ export async function POST(req: Request) {
     }
 
     // Parse and validate times
-    const eventDateTime = new Date(eventDate);
-    const startDateTime = new Date(startTime);
-    const endDateTime = new Date(endTime);
+    const eventDateTime = new Date(eventDate + "T00:00:00");
+
+    // Parse start and end times more carefully to avoid timezone issues
+    let startDateTime: Date;
+    let endDateTime: Date;
+
+    try {
+      // If startTime already includes the date, use it as is
+      if (startTime.includes("T") && startTime.includes("-")) {
+        startDateTime = new Date(startTime);
+      } else {
+        // Otherwise, combine with event date
+        startDateTime = new Date(`${eventDate}T${startTime}:00`);
+      }
+
+      if (endTime.includes("T") && endTime.includes("-")) {
+        endDateTime = new Date(endTime);
+      } else {
+        endDateTime = new Date(`${eventDate}T${endTime}:00`);
+      }
+    } catch (error) {
+      console.error("Date parsing error:", error);
+      return NextResponse.json(
+        { ok: false, error: "Invalid date/time format" },
+        { status: 400 }
+      );
+    }
 
     console.log("Parsed dates:", {
       eventDateTime,
       startDateTime,
       endDateTime,
+      originalStartTime: startTime,
+      originalEndTime: endTime,
     });
 
     // Validate booking time
@@ -147,6 +174,49 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, error: timeValidation.error },
         { status: 400 }
+      );
+    }
+
+    // Check for event-level time conflicts (prevents overlapping DJ time slots)
+    const {
+      hasConflicts: eventTimeConflicts,
+      conflictingBookings: eventTimeConflictingBookings,
+    } = await checkEventTimeConflicts(
+      eventDateTime,
+      startDateTime,
+      endDateTime
+    );
+
+    console.log("Event time conflicts:", {
+      eventTimeConflicts,
+      eventTimeConflictingBookings,
+    });
+
+    if (eventTimeConflicts) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This time slot conflicts with another DJ booking for the same event",
+          conflictingBookings: (
+            eventTimeConflictingBookings as Array<{
+              id: string;
+              startTime: Date;
+              endTime: Date;
+              eventType: string;
+              dj?: { stageName?: string };
+              user?: { name?: string; email?: string };
+            }>
+          ).map((b) => ({
+            id: b.id,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            eventType: b.eventType,
+            djName: b.dj?.stageName,
+            clientName: b.user?.name || b.user?.email,
+          })),
+        },
+        { status: 409 }
       );
     }
 
@@ -214,7 +284,13 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log("Booking created:", booking);
+    console.log("Booking created:", {
+      id: booking.id,
+      eventDate: booking.eventDate.toISOString(),
+      startTime: booking.startTime.toISOString(),
+      endTime: booking.endTime.toISOString(),
+      status: booking.status,
+    });
 
     return NextResponse.json(
       { ok: true, data: booking, quotedPriceCents: pkg.priceCents },

@@ -21,6 +21,13 @@ export async function isDjAvailable(
   endTime: Date,
   excludeBookingId?: string
 ): Promise<{ available: boolean; conflictingBookings: unknown[] }> {
+  console.log("🔍 Checking DJ availability:", {
+    djId,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    excludeBookingId,
+  });
+
   const conflictingBookings = await prisma.booking.findMany({
     where: {
       djId,
@@ -41,8 +48,93 @@ export async function isDjAvailable(
     },
   });
 
+  console.log("📊 Found conflicting bookings:", conflictingBookings.length);
+  if (conflictingBookings.length > 0) {
+    console.log(
+      "⚠️ Conflicts:",
+      conflictingBookings.map((b) => ({
+        id: b.id,
+        startTime: b.startTime.toISOString(),
+        endTime: b.endTime.toISOString(),
+        status: b.status,
+        eventType: b.eventType,
+      }))
+    );
+  }
+
   return {
     available: conflictingBookings.length === 0,
+    conflictingBookings,
+  };
+}
+
+/**
+ * Check if there are any overlapping time slots for the same event
+ * This prevents multiple DJs from having overlapping times
+ */
+export async function checkEventTimeConflicts(
+  eventDate: Date,
+  startTime: Date,
+  endTime: Date,
+  excludeBookingId?: string
+): Promise<{ hasConflicts: boolean; conflictingBookings: unknown[] }> {
+  console.log("🔍 Checking event time conflicts:", {
+    eventDate: eventDate.toISOString(),
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    excludeBookingId,
+  });
+
+  // Find all bookings for the same event date that have overlapping times
+  const conflictingBookings = await prisma.booking.findMany({
+    where: {
+      eventDate: {
+        gte: new Date(
+          eventDate.getFullYear(),
+          eventDate.getMonth(),
+          eventDate.getDate()
+        ),
+        lt: new Date(
+          eventDate.getFullYear(),
+          eventDate.getMonth(),
+          eventDate.getDate() + 1
+        ),
+      },
+      status: {
+        in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+      },
+      ...(excludeBookingId && { id: { not: excludeBookingId } }),
+      OR: [
+        // Check for any overlap with existing bookings
+        {
+          startTime: { lt: endTime },
+          endTime: { gt: startTime },
+        },
+      ],
+    },
+    include: {
+      user: { select: { name: true, email: true } },
+      dj: { select: { stageName: true } },
+    },
+  });
+
+  console.log("📊 Found event time conflicts:", conflictingBookings.length);
+  if (conflictingBookings.length > 0) {
+    console.log(
+      "⚠️ Event conflicts:",
+      conflictingBookings.map((b) => ({
+        id: b.id,
+        djName: b.dj?.stageName,
+        startTime: b.startTime.toISOString(),
+        endTime: b.endTime.toISOString(),
+        status: b.status,
+        eventType: b.eventType,
+      }))
+    );
+  }
+
+  return {
+    hasConflicts: conflictingBookings.length > 0,
     conflictingBookings,
   };
 }

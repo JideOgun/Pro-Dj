@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/email";
 import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/emails";
+import { emitBookingUpdate } from "@/lib/socket-server";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,9 @@ export async function POST(req: Request) {
           booking.id,
           booking.status
         );
+
+        // Emit WebSocket event for real-time updates
+        emitBookingUpdate(booking.id, "CONFIRMED");
 
         // emails: client + DJ
         const clientEmail =

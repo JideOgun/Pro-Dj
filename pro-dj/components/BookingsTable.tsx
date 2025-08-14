@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Actions from "../app/dashboard/bookings/row-actions";
+import { SocketProvider, useSocketContext } from "./SocketProvider";
 
 interface Booking {
   id: string;
@@ -11,51 +12,60 @@ interface Booking {
   eventDate: string | Date;
   startTime?: string | Date;
   endTime?: string | Date;
-  packageKey?: string;
-  quotedPriceCents?: number;
-  checkoutSessionId?: string;
+  packageKey?: string | null;
+  quotedPriceCents?: number | null;
+  checkoutSessionId?: string | null;
   user?: {
-    name?: string;
+    name?: string | null;
     email?: string;
   };
   dj?: {
     stageName?: string;
-  };
+  } | null;
 }
 
 interface BookingsTableProps {
   initialBookings: Booking[];
   userRole: string;
+  userId?: string;
 }
 
-export default function BookingsTable({
+function BookingsTableContent({
   initialBookings,
   userRole,
+  userId,
 }: BookingsTableProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Function to refresh bookings data
-  const refreshBookings = async () => {
-    setIsRefreshing(true);
-    try {
-      const response = await fetch("/api/bookings");
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data.bookings || []);
-      }
-    } catch (error) {
-      console.error("Error refreshing bookings:", error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  // Get WebSocket context
+  const { isConnected, socket } = useSocketContext();
 
-  // Poll for updates every 10 seconds
+  // Listen for real-time booking status changes via WebSocket
   useEffect(() => {
-    const interval = setInterval(refreshBookings, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!socket || !isConnected) return;
+
+    const handleBookingStatusChange = (data: {
+      bookingId: string;
+      status: string;
+    }) => {
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === data.bookingId
+            ? { ...booking, status: data.status }
+            : booking
+        )
+      );
+    };
+
+    // Set up WebSocket listener
+    socket.on("booking-status-changed", handleBookingStatusChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      socket.off("booking-status-changed", handleBookingStatusChange);
+    };
+  }, [socket, isConnected]);
 
   // Helper function to safely handle dates
   const formatDate = (date: string | Date) => {
@@ -107,15 +117,25 @@ export default function BookingsTable({
 
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden">
-      {/* Refresh indicator */}
-      {isRefreshing && (
-        <div className="bg-blue-900/20 border-b border-blue-500/30 px-6 py-2">
-          <div className="flex items-center gap-2 text-blue-300 text-sm">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-300"></div>
-            Refreshing bookings...
-          </div>
+      {/* WebSocket connection indicator */}
+      <div
+        className={`border-b px-6 py-2 ${
+          isConnected
+            ? "bg-green-900/20 border-green-500/30"
+            : "bg-yellow-900/20 border-yellow-500/30"
+        }`}
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isConnected ? "bg-green-400" : "bg-yellow-400"
+            }`}
+          ></div>
+          {isConnected
+            ? "Real-time updates connected"
+            : "Connecting to real-time updates..."}
         </div>
-      )}
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -231,6 +251,8 @@ export default function BookingsTable({
                     status={b.status}
                     checkoutSessionId={b.checkoutSessionId}
                     onStatusChange={updateBookingStatus}
+                    userId={userId}
+                    userRole={userRole}
                   />
                 </td>
               </tr>
@@ -253,5 +275,14 @@ export default function BookingsTable({
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper component that provides Socket context
+export default function BookingsTable(props: BookingsTableProps) {
+  return (
+    <SocketProvider userId={props.userId} role={props.userRole}>
+      <BookingsTableContent {...props} />
+    </SocketProvider>
   );
 }
