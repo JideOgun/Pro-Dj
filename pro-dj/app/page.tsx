@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useSession } from "next-auth/react";
-import styles from "./home.module.css";
+import Link from "next/link";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -24,10 +23,10 @@ export default function Home() {
           {/* Main Title with Animation */}
           <div className="mb-8">
             <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
-              Jay Baba
+              Pro-DJ
             </h1>
             <div className="text-2xl md:text-3xl font-bold text-white mb-2">
-              Professional DJ
+              Multi-DJ Booking Platform
             </div>
             <div className="w-24 h-1 bg-gradient-to-r from-violet-500 to-purple-500 mx-auto rounded-full"></div>
           </div>
@@ -37,126 +36,166 @@ export default function Home() {
             <div className="mb-8">
               <div className="bg-gradient-to-r from-violet-900/30 to-purple-900/30 backdrop-blur-sm border border-violet-500/20 rounded-2xl p-6 max-w-2xl mx-auto">
                 <p className="text-2xl text-violet-200 font-semibold mb-3">
-                  Hello {userName}! 👋
+                  Welcome back, {userName}! 👋
                 </p>
                 <p className="text-lg text-gray-300">
-                  Ready to book your next event? Let&apos;s make it
-                  unforgettable with the perfect music and energy!
+                  {session.user.role === "CLIENT"
+                    ? "Ready to book your next event? Browse our talented DJs and find the perfect match!"
+                    : session.user.role === "DJ"
+                    ? "Manage your bookings and grow your business with our platform!"
+                    : "Manage the platform and oversee all bookings and DJs."}
                 </p>
               </div>
             </div>
           )}
 
           {/* Tagline */}
-          <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
-            <span className="text-violet-400 font-semibold">Afrobeats</span> •{" "}
-            <span className="text-purple-400 font-semibold">Amapiano</span> •{" "}
+          <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8">
+            <span className="text-violet-400 font-semibold">
+              Find the perfect DJ
+            </span>{" "}
+            for your event •{" "}
+            <span className="text-purple-400 font-semibold">
+              Multiple genres
+            </span>{" "}
+            •{" "}
             <span className="text-pink-400 font-semibold">
-              High-energy club sets
+              Professional service
             </span>
             <br />
             <span className="text-gray-400">
-              Based in your city, ready for your event.
+              From weddings to corporate events, we&apos;ve got you covered.
             </span>
           </p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-          {/* Desktop hover menu */}
-          <div className={styles.menu}>
-            <a
-              href="/book"
-              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            >
-              🎵 Book Me
-            </a>
-            <div className={styles.dropdown} aria-label="Event types">
-              <a className={styles.item} href="/book?type=Wedding">
-                💒 Wedding
-              </a>
-              <a className={styles.item} href="/book?type=Club%20Night">
-                🕺 Club Night
-              </a>
-              <a className={styles.item} href="/book?type=Corporate">
-                🏢 Corporate
-              </a>
-              <a className={styles.item} href="/book?type=Birthday">
-                🎂 Birthday
-              </a>
-              <a className={styles.item} href="/book?type=Private%20Party">
-                🎉 Private Party
-              </a>
+          {session?.user ? (
+            // Logged in user actions
+            <div className="flex flex-col sm:flex-row gap-4">
+              {session.user.role === "CLIENT" && (
+                <>
+                  <Link
+                    href="/book"
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    🎵 Book a DJ
+                  </Link>
+                  <Link
+                    href="/dashboard/client"
+                    className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    📋 My Bookings
+                  </Link>
+                </>
+              )}
+              {session.user.role !== "CLIENT" && (
+                <div className="text-center">
+                  <p className="text-gray-400 mb-4">
+                    Booking is only available for client accounts
+                  </p>
+                </div>
+              )}
+              {session.user.role === "DJ" && (
+                <>
+                  <Link
+                    href="/dashboard/dj"
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    🎧 DJ Dashboard
+                  </Link>
+                  <Link
+                    href="/dashboard/bookings"
+                    className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    📋 My Bookings
+                  </Link>
+                </>
+              )}
+              {session.user.role === "ADMIN" && (
+                <>
+                  <Link
+                    href="/dashboard/admin"
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    ⚙️ Admin Dashboard
+                  </Link>
+                  <Link
+                    href="/dashboard/bookings"
+                    className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    📋 All Bookings
+                  </Link>
+                </>
+              )}
             </div>
-          </div>
-
-          {/* Mobile dropdown */}
-          <details className={styles.details}>
-            <summary className={styles.summary}>
-              <span className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-                🎵 Book Me
-              </span>
-            </summary>
-            <div className={styles.panel} aria-label="Event types">
-              <a className={styles.menuItem} href="/book?type=Wedding">
-                💒 Wedding
-              </a>
-              <a className={styles.menuItem} href="/book?type=Club%20Night">
-                🕺 Club Night
-              </a>
-              <a className={styles.menuItem} href="/book?type=Corporate">
-                🏢 Corporate
-              </a>
-              <a className={styles.menuItem} href="/book?type=Birthday">
-                🎂 Birthday
-              </a>
-              <a className={styles.menuItem} href="/book?type=Private%20Party">
-                🎉 Private Party
-              </a>
-              <a className={styles.menuItem} href="/book">
-                📝 Just Book
-              </a>
+          ) : (
+            // Guest user actions
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/book"
+                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                🎵 Book a DJ
+              </Link>
+              <Link
+                href="/auth"
+                className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                🔐 Sign In
+              </Link>
             </div>
-          </details>
-
-          <a
-            href="/mixes"
-            className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-          >
-            🎧 Listen to Mixes
-          </a>
-          <a
-            href="/posts"
-            className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-purple-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-          >
-            📝 Read the Blog
-          </a>
+          )}
         </div>
 
         {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-16">
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-violet-500/30 transition-all duration-300">
             <div className="text-4xl mb-4">🎵</div>
-            <h3 className="text-xl font-bold text-white mb-2">Premium Music</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Multiple DJs</h3>
             <p className="text-gray-400">
-              Latest hits, classic tracks, and everything in between
+              Choose from a diverse selection of professional DJs
             </p>
           </div>
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-purple-500/30 transition-all duration-300">
             <div className="text-4xl mb-4">⚡</div>
-            <h3 className="text-xl font-bold text-white mb-2">High Energy</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Easy Booking</h3>
             <p className="text-gray-400">
-              Keep your crowd moving with infectious beats
+              Simple booking process with instant confirmation
             </p>
           </div>
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-pink-500/30 transition-all duration-300">
             <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-bold text-white mb-2">Professional</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              Secure Payments
+            </h3>
             <p className="text-gray-400">
-              Reliable, punctual, and always ready to perform
+              Safe and secure payment processing for all bookings
             </p>
           </div>
         </div>
+
+        {/* Call to Action for DJs */}
+        {!session?.user && (
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 max-w-2xl mx-auto">
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Are you a DJ? 🎧
+              </h2>
+              <p className="text-lg text-gray-300 mb-6">
+                Join our platform and start getting booked for events. Manage
+                your schedule, set your rates, and grow your business.
+              </p>
+              <Link
+                href="/dj/register"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                Become a DJ
+              </Link>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

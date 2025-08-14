@@ -12,6 +12,8 @@ export default function BookPage() {
 
   const [types, setTypes] = useState<string[]>([]);
   const [eventDate, setEventDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [message, setMessage] = useState("");
   const [msg, setMsg] = useState("");
   const router = useRouter();
@@ -69,6 +71,8 @@ export default function BookPage() {
         bookingType,
         packageKey,
         eventDate,
+        startTime: `${eventDate}T${startTime}`,
+        endTime: `${eventDate}T${endTime}`,
         message,
         extra: { contactEmail },
       }),
@@ -98,6 +102,30 @@ export default function BookPage() {
               className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Continue with Google
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Restrict booking to CLIENT users only
+  if (data?.user?.role !== "CLIENT") {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-gray-800 rounded-lg p-8">
+            <div className="text-6xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold mb-4">Access Restricted</h1>
+            <p className="text-gray-300 mb-6">
+              Booking is only available for client accounts. DJs and admins
+              cannot create booking requests.
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            >
+              Go Back
             </button>
           </div>
         </div>
@@ -189,8 +217,37 @@ export default function BookPage() {
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 required
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
+            </div>
+
+            {/* Event Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Start Time *
+                </label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  End Time *
+                </label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
             </div>
 
             {/* Contact Email */}

@@ -5,108 +5,181 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+provider = "prisma-client-js"
+output = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+provider = "postgresql"
+url = env("DATABASE_URL")
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String?
-  password  String?
-  googleId  String?
-  role      Role      @default(CLIENT)
-  bookings  Booking[]
-  comments  Comment[] @relation("UserComments")
-  createdAt DateTime  @default(now())
+id String @id @default(uuid())
+email String @unique
+name String?
+password String?
+googleId String?
+role Role @default(CLIENT)
+bookings Booking[]
+comments Comment[] @relation("UserComments")
+
+// DJ Profile relation
+djProfile DjProfile?
+
+// Reviews relation
+reviews Review[] @relation("UserReviews")
+
+createdAt DateTime @default(now())
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  eventType String
-  eventDate DateTime
-  message   String
-  isPaid    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  bookingType String?
-  packageKey String?
-  quotedPriceCents Int?
-  details Json?
-  status BookingStatus @default(PENDING)
-  checkoutSessionId String? // Stripe session used to payment
-  paidAt DateTime?
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
 
-  @@index([status])
+// DJ assignment
+djId String?
+dj DjProfile? @relation(fields: [djId], references: [id])
+
+eventType String
+eventDate DateTime
+startTime DateTime // Start time of the event
+endTime DateTime // End time of the event
+message String
+isPaid Boolean @default(false)
+createdAt DateTime @default(now())
+bookingType String?
+packageKey String?
+quotedPriceCents Int?
+details Json?
+status BookingStatus @default(PENDING)
+checkoutSessionId String? // Stripe session used to payment
+paidAt DateTime?
+
+// Review relation
+review Review?
+
+@@index([status])
+@@index([djId])
 }
 
 model Mix {
-  id          String    @id @default(uuid())
-  title       String
-  description String
-  url         String
-  tags        String[]
-  uploadedAt  DateTime  @default(now())
-  comments    Comment[]
+id String @id @default(uuid())
+title String
+description String
+url String
+tags String[]
+uploadedAt DateTime @default(now())
+comments Comment[]
 }
 
 model Post {
-  id         String    @id @default(uuid())
-  title      String
-  content    String
-  coverImage String
-  createdAt  DateTime  @default(now())
-  comments   Comment[]
+id String @id @default(uuid())
+title String
+content String
+coverImage String
+createdAt DateTime @default(now())
+comments Comment[]
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
+id String @id @default(uuid())
+content String
+createdAt DateTime @default(now())
 
-  //relations
-  userId String
-  user   User    @relation("UserComments", fields: [userId], references: [id])
-  mixId  String?
-  mix    Mix?    @relation(fields: [mixId], references: [id])
-  postId String?
-  post   Post?   @relation(fields: [postId], references: [id])
+//relations
+userId String
+user User @relation("UserComments", fields: [userId], references: [id])
+mixId String?
+mix Mix? @relation(fields: [mixId], references: [id])
+postId String?
+post Post? @relation(fields: [postId], references: [id])
 }
 
 model Pricing {
-  id         String   @id @default(uuid())
-  type       String   // "Wedding" | "Club" | ...
-  key        String   // "silver" | "gold" | "2hr" | ...
-  label      String   // UI label shown in the dropdown
-  priceCents Int
-  isActive   Boolean  @default(true)
-  sortOrder  Int      @default(0)
+id String @id @default(uuid())
+type String // "Wedding" | "Club" | ...
+key String // "silver" | "gold" | "2hr" | ...
+label String // UI label shown in the dropdown
+priceCents Int
+isActive Boolean @default(true)
+sortOrder Int @default(0)
 
-  // v2 (multi-DJ): add this later
-  // djId     String?
-  // dj       DjProfile? @relation(fields: [djId], references: [id])
+// DJ assignment
+djId String?
+dj DjProfile? @relation(fields: [djId], references: [id])
 
-  @@unique([type, key]) // one package per type+key
-  @@index([type, sortOrder])
+@@unique([type, key, djId]) // one package per type+key+dj (null djId = platform default)
+@@index([type, sortOrder])
+@@index([djId])
 }
 
-
 enum Role {
-  ADMIN
-  DJ
-  CLIENT
+ADMIN
+DJ
+CLIENT
+}
+
+model DjProfile {
+id String @id @default(uuid())
+userId String @unique
+user User @relation(fields: [userId], references: [id])
+
+// DJ-specific fields
+stageName String
+bio String?
+genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"]
+experience Int // years of experience
+location String?
+travelRadius Int? // miles willing to travel
+
+// Media
+profileImage String?
+portfolio String[] // array of image URLs
+
+// Pricing
+basePriceCents Int? // base hourly rate
+
+// Availability
+isActive Boolean @default(true)
+isVerified Boolean @default(false)
+
+// Stats
+totalBookings Int @default(0)
+rating Float @default(0)
+reviewCount Int @default(0)
+
+// Relations
+bookings Booking[]
+pricing Pricing[]
+reviews Review[]
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+}
+
+model Review {
+id String @id @default(uuid())
+bookingId String @unique
+booking Booking @relation(fields: [bookingId], references: [id])
+
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+clientId String
+client User @relation("UserReviews", fields: [clientId], references: [id])
+
+rating Int // 1-5 stars
+comment String?
+
+createdAt DateTime @default(now())
 }
 
 enum BookingStatus {
-  PENDING
-  ACCEPTED  // waiting on payment
-  DECLINED
-  CONFIRMED   // paid
-  CANCELLED
+PENDING
+ACCEPTED // waiting on payment
+DECLINED
+CONFIRMED // paid
+CANCELLED
 }

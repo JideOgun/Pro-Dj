@@ -4,19 +4,24 @@ import { requireAdmin } from "@/lib/auth-guard";
 import Stripe from "stripe";
 import { sendMail } from "@/lib/email";
 import { acceptEmailHtml } from "@/lib/emails";
+import { isDjAvailable } from "@/lib/booking-utils";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-07-30.basil",
 });
 
 export async function PATCH(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });
+
+  const body = await req.json().catch(() => ({}));
+  const djId = body.djId ? String(body.djId).trim() : null;
+
   const booking = await prisma.booking.findUnique({
     where: { id },
     include: { user: { select: { email: true, name: true } } },
@@ -31,6 +36,41 @@ export async function PATCH(
       { ok: false, error: "No quote on booking" },
       { status: 400 }
     );
+
+  // If DJ is being assigned, check for conflicts
+  if (djId && booking.startTime && booking.endTime) {
+    const { available, conflictingBookings } = await isDjAvailable(
+      djId,
+      booking.startTime,
+      booking.endTime,
+      booking.id // Exclude current booking from conflict check
+    );
+
+    if (!available) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Selected DJ is not available for this time slot",
+          conflictingBookings: (
+            conflictingBookings as Array<{
+              id: string;
+              startTime: Date;
+              endTime: Date;
+              eventType: string;
+              user?: { name?: string; email?: string };
+            }>
+          ).map((b) => ({
+            id: b.id,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            eventType: b.eventType,
+            clientName: b.user?.name || b.user?.email,
+          })),
+        },
+        { status: 409 }
+      );
+    }
+  }
 
   // Create a Checkout Session for the quoted amount
   const session = await stripe.checkout.sessions.create({
@@ -62,7 +102,11 @@ export async function PATCH(
 
   const updated = await prisma.booking.update({
     where: { id: booking.id },
-    data: { status: "ACCEPTED", checkoutSessionId: session.id },
+    data: {
+      status: "ACCEPTED",
+      checkoutSessionId: session.id,
+      ...(djId && { djId }), // Assign DJ if provided
+    },
   });
 
   //send email with session.url to client (below)

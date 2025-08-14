@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token }) {
+    async jwt({ token, trigger, session }) {
       // Enrich token with DB user id + role
       if (token?.email) {
         const u = await prisma.user.findUnique({
@@ -79,6 +79,12 @@ export const authOptions: NextAuthOptions = {
           token.name = u.name;
         }
       }
+      
+      // Handle session update trigger
+      if (trigger === "update" && session) {
+        token.role = session.role;
+      }
+      
       return token;
     },
 

@@ -44,13 +44,13 @@ export default function Actions({
         <>
           <button
             onClick={() => run("accept")}
-            className="px-3 py-1 rounded bg-violet-600 hover:brightness-110"
+            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors"
           >
             Accept
           </button>
           <button
             onClick={() => run("decline")}
-            className="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700"
+            className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
           >
             Decline
           </button>
@@ -60,21 +60,23 @@ export default function Actions({
         <>
           <button
             onClick={copyLink}
-            className="px-3 py-1 rounded bg-blue-600 hover:brightness-110"
+            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
           >
             Copy Payment Link
           </button>
           {/* Temporary admin control until webhooks */}
           <button
             onClick={() => run("mark-paid")}
-            className="px-3 py-1 rounded bg-green-700 hover:brightness-110"
+            className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
           >
             Mark Paid (temp)
           </button>
         </>
       )}
       {status === "CONFIRMED" && (
-        <span className="px-3 py-1 rounded bg-green-700/70">Paid</span>
+        <span className="px-3 py-1.5 rounded-lg bg-green-700/50 text-green-200 text-sm font-medium">
+          Paid
+        </span>
       )}
     </div>
   );

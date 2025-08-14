@@ -16,6 +16,11 @@ export default async function DashboardPage() {
     redirect("/dashboard/client");
   }
 
-  // For ADMIN and DJ users, redirect to admin dashboard
+  // Redirect DJs to their dashboard
+  if (role === "DJ") {
+    redirect("/dashboard/dj");
+  }
+
+  // For ADMIN users, redirect to admin dashboard
   redirect("/dashboard/admin");
 }
