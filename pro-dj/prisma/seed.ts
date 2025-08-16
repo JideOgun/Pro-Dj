@@ -38,7 +38,7 @@ async function main() {
 
   const client = await prisma.user.upsert({
     where: { email: CLIENT_EMAIL },
-    update: { 
+    update: {
       role: Role.CLIENT,
       status: "ACTIVE", // Ensure client is active
     },
