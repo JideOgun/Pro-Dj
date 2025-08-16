@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SocketProvider, useSocketContext } from "@/components/SocketProvider";
+import { AlertTriangle, PartyPopper, Check, Calendar } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -99,7 +100,7 @@ function SuccessPageContent() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <AlertTriangle className="w-16 h-16 text-red-400 mb-4 mx-auto" />
           <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
           <p className="text-gray-300 mb-6">
             {error || "Unable to load your booking details"}
@@ -136,7 +137,7 @@ function SuccessPageContent() {
       <div className="max-w-4xl mx-auto p-6">
         {/* Success Header */}
         <div className="text-center mb-8">
-          <div className="text-green-400 text-6xl mb-4">🎉</div>
+          <PartyPopper className="w-16 h-16 text-green-400 mb-4 mx-auto" />
           <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
           <p className="text-gray-300 text-lg">
             Your booking has been confirmed and payment received
@@ -257,10 +258,16 @@ function SuccessPageContent() {
             What&apos;s Next?
           </h2>
           <div className="space-y-3 text-gray-300">
-            <p>✅ Your payment has been processed successfully</p>
+            <p>
+              <Check className="w-4 h-4 inline mr-1" />
+              Your payment has been processed successfully
+            </p>
             <p>📧 You&apos;ll receive a confirmation email shortly</p>
             <p>📞 Our DJ will contact you within 24 hours to discuss details</p>
-            <p>📅 We&apos;ll send you a reminder 1 week before your event</p>
+            <p>
+              <Calendar className="w-4 h-4 inline mr-1" />
+              We&apos;ll send you a reminder 1 week before your event
+            </p>
           </div>
         </div>
 
@@ -291,7 +298,8 @@ function SuccessPageContent() {
               {/* Current user is different from booking owner - only allow sign out */}
               <div className="text-center w-full">
                 <p className="text-yellow-400 mb-4">
-                  ⚠️ You are logged in as a different user than the one who made
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  You are logged in as a different user than the one who made
                   this payment.
                 </p>
                 <button

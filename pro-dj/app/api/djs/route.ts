@@ -3,50 +3,42 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const djs = await prisma.user.findMany({
+    // Get all DJ users first
+    const djUsers = await prisma.user.findMany({
       where: {
         role: "DJ",
-        djProfile: { isNot: null }, // Only users with DJ profiles
-      },
-      include: {
-        djProfile: {
-          select: {
-            id: true,
-            stageName: true,
-            genres: true,
-            customGenres: true,
-            basePriceCents: true,
-            bio: true,
-            location: true,
-            specialties: true,
-            equipment: true,
-            languages: true,
-            availability: true,
-            socialLinks: true,
-          },
-        },
-      },
-      orderBy: {
-        djProfile: {
-          stageName: "asc",
-        },
+        status: "ACTIVE",
       },
     });
 
-    const formattedDjs = djs.map((dj) => ({
-      id: dj.djProfile?.id || dj.id, // Use DjProfile.id for booking references
-      stageName: dj.djProfile?.stageName || "Unknown DJ",
-      genres: dj.djProfile?.genres || [],
-      customGenres: dj.djProfile?.customGenres || "",
-      basePriceCents: dj.djProfile?.basePriceCents || 0,
-      bio: dj.djProfile?.bio || "",
-      location: dj.djProfile?.location || "",
-      specialties: dj.djProfile?.specialties || "",
-      equipment: dj.djProfile?.equipment || "",
-      languages: dj.djProfile?.languages || [],
-      availability: dj.djProfile?.availability || "",
-      socialLinks: dj.djProfile?.socialLinks || {},
-    }));
+    // Then get their profiles
+    const djsWithProfiles = await Promise.all(
+      djUsers.map(async (user) => {
+        const profile = await prisma.djProfile.findUnique({
+          where: { userId: user.id },
+        });
+
+        if (profile && profile.isVerified && profile.isActive) {
+          return {
+            id: profile.id,
+            stageName: profile.stageName,
+            genres: profile.genres || [],
+            customGenres: profile.customGenres || "",
+            basePriceCents: profile.basePriceCents || 0,
+            bio: profile.bio || "",
+            location: profile.location || "",
+            specialties: profile.specialties || "",
+            equipment: profile.equipment || "",
+            languages: profile.languages || [],
+            availability: profile.availability || "",
+            socialLinks: profile.socialLinks || {},
+          };
+        }
+        return null;
+      })
+    );
+
+    const formattedDjs = djsWithProfiles.filter(Boolean);
 
     return NextResponse.json(
       {

@@ -154,9 +154,15 @@ export async function getAvailableDjs(
   }>
 > {
   const allDjs = await prisma.djProfile.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      isVerified: true, // Only show verified DJs
+      user: {
+        status: "ACTIVE", // Only show active users
+      },
+    },
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, status: true } },
     },
   });
 
@@ -183,7 +189,11 @@ export function validateBookingTime(
 
   // Check if booking is in the past
   if (startTime <= now) {
-    return { valid: false, error: "Booking cannot be in the past" };
+    return {
+      valid: false,
+      error:
+        "❌ Event time has already passed. Please select a future date and time for your event.",
+    };
   }
 
   // Check if booking is too far in the future (e.g., 2 years)
@@ -192,7 +202,8 @@ export function validateBookingTime(
   if (startTime > twoYearsFromNow) {
     return {
       valid: false,
-      error: "Booking cannot be more than 2 years in the future",
+      error:
+        "📅 Event date is too far in the future. Please select a date within the next 2 years for your booking.",
     };
   }
 
@@ -207,10 +218,18 @@ export function validateBookingTime(
 
   // Check if booking duration is reasonable (e.g., 1-12 hours)
   if (adjustedDurationHours < 1) {
-    return { valid: false, error: "Booking must be at least 1 hour long" };
+    return {
+      valid: false,
+      error:
+        "⏰ Event duration is too short. Please ensure your event is at least 1 hour long.",
+    };
   }
   if (adjustedDurationHours > 12) {
-    return { valid: false, error: "Booking cannot exceed 12 hours" };
+    return {
+      valid: false,
+      error:
+        "⏰ Event duration is too long. Please keep your event under 12 hours for optimal DJ performance.",
+    };
   }
 
   return { valid: true };

@@ -21,6 +21,10 @@ name String?
 password String?
 googleId String?
 role Role @default(CLIENT)
+status UserStatus @default(ACTIVE)
+suspendedAt DateTime?
+suspendedBy String? // Admin ID who suspended the user
+suspensionReason String?
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 
@@ -34,6 +38,7 @@ reviews Review[] @relation("UserReviews")
 notifications Notification[] @relation("UserNotifications")
 
 createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 }
 
 model Booking {
@@ -59,6 +64,15 @@ details Json?
 status BookingStatus @default(PENDING)
 checkoutSessionId String? // Stripe session used to payment
 paidAt DateTime?
+
+// Cancellation and refund fields
+cancellationReason String?
+cancelledAt DateTime?
+cancelledBy String? // ID of admin who cancelled
+refundId String? // Stripe refund ID
+refundedAt DateTime?
+refundAmount Int? // Amount refunded in cents
+totalAmount Int? // Total booking amount in cents
 
 // Review relation
 review Review?
@@ -108,7 +122,7 @@ id String @id @default(uuid())
 type String // "Wedding" | "Club" | ...
 key String // "silver" | "gold" | "2hr" | ...
 label String // UI label shown in the dropdown
-priceCents Int
+priceCents Int // Base price per hour in cents
 isActive Boolean @default(true)
 sortOrder Int @default(0)
 
@@ -199,6 +213,12 @@ ACCEPTED // waiting on payment
 DECLINED
 CONFIRMED // paid
 CANCELLED
+}
+
+enum UserStatus {
+ACTIVE
+SUSPENDED
+PENDING
 }
 
 model Notification {

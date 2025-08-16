@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { recoveryId, action, response } = body;
+    const { recoveryId, action, response, notificationId } = body;
 
     if (action === "accept") {
       const success = await acceptRecoverySuggestion(
@@ -74,6 +74,14 @@ export async function POST(req: Request) {
       );
 
       if (success) {
+        // Mark notification as read if provided
+        if (notificationId) {
+          await prisma.notification.update({
+            where: { id: notificationId },
+            data: { isRead: true },
+          });
+        }
+
         return NextResponse.json(
           {
             ok: true,
@@ -95,6 +103,14 @@ export async function POST(req: Request) {
           clientResponse: response || "",
         },
       });
+
+      // Mark notification as read if provided
+      if (notificationId) {
+        await prisma.notification.update({
+          where: { id: notificationId },
+          data: { isRead: true },
+        });
+      }
 
       return NextResponse.json(
         {

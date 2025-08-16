@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
+import NotificationsContainer from "@/components/NotificationsContainer";
+import { Music, AlertTriangle, Calendar } from "lucide-react";
 
 export default async function ClientDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -87,87 +89,16 @@ export default async function ClientDashboardPage() {
               &quot;New Booking&quot; below or head to the homepage!
             </p>
             <p className="text-violet-200 text-sm mt-2">
-              🎵 <strong>Multi-DJ Bookings:</strong> You can now book multiple
-              DJs for the same event with different time slots. Each DJ will
-              receive their own booking request.
+              <Music className="w-5 h-5 inline mr-2" />
+              <strong>Multi-DJ Bookings:</strong> You can now book multiple DJs
+              for the same event with different time slots. Each DJ will receive
+              their own booking request.
             </p>
           </div>
         </div>
 
         {/* Notifications */}
-        {notifications.length > 0 && (
-          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-yellow-400">
-              ⚠️ Important Notifications
-            </h2>
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className="bg-gray-800/50 rounded-lg p-4"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium text-white mb-1">
-                        {notification.title}
-                      </h3>
-                      <p className="text-gray-300 text-sm mb-2">
-                        {notification.message}
-                      </p>
-                      {notification.data &&
-                        typeof notification.data === "object" && (
-                          <div className="text-xs text-gray-400">
-                            {"reason" in notification.data &&
-                              notification.data.reason && (
-                                <p>
-                                  <strong>Reason:</strong>{" "}
-                                  {String(notification.data.reason)}
-                                </p>
-                              )}
-                            {"suggestions" in notification.data &&
-                              Array.isArray(notification.data.suggestions) && (
-                                <div className="mt-2">
-                                  <p className="font-medium text-yellow-300 mb-1">
-                                    Recovery Options:
-                                  </p>
-                                  <ul className="list-disc list-inside space-y-1">
-                                    {notification.data.suggestions.map(
-                                      (suggestion, index: number) => {
-                                        const typedSuggestion = suggestion as {
-                                          message: string;
-                                        };
-                                        return (
-                                          <li key={index} className="text-xs">
-                                            {typedSuggestion.message}
-                                          </li>
-                                        );
-                                      }
-                                    )}
-                                  </ul>
-                                </div>
-                              )}
-                          </div>
-                        )}
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(notification.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {notification.actionUrl && (
-                    <div className="mt-3">
-                      <Link
-                        href={notification.actionUrl}
-                        className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-                      >
-                        Take Action
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <NotificationsContainer initialNotifications={notifications} />
 
         {/* User Info Card */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
@@ -214,7 +145,7 @@ export default async function ClientDashboardPage() {
 
           {bookings.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-400 text-6xl mb-4">📅</div>
+              <Calendar className="w-16 h-16 text-gray-400 mb-4 mx-auto" />
               <h3 className="text-lg font-medium mb-2">No bookings yet</h3>
               <p className="text-gray-300 mb-4">
                 Ready to book your next event?
@@ -301,7 +232,7 @@ export default async function ClientDashboardPage() {
             href="/book"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
           >
-            <div className="text-3xl mb-2">🎵</div>
+            <Music className="w-8 h-8 mb-2" />
             <h3 className="font-semibold mb-2">Book New Event</h3>
             <p className="text-gray-400 text-sm">
               Request a booking for your next event

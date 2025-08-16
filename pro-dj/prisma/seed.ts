@@ -13,12 +13,14 @@ async function main() {
     update: {
       role: Role.ADMIN,
       password: hashedPassword, // Update password too
+      status: "ACTIVE", // Ensure admin is active
     },
     create: {
       email: ADMIN_EMAIL,
       name: "Jay Baba",
       password: hashedPassword,
       role: Role.ADMIN,
+      status: "ACTIVE", // Ensure admin is active
     },
   });
 
@@ -36,12 +38,16 @@ async function main() {
 
   const client = await prisma.user.upsert({
     where: { email: CLIENT_EMAIL },
-    update: { role: Role.CLIENT },
+    update: { 
+      role: Role.CLIENT,
+      status: "ACTIVE", // Ensure client is active
+    },
     create: {
       email: CLIENT_EMAIL,
       name: "Test Client",
       password: clientHashedPassword,
       role: Role.CLIENT,
+      status: "ACTIVE", // Ensure client is active
     },
   });
 
@@ -98,7 +104,7 @@ async function main() {
         type: "Wedding",
         key: "silver",
         label: "Silver Package",
-        priceCents: 50000,
+        priceCents: 15000, // $150/hour
         sortOrder: 1,
         isActive: true,
       },
@@ -106,7 +112,7 @@ async function main() {
         type: "Wedding",
         key: "gold",
         label: "Gold Package",
-        priceCents: 75000,
+        priceCents: 20000, // $200/hour
         sortOrder: 2,
         isActive: true,
       },
@@ -114,7 +120,7 @@ async function main() {
         type: "Wedding",
         key: "platinum",
         label: "Platinum Package",
-        priceCents: 100000,
+        priceCents: 25000, // $250/hour
         sortOrder: 3,
         isActive: true,
       },
@@ -122,25 +128,25 @@ async function main() {
       // Club packages
       {
         type: "Club",
-        key: "2hr",
-        label: "2 Hours",
-        priceCents: 20000,
+        key: "basic",
+        label: "Basic Club Package",
+        priceCents: 10000, // $100/hour
         sortOrder: 1,
         isActive: true,
       },
       {
         type: "Club",
-        key: "3hr",
-        label: "3 Hours",
-        priceCents: 30000,
+        key: "premium",
+        label: "Premium Club Package",
+        priceCents: 15000, // $150/hour
         sortOrder: 2,
         isActive: true,
       },
       {
         type: "Club",
-        key: "4hr",
-        label: "4 Hours",
-        priceCents: 40000,
+        key: "vip",
+        label: "VIP Club Package",
+        priceCents: 20000, // $200/hour
         sortOrder: 3,
         isActive: true,
       },
@@ -148,17 +154,17 @@ async function main() {
       // Corporate Event packages
       {
         type: "Corporate",
-        key: "halfday",
-        label: "Half Day",
-        priceCents: 60000,
+        key: "basic",
+        label: "Basic Corporate Package",
+        priceCents: 12000, // $120/hour
         sortOrder: 1,
         isActive: true,
       },
       {
         type: "Corporate",
-        key: "fullday",
-        label: "Full Day",
-        priceCents: 120000,
+        key: "premium",
+        label: "Premium Corporate Package",
+        priceCents: 18000, // $180/hour
         sortOrder: 2,
         isActive: true,
       },
@@ -166,17 +172,17 @@ async function main() {
       // Private Party Packages
       {
         type: "Private Party",
-        key: "private_basic",
-        label: "Basic Private Party (3 hours)",
-        priceCents: 30000,
+        key: "basic",
+        label: "Basic Private Party Package",
+        priceCents: 8000, // $80/hour
         sortOrder: 1,
         isActive: true,
       },
       {
         type: "Private Party",
-        key: "private_vip",
-        label: "VIP Private Party (5 hours, lighting + MC)",
-        priceCents: 60000,
+        key: "premium",
+        label: "Premium Private Party Package",
+        priceCents: 12000, // $120/hour
         sortOrder: 2,
         isActive: true,
       },
@@ -184,17 +190,17 @@ async function main() {
       // Birthday Packages
       {
         type: "Birthday",
-        key: "birthday_basic",
-        label: "Basic Birthday Package (2 hours)",
-        priceCents: 20000,
+        key: "basic",
+        label: "Basic Birthday Package",
+        priceCents: 6000, // $60/hour
         sortOrder: 1,
         isActive: true,
       },
       {
         type: "Birthday",
-        key: "birthday_premium",
-        label: "Premium Birthday Package (4 hours, lighting)",
-        priceCents: 40000,
+        key: "premium",
+        label: "Premium Birthday Package",
+        priceCents: 10000, // $100/hour
         sortOrder: 2,
         isActive: true,
       },
@@ -252,12 +258,14 @@ async function main() {
         role: Role.DJ,
         name: djData.name,
         password: hashedPassword,
+        status: "ACTIVE", // Set existing DJs as active
       },
       create: {
         email: djData.email,
         name: djData.name,
         password: hashedPassword,
         role: Role.DJ,
+        status: "ACTIVE", // Set new DJs as active
       },
     });
 
@@ -272,6 +280,8 @@ async function main() {
         location: djData.location,
         travelRadius: djData.travelRadius,
         basePriceCents: djData.basePriceCents,
+        isVerified: true, // Mark existing DJs as verified
+        isActive: true, // Mark existing DJs as active
       },
       create: {
         userId: dj.id,
@@ -282,6 +292,8 @@ async function main() {
         location: djData.location,
         travelRadius: djData.travelRadius,
         basePriceCents: djData.basePriceCents,
+        isVerified: true, // Mark new DJs as verified
+        isActive: true, // Mark new DJs as active
       },
     });
 

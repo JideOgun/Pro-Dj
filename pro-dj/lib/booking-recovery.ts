@@ -99,6 +99,8 @@ async function generateRecoverySuggestions(
     endTime: Date;
     eventDate: Date;
     eventType: string;
+    djId?: string | null;
+    details?: unknown;
   },
   eventBookings: Array<{
     id: string;
@@ -153,28 +155,62 @@ async function generateRecoverySuggestions(
     rejectedBooking.endTime
   );
 
-  // Filter out DJs already booked for this event
+  // Filter out DJs already booked for this event AND the original rejected DJ
   const eventDjIds = eventBookings.map((b) => b.djId).filter(Boolean);
-  const newDjs = availableDjs.filter((dj) => !eventDjIds.includes(dj.id));
+  const originalDjId = rejectedBooking.djId; // Get the original DJ's ID
+  const newDjs = availableDjs.filter(
+    (dj) => !eventDjIds.includes(dj.id) && dj.id !== originalDjId
+  );
 
-  // Suggest top 3 available DJs
-  for (const dj of newDjs.slice(0, 3)) {
-    if (dj.basePriceCents !== null) {
+  // Get client preferences from booking details
+  const clientPreferences = rejectedBooking.details as {
+    preferredGenres?: string[];
+    musicStyle?: string;
+    eventVibe?: string;
+  } | null;
+
+  // Sort DJs by preference match if client has preferences
+  let sortedDjs = newDjs;
+  if (clientPreferences?.preferredGenres?.length) {
+    sortedDjs = newDjs.sort((a, b) => {
+      const aMatches = a.genres.filter((genre) =>
+        clientPreferences.preferredGenres!.includes(genre)
+      ).length;
+      const bMatches = b.genres.filter((genre) =>
+        clientPreferences.preferredGenres!.includes(genre)
+      ).length;
+      return bMatches - aMatches; // Sort by most matches first
+    });
+  }
+
+  // Suggest only ONE DJ replacement (the best match based on preferences)
+  if (sortedDjs.length > 0) {
+    const bestMatchDj = sortedDjs[0];
+    if (bestMatchDj.basePriceCents !== null) {
       suggestions.push({
         type: "NEW_DJ",
-        suggestedDjId: dj.id,
+        suggestedDjId: bestMatchDj.id,
         suggestedDj: {
-          id: dj.id,
-          stageName: dj.stageName,
-          genres: dj.genres,
-          basePriceCents: dj.basePriceCents,
+          id: bestMatchDj.id,
+          stageName: bestMatchDj.stageName,
+          genres: bestMatchDj.genres,
+          basePriceCents: bestMatchDj.basePriceCents,
         },
-        message: `Book ${
-          dj.stageName
-        } for the same time slot (${rejectedBooking.startTime.toLocaleTimeString()} - ${rejectedBooking.endTime.toLocaleTimeString()})`,
-        actionUrl: `/book?djId=${dj.id}&eventDate=${
+        message: `Replace with ${
+          bestMatchDj.stageName
+        } for the same time slot (${rejectedBooking.startTime.toLocaleTimeString()} - ${rejectedBooking.endTime.toLocaleTimeString()})${
+          clientPreferences?.preferredGenres?.length
+            ? ` - Specializes in ${bestMatchDj.genres
+                .filter((genre) =>
+                  clientPreferences.preferredGenres!.includes(genre)
+                )
+                .slice(0, 2)
+                .join(", ")}`
+            : ""
+        }`,
+        actionUrl: `/book?djId=${bestMatchDj.id}&eventDate=${
           rejectedBooking.eventDate.toISOString().split("T")[0]
-        }&startTime=${rejectedBooking.startTime.toLocaleTimeString()}&endTime=${rejectedBooking.endTime.toLocaleTimeString()}`,
+        }&startTime=${rejectedBooking.startTime.toLocaleTimeString()}&endTime=${rejectedBooking.endTime.toLocaleTimeString()}&recovery=true`,
       });
     }
   }

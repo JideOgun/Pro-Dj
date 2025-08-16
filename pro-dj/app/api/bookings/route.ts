@@ -90,6 +90,9 @@ export async function POST(req: Request) {
     const message = String(body?.message ?? "").trim();
     const djId = body?.djId ? String(body.djId).trim() : null;
     const extra = body?.extra ?? null; // optional future use
+    const preferredGenres = body?.preferredGenres ?? [];
+    const musicStyle = String(body?.musicStyle ?? "").trim();
+    const eventVibe = String(body?.eventVibe ?? "").trim();
 
     console.log("Parsed values:", {
       bookingType,
@@ -110,7 +113,11 @@ export async function POST(req: Request) {
       !message
     ) {
       return NextResponse.json(
-        { ok: false, error: "Missing required fields" },
+        {
+          ok: false,
+          error:
+            "⚠️ Please fill in all required fields to complete your booking request.",
+        },
         { status: 400 }
       );
     }
@@ -124,7 +131,11 @@ export async function POST(req: Request) {
 
     if (!pkg) {
       return NextResponse.json(
-        { ok: false, error: "Invalid type or package" },
+        {
+          ok: false,
+          error:
+            "🎵 Please select a valid event type and package for your booking.",
+        },
         { status: 400 }
       );
     }
@@ -153,7 +164,11 @@ export async function POST(req: Request) {
     } catch (error) {
       console.error("Date parsing error:", error);
       return NextResponse.json(
-        { ok: false, error: "Invalid date/time format" },
+        {
+          ok: false,
+          error:
+            "📅 Please check your event date and time format. Make sure to select a valid date and time for your event.",
+        },
         { status: 400 }
       );
     }
@@ -197,7 +212,7 @@ export async function POST(req: Request) {
         {
           ok: false,
           error:
-            "This time slot conflicts with another DJ booking for the same event",
+            "⏰ Time slot conflict detected! Another DJ is already booked for this event time. Please select a different time slot or contact us for assistance.",
           conflictingBookings: (
             eventTimeConflictingBookings as Array<{
               id: string;
@@ -234,7 +249,8 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             ok: false,
-            error: "Selected DJ is not available for this time slot",
+            error:
+              "🎧 This DJ is not available for your selected time slot. Please choose a different time or select another DJ for your event.",
             conflictingBookings: (
               conflictingBookings as Array<{
                 id: string;
@@ -256,6 +272,19 @@ export async function POST(req: Request) {
       }
     }
 
+    // Calculate total price based on duration
+    const durationHours =
+      (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+    const totalPriceCents = Math.round(pkg.priceCents * durationHours);
+
+    // Combine all details including preferences
+    const bookingDetails = {
+      ...extra,
+      preferredGenres,
+      musicStyle,
+      eventVibe,
+    };
+
     console.log("Creating booking with data:", {
       userId: String(session.user?.id),
       djId,
@@ -265,8 +294,10 @@ export async function POST(req: Request) {
       endTime: endDateTime,
       message,
       packageKey,
-      quotedPriceCents: pkg.priceCents,
-      details: extra,
+      basePricePerHourCents: pkg.priceCents,
+      durationHours,
+      totalPriceCents,
+      details: bookingDetails,
     });
 
     const booking = await prisma.booking.create({
@@ -279,8 +310,8 @@ export async function POST(req: Request) {
         endTime: endDateTime,
         message,
         packageKey,
-        quotedPriceCents: pkg.priceCents,
-        details: extra,
+        quotedPriceCents: totalPriceCents,
+        details: bookingDetails,
       },
     });
 
@@ -293,7 +324,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { ok: true, data: booking, quotedPriceCents: pkg.priceCents },
+      { ok: true, data: booking, quotedPriceCents: totalPriceCents },
       { status: 201 }
     );
   } catch (error: unknown) {

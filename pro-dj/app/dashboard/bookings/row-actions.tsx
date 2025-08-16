@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSocketContext } from "../../../components/SocketProvider";
+import { X, Copy, Check, XCircle } from "lucide-react";
 
 interface PaymentLinkModalProps {
   isOpen: boolean;
@@ -26,19 +27,7 @@ function PaymentLinkModal({
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
         <p className="text-gray-300 text-sm mb-4">
@@ -161,19 +150,21 @@ export default function Actions({
 
   return (
     <>
-      <div className="flex gap-2 justify-end">
+      <div className="flex flex-col sm:flex-row gap-1 justify-end">
         {status === "PENDING" && (
           <>
             <button
               onClick={() => run("accept")}
-              className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition-colors"
+              className="px-2 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
             >
+              <Check size={12} />
               Accept
             </button>
             <button
               onClick={() => run("decline")}
-              className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+              className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
             >
+              <XCircle size={12} />
               Decline
             </button>
           </>
@@ -181,9 +172,10 @@ export default function Actions({
         {status === "ACCEPTED" && (
           <button
             onClick={showPaymentLink}
-            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
           >
-            Show Payment Link
+            <Copy size={12} />
+            Payment
           </button>
         )}
       </div>

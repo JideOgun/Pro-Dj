@@ -5,6 +5,15 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
 import BookingCalendar from "@/components/BookingCalendar";
+import {
+  Users,
+  Calendar,
+  Music,
+  User,
+  ClipboardList,
+  DollarSign,
+  ArrowRight,
+} from "lucide-react";
 
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -115,7 +124,7 @@ export default async function AdminDashboardPage() {
                 <p className="text-gray-400 text-sm">Total Users</p>
                 <p className="text-2xl font-bold text-white">{totalUsers}</p>
               </div>
-              <div className="text-3xl">👥</div>
+              <Users className="w-8 h-8" />
             </div>
             <div className="mt-4 flex space-x-2 text-xs">
               <span className="bg-blue-900/30 text-blue-200 px-2 py-1 rounded">
@@ -133,7 +142,7 @@ export default async function AdminDashboardPage() {
                 <p className="text-gray-400 text-sm">Total Bookings</p>
                 <p className="text-2xl font-bold text-white">{totalBookings}</p>
               </div>
-              <div className="text-3xl">📅</div>
+              <Calendar className="w-8 h-8" />
             </div>
             <div className="mt-4 flex space-x-2 text-xs">
               <span className="bg-yellow-900/30 text-yellow-200 px-2 py-1 rounded">
@@ -151,14 +160,14 @@ export default async function AdminDashboardPage() {
                 <p className="text-gray-400 text-sm">DJs</p>
                 <p className="text-2xl font-bold text-violet-400">{totalDjs}</p>
               </div>
-              <div className="text-3xl">🎵</div>
+              <Music className="w-8 h-8" />
             </div>
             <div className="mt-4">
               <Link
-                href="/dashboard/djs"
+                href="/dashboard/admin/djs"
                 className="text-violet-400 hover:text-violet-300 text-sm"
               >
-                Manage DJs →
+                Manage DJs <ArrowRight className="w-4 h-4 inline ml-1" />
               </Link>
             </div>
           </div>
@@ -171,14 +180,14 @@ export default async function AdminDashboardPage() {
                   {totalClients}
                 </p>
               </div>
-              <div className="text-3xl">👤</div>
+              <User className="w-8 h-8" />
             </div>
             <div className="mt-4">
               <Link
-                href="/dashboard/clients"
+                href="/dashboard/admin/clients"
                 className="text-blue-400 hover:text-blue-300 text-sm"
               >
-                View Clients →
+                View Clients <ArrowRight className="w-4 h-4 inline ml-1" />
               </Link>
             </div>
           </div>
@@ -191,10 +200,10 @@ export default async function AdminDashboardPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
-              href="/dashboard/bookings"
+              href="/dashboard/admin/bookings"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
-              <div className="text-2xl mb-2">📋</div>
+              <ClipboardList className="w-6 h-6 mb-2" />
               <h3 className="font-semibold mb-1">Manage Bookings</h3>
               <p className="text-gray-400 text-sm">
                 View and manage all booking requests
@@ -202,10 +211,43 @@ export default async function AdminDashboardPage() {
             </Link>
 
             <Link
+              href="/dashboard/admin/users"
+              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <Users className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">User Management</h3>
+              <p className="text-gray-400 text-sm">
+                Manage users, roles, and account statuses
+              </p>
+            </Link>
+
+            <Link
+              href="/dashboard/admin/djs"
+              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <Music className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">DJ Management</h3>
+              <p className="text-gray-400 text-sm">
+                Manage DJ profiles and approvals
+              </p>
+            </Link>
+
+            <Link
+              href="/dashboard/admin/clients"
+              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <Users className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">Client Management</h3>
+              <p className="text-gray-400 text-sm">
+                Manage client accounts and activity
+              </p>
+            </Link>
+
+            <Link
               href="/dashboard/admin/calendar"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
-              <div className="text-2xl mb-2">📅</div>
+              <Calendar className="w-6 h-6 mb-2" />
               <h3 className="font-semibold mb-1">Calendar</h3>
               <p className="text-gray-400 text-sm">
                 View upcoming bookings and DJ availability
@@ -216,7 +258,7 @@ export default async function AdminDashboardPage() {
               href="/dashboard/pricing"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
-              <div className="text-2xl mb-2">💰</div>
+              <DollarSign className="w-6 h-6 mb-2" />
               <h3 className="font-semibold mb-1">Pricing</h3>
               <p className="text-gray-400 text-sm">
                 Manage platform pricing packages
@@ -227,7 +269,7 @@ export default async function AdminDashboardPage() {
               href="/dashboard/media"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
-              <div className="text-2xl mb-2">🎵</div>
+              <Music className="w-6 h-6 mb-2" />
               <h3 className="font-semibold mb-1">Upload Mix</h3>
               <p className="text-gray-400 text-sm">
                 Add new music mixes to the platform
@@ -241,7 +283,8 @@ export default async function AdminDashboardPage() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-2xl font-bold text-violet-400 mb-1">
-                📅 Booking Calendar
+                <Calendar className="w-6 h-6 inline mr-2" />
+                Booking Calendar
               </h2>
               <p className="text-gray-400 text-sm">
                 Interactive calendar with all your DJ bookings
@@ -251,7 +294,7 @@ export default async function AdminDashboardPage() {
               href="/dashboard/admin/calendar"
               className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
             >
-              View Full Calendar →
+              View Full Calendar <ArrowRight className="w-4 h-4 inline ml-1" />
             </Link>
           </div>
 
@@ -291,13 +334,13 @@ export default async function AdminDashboardPage() {
                 href="/dashboard/bookings"
                 className="text-violet-400 hover:text-violet-300 text-sm"
               >
-                View All →
+                View All <ArrowRight className="w-4 h-4 inline ml-1" />
               </Link>
             </div>
 
             {recentBookings.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                <div className="text-4xl mb-2">📅</div>
+                <Calendar className="w-12 h-12 mb-2 mx-auto" />
                 <p>No bookings yet</p>
               </div>
             ) : (
@@ -345,13 +388,13 @@ export default async function AdminDashboardPage() {
                 href="/dashboard/users"
                 className="text-violet-400 hover:text-violet-300 text-sm"
               >
-                View All →
+                View All <ArrowRight className="w-4 h-4 inline ml-1" />
               </Link>
             </div>
 
             {recentUsers.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                <div className="text-4xl mb-2">👥</div>
+                <Users className="w-12 h-12 mb-2 mx-auto" />
                 <p>No users yet</p>
               </div>
             ) : (

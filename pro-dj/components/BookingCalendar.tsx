@@ -5,6 +5,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Calendar } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -113,7 +114,7 @@ export default function BookingCalendar({ bookings }: BookingCalendarProps) {
       {events.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-400">
           <div className="text-center">
-            <div className="text-6xl mb-4">📅</div>
+            <Calendar className="w-16 h-16 mb-4 mx-auto" />
             <p className="text-lg font-medium">
               No bookings with valid times found
             </p>

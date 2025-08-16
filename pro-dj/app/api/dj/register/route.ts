@@ -77,10 +77,13 @@ export async function POST(req: Request) {
       },
     });
 
-    // Update user role to DJ
+    // Update user role to DJ and set status to PENDING for admin approval
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { role: "DJ" },
+      data: {
+        role: "DJ",
+        status: "PENDING", // Require admin approval
+      },
     });
 
     return NextResponse.json({ ok: true, djProfile }, { status: 201 });

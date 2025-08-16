@@ -2,6 +2,16 @@
 
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import {
+  Music,
+  ClipboardList,
+  Headphones,
+  ArrowRight,
+  Target,
+  Settings,
+  Lock,
+  Zap,
+} from "lucide-react";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -80,13 +90,15 @@ export default function Home() {
                     href="/book"
                     className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    🎵 Book a DJ
+                    <Music className="w-5 h-5 inline mr-2" />
+                    Book a DJ
                   </Link>
                   <Link
                     href="/dashboard/client"
                     className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    📋 My Bookings
+                    <ClipboardList className="w-5 h-5 inline mr-2" />
+                    My Bookings
                   </Link>
                 </>
               )}
@@ -103,13 +115,15 @@ export default function Home() {
                     href="/dashboard/dj"
                     className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    🎧 DJ Dashboard
+                    <Headphones className="w-5 h-5 inline mr-2" />
+                    DJ Dashboard
                   </Link>
                   <Link
                     href="/dashboard/bookings"
                     className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    📋 My Bookings
+                    <ClipboardList className="w-5 h-5 inline mr-2" />
+                    My Bookings
                   </Link>
                 </>
               )}
@@ -119,13 +133,15 @@ export default function Home() {
                     href="/dashboard/admin"
                     className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    ⚙️ Admin Dashboard
+                    <Settings className="w-5 h-5 inline mr-2" />
+                    Admin Dashboard
                   </Link>
                   <Link
                     href="/dashboard/bookings"
                     className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
-                    📋 All Bookings
+                    <ClipboardList className="w-5 h-5 inline mr-2" />
+                    All Bookings
                   </Link>
                 </>
               )}
@@ -137,13 +153,15 @@ export default function Home() {
                 href="/book"
                 className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
-                🎵 Book a DJ
+                <Music className="w-5 h-5 inline mr-2" />
+                Book a DJ
               </Link>
               <Link
                 href="/auth"
                 className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
-                🔐 Sign In
+                <Lock className="w-5 h-5 inline mr-2" />
+                Sign In
               </Link>
             </div>
           )}
@@ -152,21 +170,21 @@ export default function Home() {
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-16">
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-violet-500/30 transition-all duration-300">
-            <div className="text-4xl mb-4">🎵</div>
+            <Music className="w-12 h-12 mb-4 mx-auto" />
             <h3 className="text-xl font-bold text-white mb-2">Multiple DJs</h3>
             <p className="text-gray-400">
               Choose from a diverse selection of professional DJs
             </p>
           </div>
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-purple-500/30 transition-all duration-300">
-            <div className="text-4xl mb-4">⚡</div>
+            <Zap className="w-12 h-12 mb-4 mx-auto" />
             <h3 className="text-xl font-bold text-white mb-2">Easy Booking</h3>
             <p className="text-gray-400">
               Simple booking process with instant confirmation
             </p>
           </div>
           <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded-2xl p-6 text-center hover:border-pink-500/30 transition-all duration-300">
-            <div className="text-4xl mb-4">🎯</div>
+            <Target className="w-12 h-12 mb-4 mx-auto" />
             <h3 className="text-xl font-bold text-white mb-2">
               Secure Payments
             </h3>
@@ -181,7 +199,7 @@ export default function Home() {
           <div className="text-center">
             <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 max-w-2xl mx-auto">
               <h2 className="text-2xl font-bold text-white mb-4">
-                Are you a DJ? 🎧
+                Are you a DJ? <Headphones className="w-6 h-6 inline ml-2" />
               </h2>
               <p className="text-lg text-gray-300 mb-6">
                 Join our platform and start getting booked for events. Manage

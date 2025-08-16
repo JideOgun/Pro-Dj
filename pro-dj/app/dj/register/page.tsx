@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { Music, DollarSign } from "lucide-react";
 
 export default function DjRegisterPage() {
   const { data: session } = useSession();
@@ -148,7 +149,7 @@ export default function DjRegisterPage() {
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
           <div className="bg-gray-800 rounded-lg p-8">
-            <div className="text-6xl mb-4">🎵</div>
+            <Music className="w-16 h-16 mb-4 mx-auto" />
             <h1 className="text-2xl font-bold mb-4">Join as a DJ</h1>
             <p className="text-gray-300 mb-6">
               Please sign in to create your DJ profile and start getting
@@ -480,11 +481,11 @@ export default function DjRegisterPage() {
                 <p>Your profile will be reviewed and verified</p>
               </div>
               <div>
-                <div className="text-2xl mb-2">💰</div>
+                <DollarSign className="w-6 h-6 mb-2" />
                 <p>Set up your pricing packages</p>
               </div>
               <div>
-                <div className="text-2xl mb-2">🎵</div>
+                <Music className="w-6 h-6 mb-2" />
                 <p>Start receiving booking requests</p>
               </div>
             </div>

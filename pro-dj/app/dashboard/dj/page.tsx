@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
 import BookingCalendar from "@/components/BookingCalendar";
+import { Music, Calendar, User, ClipboardList, ArrowRight } from "lucide-react";
 
 export default async function DjDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -87,7 +88,8 @@ export default async function DjDashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {djProfile.stageName}! 🎵
+            Welcome back, {djProfile.stageName}!{" "}
+            <Music className="w-6 h-6 inline ml-2" />
           </h1>
           <p className="text-gray-300">
             Manage your bookings, profile, and earnings
@@ -184,7 +186,8 @@ export default async function DjDashboardPage() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-2xl font-bold text-violet-400 mb-1">
-                📅 Your Booking Calendar
+                <Calendar className="w-6 h-6 inline mr-2" />
+                Your Booking Calendar
               </h2>
               <p className="text-gray-400 text-sm">
                 Interactive calendar with all your DJ bookings
@@ -194,7 +197,7 @@ export default async function DjDashboardPage() {
               href="/dashboard/dj/calendar"
               className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
             >
-              View Full Calendar →
+              View Full Calendar <ArrowRight className="w-4 h-4 inline ml-1" />
             </Link>
           </div>
           <div className="h-[400px]">
@@ -236,7 +239,7 @@ export default async function DjDashboardPage() {
 
           {bookings.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-400 text-6xl mb-4">📅</div>
+              <Calendar className="w-16 h-16 text-gray-400 mb-4 mx-auto" />
               <h3 className="text-lg font-medium mb-2">No bookings yet</h3>
               <p className="text-gray-300 mb-4">
                 Your booking requests will appear here
@@ -299,7 +302,7 @@ export default async function DjDashboardPage() {
             href="/dj/profile/edit"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
           >
-            <div className="text-3xl mb-2">👤</div>
+            <User className="w-8 h-8 mb-2" />
             <h3 className="font-semibold mb-2">Edit Profile</h3>
             <p className="text-gray-400 text-sm">
               Update your information and pricing
@@ -310,7 +313,7 @@ export default async function DjDashboardPage() {
             href="/dashboard/bookings"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
           >
-            <div className="text-3xl mb-2">📋</div>
+            <ClipboardList className="w-8 h-8 mb-2" />
             <h3 className="font-semibold mb-2">Manage Bookings</h3>
             <p className="text-gray-400 text-sm">
               View and respond to booking requests
@@ -321,7 +324,7 @@ export default async function DjDashboardPage() {
             href="/dashboard/dj/calendar"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
           >
-            <div className="text-3xl mb-2">📅</div>
+            <Calendar className="w-8 h-8 mb-2" />
             <h3 className="font-semibold mb-2">Full Calendar</h3>
             <p className="text-gray-400 text-sm">
               View your complete booking calendar

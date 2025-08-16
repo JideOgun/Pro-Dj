@@ -60,6 +60,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          status: user.status,
         };
       },
     }),
@@ -110,12 +111,18 @@ export const authOptions: NextAuthOptions = {
           token.id = u.id;
           token.role = u.role;
           token.name = u.name;
+          token.status = u.status;
+          token.suspensionReason = u.suspensionReason;
+          token.suspendedAt = u.suspendedAt;
         }
       }
 
       // Handle session update trigger
       if (trigger === "update" && session) {
         token.role = session.role;
+        token.status = session.status;
+        token.suspensionReason = session.suspensionReason;
+        token.suspendedAt = session.suspendedAt;
       }
 
       return token;
@@ -126,6 +133,9 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.name = token.name as string | null | undefined;
+        session.user.status = token.status as string;
+        session.user.suspensionReason = token.suspensionReason as string | null;
+        session.user.suspendedAt = token.suspendedAt as Date | null;
       }
       return session;
     },

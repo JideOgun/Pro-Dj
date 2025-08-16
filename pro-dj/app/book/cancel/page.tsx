@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 
 export default function CancelPage() {
   const searchParams = useSearchParams();
@@ -10,7 +11,7 @@ export default function CancelPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-6">
-        <div className="text-yellow-400 text-6xl mb-4">⚠️</div>
+        <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4 mx-auto" />
         <h1 className="text-2xl font-bold mb-4">Payment Cancelled</h1>
         <p className="text-gray-300 mb-6">
           Your payment was cancelled. Your booking is still pending and you can
