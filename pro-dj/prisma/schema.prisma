@@ -202,6 +202,7 @@ bookings Booking[]
 pricing Pricing[]
 reviews Review[]
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
+mixes DjMix[]
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -323,4 +324,63 @@ updatedAt DateTime @updatedAt
 
 @@index([djId, isFeatured])
 @@index([eventType])
+}
+
+model DjMix {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+// Mix Information
+title String
+description String?
+genre String?
+tags String[] // ["afrobeats", "amapiano", "hip-hop", "house"]
+isPublic Boolean @default(false)
+isFeatured Boolean @default(false)
+
+// File Information
+fileName String
+originalName String
+fileSize Int // file size in bytes
+duration Int? // duration in seconds
+bitrate Int? // bitrate in kbps
+sampleRate Int? // sample rate in Hz
+
+// Storage Information
+s3Key String // S3 object key
+cloudFrontUrl String? // CDN URL for fast delivery
+localUrl String? // Local URL for development/testing
+
+// Upload Information
+uploadStatus UploadStatus @default(PENDING)
+uploadProgress Int @default(0) // 0-100
+uploadedAt DateTime?
+uploadError String?
+
+// Playback Statistics
+playCount Int @default(0)
+downloadCount Int @default(0)
+lastPlayedAt DateTime?
+
+// Metadata
+mimeType String
+format String? // "mp3", "wav", "ogg"
+quality String? // "high", "medium", "low"
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([djId, isPublic])
+@@index([genre])
+@@index([uploadStatus])
+@@index([isFeatured])
+}
+
+enum UploadStatus {
+PENDING
+UPLOADING
+COMPLETED
+FAILED
+CANCELLED
 }

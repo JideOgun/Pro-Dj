@@ -109,6 +109,13 @@ export default function Navbar() {
             )}
 
             <Link
+              href="/mixes"
+              className="text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              Mixes
+            </Link>
+
+            <Link
               href="/gallery"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
