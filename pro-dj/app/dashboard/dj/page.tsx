@@ -5,7 +5,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
 import BookingCalendar from "@/components/BookingCalendar";
-import { Music, Calendar, User, ClipboardList, ArrowRight } from "lucide-react";
+import {
+  Music,
+  Calendar,
+  User,
+  ClipboardList,
+  ArrowRight,
+  Image as ImageIcon,
+} from "lucide-react";
 
 export default async function DjDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -17,6 +24,18 @@ export default async function DjDashboardPage() {
   if (session.user.role !== "DJ") {
     redirect("/dashboard");
   }
+
+  // Get user with profile data
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      userMedia: {
+        where: { type: "PROFILE_PICTURE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
 
   // Get DJ profile first
   const djProfile = await prisma.djProfile.findUnique({
@@ -85,43 +104,83 @@ export default async function DjDashboardPage() {
         {/* Role Switcher */}
         <ClientRoleSwitcher />
 
-        {/* Header */}
+        {/* Header with Profile Photo */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {djProfile.stageName}!{" "}
-            <Music className="w-6 h-6 inline ml-2" />
-          </h1>
-          <p className="text-gray-300">
-            Manage your bookings, profile, and earnings
-          </p>
+          <div className="flex items-center gap-6 mb-6">
+            <Link href="/dashboard/profile" className="relative group">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700 border-4 border-violet-500/30 shadow-lg group-hover:border-violet-400/50 transition-all duration-200">
+                {user?.profileImage || user?.userMedia[0]?.url ? (
+                  <img
+                    src={user.profileImage || user.userMedia[0]?.url}
+                    alt="Profile"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-10 h-10 text-gray-400 group-hover:text-violet-300 transition-colors" />
+                  </div>
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                Welcome back, {djProfile.stageName}!{" "}
+                <Music className="w-6 h-6 inline ml-2" />
+              </h1>
+              <p className="text-gray-300">
+                Manage your bookings, profile, and earnings
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-2xl font-bold text-violet-400">
+          <Link
+            href="/dashboard/bookings"
+            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
+          >
+            <div className="text-2xl font-bold text-violet-400 group-hover:text-violet-300">
               {bookings.length}
             </div>
-            <div className="text-gray-400">Total Bookings</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-2xl font-bold text-yellow-400">
+            <div className="text-gray-400 group-hover:text-gray-300">
+              Total Bookings
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/bookings?status=PENDING"
+            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
+          >
+            <div className="text-2xl font-bold text-yellow-400 group-hover:text-yellow-300">
               {pendingBookings.length}
             </div>
-            <div className="text-gray-400">Pending Requests</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-2xl font-bold text-green-400">
+            <div className="text-gray-400 group-hover:text-gray-300">
+              Pending Requests
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/bookings?status=CONFIRMED"
+            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
+          >
+            <div className="text-2xl font-bold text-green-400 group-hover:text-green-300">
               {confirmedBookings.length}
             </div>
-            <div className="text-gray-400">Confirmed Events</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-2xl font-bold text-blue-400">
+            <div className="text-gray-400 group-hover:text-gray-300">
+              Confirmed Events
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/earnings"
+            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
+          >
+            <div className="text-2xl font-bold text-blue-400 group-hover:text-blue-300">
               {formatPrice(totalEarnings)}
             </div>
-            <div className="text-gray-400">Total Earnings</div>
-          </div>
+            <div className="text-gray-400 group-hover:text-gray-300">
+              Total Earnings
+            </div>
+          </Link>
         </div>
 
         {/* Profile Card */}
@@ -131,7 +190,7 @@ export default async function DjDashboardPage() {
               Your Profile
             </h2>
             <Link
-              href="/dj/profile/edit"
+              href="/dashboard/profile"
               className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm"
             >
               Edit Profile
@@ -148,7 +207,9 @@ export default async function DjDashboardPage() {
                 </div>
                 <div>
                   <span className="text-gray-400">Location:</span>
-                  <span className="ml-2 text-white">{djProfile.location}</span>
+                  <span className="ml-2 text-white">
+                    {user?.location || djProfile.location || "Location not set"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-400">Experience:</span>
@@ -297,15 +358,26 @@ export default async function DjDashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
-            href="/dj/profile/edit"
+            href="/dashboard/profile"
             className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
           >
             <User className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">Edit Profile</h3>
+            <h3 className="font-semibold mb-2">Profile Settings</h3>
             <p className="text-gray-400 text-sm">
-              Update your information and pricing
+              Update your profile and social media
+            </p>
+          </Link>
+
+          <Link
+            href="/gallery"
+            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          >
+            <ImageIcon className="w-8 h-8 mb-2" />
+            <h3 className="font-semibold mb-2">Gallery</h3>
+            <p className="text-gray-400 text-sm">
+              Upload and manage your event portfolio
             </p>
           </Link>
 
@@ -328,6 +400,17 @@ export default async function DjDashboardPage() {
             <h3 className="font-semibold mb-2">Full Calendar</h3>
             <p className="text-gray-400 text-sm">
               View your complete booking calendar
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/profile"
+            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          >
+            <Music className="w-8 h-8 mb-2" />
+            <h3 className="font-semibold mb-2">DJ Profile</h3>
+            <p className="text-gray-400 text-sm">
+              Edit your DJ information and pricing
             </p>
           </Link>
 

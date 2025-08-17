@@ -5,7 +5,14 @@ import Link from "next/link";
 import Actions from "../app/dashboard/bookings/row-actions";
 import { SocketProvider, useSocketContext } from "./SocketProvider";
 import SuspendedUserGuard from "./SuspendedUserGuard";
-import { Calendar } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
+import {
+  getStatusColor,
+  getStatusText,
+  getPaymentStatusText,
+  getStatusIcon,
+  getPaymentStatusIcon,
+} from "@/lib/status-utils";
 
 interface Booking {
   id: string;
@@ -17,6 +24,7 @@ interface Booking {
   packageKey?: string | null;
   quotedPriceCents?: number | null;
   checkoutSessionId?: string | null;
+  createdAt: string | Date;
   user?: {
     name?: string | null;
     email?: string;
@@ -78,6 +86,50 @@ function BookingsTableContent({
     }
   };
 
+  // Helper function to calculate timeout information
+  const getTimeoutInfo = (
+    createdAt: string | Date,
+    eventDate: string | Date
+  ) => {
+    const created = new Date(createdAt);
+    const event = new Date(eventDate);
+    const now = new Date();
+
+    // Calculate days until event
+    const daysUntilEvent = Math.ceil(
+      (event.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Determine timeout hours based on event proximity
+    const timeoutHours = daysUntilEvent <= 7 ? 24 : 48;
+    const timeoutDate = new Date(
+      created.getTime() + timeoutHours * 60 * 60 * 1000
+    );
+    const timeLeft = timeoutDate.getTime() - now.getTime();
+
+    if (timeLeft <= 0) {
+      return {
+        isExpired: true,
+        timeLeftFormatted: "Expired",
+        color: "text-red-400",
+      };
+    }
+
+    const hoursLeft = Math.ceil(timeLeft / (1000 * 60 * 60));
+    const daysLeft = Math.ceil(hoursLeft / 24);
+
+    let color = "text-green-400";
+    if (hoursLeft <= 6) color = "text-red-400";
+    else if (hoursLeft <= 24) color = "text-yellow-400";
+
+    return {
+      isExpired: false,
+      timeLeftFormatted:
+        daysLeft > 1 ? `${daysLeft} days` : `${hoursLeft} hours`,
+      color,
+    };
+  };
+
   // Optimistic update when booking status changes
   const updateBookingStatus = (bookingId: string, newStatus: string) => {
     setBookings((prev) =>
@@ -87,35 +139,7 @@ function BookingsTableContent({
     );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
-      case "ACCEPTED":
-        return "bg-yellow-700/50 text-yellow-200 border-yellow-600/30";
-      case "CONFIRMED":
-        return "bg-green-700/50 text-green-200 border-green-600/30";
-      case "DECLINED":
-        return "bg-red-900/40 text-red-200 border-red-700/30";
-      default:
-        return "bg-gray-800 text-gray-200 border-gray-600/30";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "PENDING";
-      case "ACCEPTED":
-        return "NOT PAID";
-      case "CONFIRMED":
-        return "PAID";
-      case "DECLINED":
-        return "DECLINED";
-      default:
-        return status;
-    }
-  };
+  // Using centralized status utilities from lib/status-utils.ts
 
   return (
     <div className="bg-gray-800 rounded-lg overflow-hidden w-full">
@@ -156,10 +180,12 @@ function BookingsTableContent({
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-20">
                 Package
               </th>
-              <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-32">
-                Client
-              </th>
-              {userRole === "ADMIN" && (
+              {userRole !== "CLIENT" && (
+                <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-32">
+                  Client
+                </th>
+              )}
+              {(userRole === "ADMIN" || userRole === "CLIENT") && (
                 <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-24">
                   DJ
                 </th>
@@ -168,7 +194,7 @@ function BookingsTableContent({
                 Price
               </th>
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-20">
-                Status
+                {userRole === "CLIENT" ? "Payment Status" : "Status"}
               </th>
               <th className="px-3 py-3 text-right text-sm font-medium text-gray-300 w-32">
                 Actions
@@ -211,15 +237,17 @@ function BookingsTableContent({
                 <td className="px-3 py-3 text-gray-300 text-sm">
                   {b.packageKey ?? "-"}
                 </td>
-                <td className="px-3 py-3">
-                  <div className="text-white font-medium text-sm">
-                    {b.user?.name || "Unknown"}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate max-w-[120px]">
-                    {b.user?.email}
-                  </div>
-                </td>
-                {userRole === "ADMIN" && (
+                {userRole !== "CLIENT" && (
+                  <td className="px-3 py-3">
+                    <div className="text-white font-medium text-sm">
+                      {b.user?.name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-gray-400 truncate max-w-[120px]">
+                      {b.user?.email}
+                    </div>
+                  </td>
+                )}
+                {(userRole === "ADMIN" || userRole === "CLIENT") && (
                   <td className="px-3 py-3">
                     {b.dj?.stageName ? (
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-900/30 text-blue-200 border border-blue-700/30 whitespace-nowrap">
@@ -241,11 +269,18 @@ function BookingsTableContent({
                 </td>
                 <td className="px-3 py-3">
                   <span
-                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
                       b.status
                     )}`}
                   >
-                    {getStatusText(b.status)}
+                    <span>
+                      {userRole === "CLIENT"
+                        ? getPaymentStatusIcon(b.status)
+                        : getStatusIcon(b.status)}
+                    </span>
+                    {userRole === "CLIENT"
+                      ? getPaymentStatusText(b.status)
+                      : getStatusText(b.status)}
                   </span>
                 </td>
                 <td className="px-3 py-3 text-right">
@@ -286,10 +321,12 @@ function BookingsTableContent({
               <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-20">
                 Event
               </th>
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-24">
-                Client
-              </th>
-              {userRole === "ADMIN" && (
+              {userRole !== "CLIENT" && (
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-24">
+                  Client
+                </th>
+              )}
+              {(userRole === "ADMIN" || userRole === "CLIENT") && (
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-20">
                   DJ
                 </th>
@@ -298,7 +335,7 @@ function BookingsTableContent({
                 Price
               </th>
               <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-16">
-                Status
+                {userRole === "CLIENT" ? "Payment Status" : "Status"}
               </th>
               <th className="px-2 py-2 text-right text-xs font-medium text-gray-300 w-24">
                 Actions
@@ -338,15 +375,17 @@ function BookingsTableContent({
                     {b.eventType}
                   </span>
                 </td>
-                <td className="px-2 py-2">
-                  <div className="text-white font-medium text-xs">
-                    {b.user?.name || "Unknown"}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate max-w-[80px]">
-                    {b.user?.email}
-                  </div>
-                </td>
-                {userRole === "ADMIN" && (
+                {userRole !== "CLIENT" && (
+                  <td className="px-2 py-2">
+                    <div className="text-white font-medium text-xs">
+                      {b.user?.name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-gray-400 truncate max-w-[80px]">
+                      {b.user?.email}
+                    </div>
+                  </td>
+                )}
+                {(userRole === "ADMIN" || userRole === "CLIENT") && (
                   <td className="px-2 py-2">
                     {b.dj?.stageName ? (
                       <span className="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium bg-blue-900/30 text-blue-200 border border-blue-700/30 whitespace-nowrap">
@@ -367,13 +406,32 @@ function BookingsTableContent({
                   )}
                 </td>
                 <td className="px-2 py-2">
-                  <span
-                    className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
-                      b.status
-                    )}`}
-                  >
-                    {getStatusText(b.status)}
-                  </span>
+                  <div className="space-y-1">
+                    <span
+                      className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
+                        b.status
+                      )}`}
+                    >
+                      {userRole === "CLIENT"
+                        ? getPaymentStatusText(b.status)
+                        : getStatusText(b.status)}
+                    </span>
+                    {b.status === "PENDING" && b.createdAt && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <Clock className="w-3 h-3" />
+                        <span
+                          className={
+                            getTimeoutInfo(b.createdAt, b.eventDate).color
+                          }
+                        >
+                          {
+                            getTimeoutInfo(b.createdAt, b.eventDate)
+                              .timeLeftFormatted
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-2 py-2 text-right">
                   <SuspendedUserGuard
@@ -430,13 +488,35 @@ function BookingsTableContent({
                   </div>
                 )}
               </div>
-              <span
-                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getStatusColor(
-                  b.status
-                )}`}
-              >
-                {getStatusText(b.status)}
-              </span>
+              <div className="text-right">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(
+                    b.status
+                  )}`}
+                >
+                  <span>
+                    {userRole === "CLIENT"
+                      ? getPaymentStatusIcon(b.status)
+                      : getStatusIcon(b.status)}
+                  </span>
+                  {userRole === "CLIENT"
+                    ? getPaymentStatusText(b.status)
+                    : getStatusText(b.status)}
+                </span>
+                {b.status === "PENDING" && b.createdAt && (
+                  <div className="flex items-center justify-end gap-1 text-xs mt-1">
+                    <Clock className="w-3 h-3" />
+                    <span
+                      className={getTimeoutInfo(b.createdAt, b.eventDate).color}
+                    >
+                      {
+                        getTimeoutInfo(b.createdAt, b.eventDate)
+                          .timeLeftFormatted
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Event Details */}
@@ -462,17 +542,19 @@ function BookingsTableContent({
               )}
             </div>
 
-            {/* Client and DJ Info */}
-            <div className="space-y-2 mb-4">
-              <div>
-                <div className="text-sm text-gray-400">Client</div>
-                <div className="text-white font-medium">
-                  {b.user?.name || "Unknown"}
-                </div>
-                <div className="text-xs text-gray-400">{b.user?.email}</div>
-              </div>
+            {/* DJ Info */}
+            {(userRole === "ADMIN" || userRole === "CLIENT") && (
+              <div className="space-y-2 mb-4">
+                {userRole !== "CLIENT" && (
+                  <div>
+                    <div className="text-sm text-gray-400">Client</div>
+                    <div className="text-white font-medium">
+                      {b.user?.name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-gray-400">{b.user?.email}</div>
+                  </div>
+                )}
 
-              {userRole === "ADMIN" && (
                 <div>
                   <div className="text-sm text-gray-400">DJ</div>
                   {b.dj?.stageName ? (
@@ -483,8 +565,8 @@ function BookingsTableContent({
                     <span className="text-gray-400 text-xs">Unassigned</span>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="pt-3 border-t border-gray-600/30">

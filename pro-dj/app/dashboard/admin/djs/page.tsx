@@ -148,7 +148,7 @@ export default async function AdminDjsPage() {
                         </div>
                         <div className="text-gray-400 text-sm">{dj.email}</div>
                         <div className="text-gray-400 text-sm">
-                          {dj.djProfile?.location || "No location"}
+                          {dj.location || dj.djProfile?.location || "No location"}
                         </div>
                       </div>
                     </td>

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useSocketContext } from "../../../components/SocketProvider";
-import { X, Copy, Check, XCircle } from "lucide-react";
+import { X, Copy, Check, XCircle, Clock, CreditCard } from "lucide-react";
 
 interface PaymentLinkModalProps {
   isOpen: boolean;
@@ -151,32 +151,123 @@ export default function Actions({
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-1 justify-end">
-        {status === "PENDING" && (
-          <>
+        {/* Only show accept/decline for DJs and admins */}
+        {status === "PENDING" &&
+          (userRole === "DJ" || userRole === "ADMIN") && (
+            <>
+              <button
+                onClick={() => run("accept")}
+                className="px-2 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+              >
+                <Check size={12} />
+                Accept
+              </button>
+              <button
+                onClick={() => run("decline")}
+                className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+              >
+                <XCircle size={12} />
+                Decline
+              </button>
+            </>
+          )}
+        {/* Show payment link for DJs and admins when accepted */}
+        {status === "ACCEPTED" &&
+          (userRole === "DJ" || userRole === "ADMIN") && (
             <button
-              onClick={() => run("accept")}
-              className="px-2 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+              onClick={showPaymentLink}
+              className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
             >
-              <Check size={12} />
-              Accept
+              <Copy size={12} />
+              Payment
             </button>
-            <button
-              onClick={() => run("decline")}
-              className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-            >
-              <XCircle size={12} />
-              Decline
-            </button>
-          </>
-        )}
-        {status === "ACCEPTED" && (
-          <button
-            onClick={showPaymentLink}
-            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-          >
-            <Copy size={12} />
-            Payment
-          </button>
+          )}
+        {/* Show action info for clients */}
+        {userRole === "CLIENT" && (
+          <div className="text-xs px-2 py-1">
+            {status === "PENDING" && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-yellow-900/40 text-yellow-200 border border-yellow-700/30">
+                <Clock size={10} />
+                Waiting for DJ
+              </span>
+            )}
+            {status === "ACCEPTED" && (
+              <div className="flex flex-col gap-1">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-900/40 text-blue-200 border border-blue-700/30">
+                  <CreditCard size={10} />
+                  Complete payment
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(
+                          `/api/bookings/${id}/payment-link`,
+                          {
+                            method: "GET",
+                          }
+                        );
+                        const data = await res.json();
+
+                        if (res.ok && data?.checkoutUrl) {
+                          await navigator.clipboard.writeText(data.checkoutUrl);
+                          toast.success("Payment link copied to clipboard!");
+                        } else {
+                          toast.error(
+                            data?.error || "Could not retrieve payment link"
+                          );
+                        }
+                      } catch (error) {
+                        toast.error("Failed to copy payment link");
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-1.5 py-0.5 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                  >
+                    <Copy size={10} />
+                    Copy
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(
+                          `/api/bookings/${id}/payment-link`,
+                          {
+                            method: "GET",
+                          }
+                        );
+                        const data = await res.json();
+
+                        if (res.ok && data?.checkoutUrl) {
+                          window.open(data.checkoutUrl, "_blank");
+                        } else {
+                          toast.error(
+                            data?.error || "Could not retrieve payment link"
+                          );
+                        }
+                      } catch (error) {
+                        toast.error("Failed to open payment link");
+                      }
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-1.5 py-0.5 rounded text-xs font-medium transition-colors"
+                  >
+                    Pay Now
+                  </button>
+                </div>
+              </div>
+            )}
+            {status === "CONFIRMED" && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-900/40 text-green-200 border border-green-700/30">
+                <Check size={10} />
+                Booking confirmed
+              </span>
+            )}
+            {status === "DECLINED" && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-900/40 text-red-200 border border-red-700/30">
+                <XCircle size={10} />
+                Booking declined
+              </span>
+            )}
+          </div>
         )}
       </div>
 

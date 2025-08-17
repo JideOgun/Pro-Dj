@@ -72,6 +72,7 @@ export async function POST(req: Request) {
         );
 
         // Emit WebSocket event for real-time updates
+        console.log("📡 Emitting WebSocket event for booking:", booking.id);
         emitBookingUpdate(booking.id, "CONFIRMED");
 
         // emails: client + DJ

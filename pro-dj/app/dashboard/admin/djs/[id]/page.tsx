@@ -151,7 +151,7 @@ export default async function DjManagementPage({ params }: PageProps) {
                 <div>
                   <span className="text-gray-400">Location:</span>
                   <span className="ml-2 text-white">
-                    {user.djProfile?.location || "Not specified"}
+                    {user.location || user.djProfile?.location || "Not specified"}
                   </span>
                 </div>
                 <div>

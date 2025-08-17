@@ -25,6 +25,18 @@ status UserStatus @default(ACTIVE)
 suspendedAt DateTime?
 suspendedBy String? // Admin ID who suspended the user
 suspensionReason String?
+
+// Profile Information
+profileImage String? // URL to profile picture
+phone String?
+location String?
+bio String?
+dateOfBirth DateTime?
+website String?
+
+// Social Media Links
+socialLinks Json? // {instagram, twitter, facebook, linkedin, tiktok}
+
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 
@@ -36,6 +48,9 @@ reviews Review[] @relation("UserReviews")
 
 // Notifications relation
 notifications Notification[] @relation("UserNotifications")
+
+// User Media
+userMedia UserMedia[]
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -147,7 +162,7 @@ userId String @unique
 user User @relation(fields: [userId], references: [id])
 
 // DJ-specific fields
-stageName String
+stageName String @unique
 bio String?
 genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"]
 customGenres String? // additional genres not in the main list
@@ -167,6 +182,7 @@ socialLinks Json? // {instagram, youtube, soundcloud, website}
 // Media
 profileImage String?
 portfolio String[] // array of image URLs
+eventPhotos EventPhoto[] // enhanced event photos with metadata
 
 // Pricing
 basePriceCents Int? // base hourly rate
@@ -174,6 +190,7 @@ basePriceCents Int? // base hourly rate
 // Availability
 isActive Boolean @default(true)
 isVerified Boolean @default(false)
+isFeatured Boolean @default(false) // For featuring DJs on homepage
 
 // Stats
 totalBookings Int @default(0)
@@ -254,4 +271,56 @@ clientResponse String? // client's response to recovery suggestion
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+}
+
+model UserMedia {
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
+
+type String // "PROFILE_PICTURE", "EVENT_PHOTO", "PORTFOLIO", "DOCUMENT"
+url String
+filename String
+originalName String
+mimeType String
+size Int // file size in bytes
+altText String? // for accessibility
+description String?
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([userId, type])
+}
+
+model EventPhoto {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+title String
+description String?
+url String
+filename String
+originalName String
+mimeType String
+size Int // file size in bytes
+altText String? // for accessibility
+
+// Event Details
+eventName String?
+eventDate DateTime?
+eventType String?
+venue String?
+location String?
+
+// Tags and Categories
+tags String[] // ["wedding", "club", "birthday", "corporate"]
+isFeatured Boolean @default(false) // for portfolio highlights
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([djId, isFeatured])
+@@index([eventType])
 }

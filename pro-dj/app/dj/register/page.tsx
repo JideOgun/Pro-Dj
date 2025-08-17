@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Music, DollarSign } from "lucide-react";
+import { Music, DollarSign, MapPin } from "lucide-react";
 
 export default function DjRegisterPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
   const [formData, setFormData] = useState({
     stageName: "",
@@ -106,6 +107,129 @@ export default function DjRegisterPage() {
     }));
   };
 
+  // Get current location using browser geolocation
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsLocating(true);
+
+    try {
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000,
+          });
+        }
+      );
+
+      const { latitude, longitude } = position.coords;
+
+      // Try multiple approaches to get better city data
+      let response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1&accept-language=en`
+      );
+
+      // If that doesn't work well, try with a different zoom level
+      if (!response.ok) {
+        response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=en`
+        );
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Extract city, state, and country from the address data
+        const address = data.address || {};
+
+        // More robust city detection
+        let city = "Unknown City";
+
+        // First try: Direct address fields (excluding county)
+        const directCity =
+          address.city ||
+          address.town ||
+          address.village ||
+          address.municipality ||
+          address.suburb ||
+          address.neighbourhood ||
+          address.district;
+
+        if (directCity && directCity !== address.county) {
+          city = directCity;
+        }
+
+        // Second try: Parse display_name if direct fields failed
+        if (city === "Unknown City" && data.display_name) {
+          const displayParts = data.display_name.split(", ");
+          console.log("Display parts:", displayParts);
+
+          // Look for the first part that looks like a city
+          for (const part of displayParts) {
+            const cleanPart = part.trim();
+            if (
+              cleanPart.length > 2 &&
+              !cleanPart.toLowerCase().includes("county") &&
+              !cleanPart.toLowerCase().includes("state") &&
+              !cleanPart.toLowerCase().includes("country") &&
+              !cleanPart.toLowerCase().includes("united states") &&
+              !cleanPart.toLowerCase().includes("usa") &&
+              !cleanPart.toLowerCase().includes("postcode") &&
+              !cleanPart.toLowerCase().includes("zip") &&
+              !cleanPart.match(/^\d+$/) && // Not just numbers
+              !cleanPart.match(/^[A-Z]{2}$/)
+            ) {
+              // Not state abbreviations
+              city = cleanPart;
+              console.log("Found city from display_name:", city);
+              break;
+            }
+          }
+        }
+
+        // Third try: Use county as last resort if nothing else found
+        if (city === "Unknown City" && address.county) {
+          city = address.county;
+          console.log("Using county as city:", city);
+        }
+
+        // Get state
+        const state =
+          address.state ||
+          address.province ||
+          address.region ||
+          "Unknown State";
+
+        // Get country
+        const country = address.country || "Unknown Country";
+
+        // Format as "City, State, Country"
+        const location = `${city}, ${state}, ${country}`;
+
+        setFormData((prev) => ({
+          ...prev,
+          location: location,
+        }));
+
+        toast.success("Location detected successfully!");
+      } else {
+        toast.error("Could not determine location name");
+      }
+    } catch (error) {
+      console.error("Geolocation error:", error);
+      toast.error(
+        "Could not get your current location. Please enter manually."
+      );
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
   const handleSocialLinkChange = (platform: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -118,6 +242,15 @@ export default function DjRegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.location || formData.location.trim() === "") {
+      toast.error(
+        "Location is required. Please enter your location or use the 'Current' button to detect it automatically."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -173,9 +306,16 @@ export default function DjRegisterPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2">Create Your DJ Profile</h1>
-          <p className="text-xl text-gray-300">
+          <p className="text-xl text-gray-300 mb-4">
             Set up your profile to start receiving bookings
           </p>
+          <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-4 max-w-2xl mx-auto">
+            <p className="text-violet-200 text-sm">
+              💡 <strong>Profile Integration:</strong> The information you
+              provide here will automatically be used to prefill your user
+              profile, so you won&apos;t need to enter it twice!
+            </p>
+          </div>
         </div>
 
         {/* Main Form */}
@@ -327,16 +467,40 @@ export default function DjRegisterPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Location *
               </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                required
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                placeholder="City, State"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                  required
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="City, State or use current location"
+                />
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  disabled={isLocating}
+                  className="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+                >
+                  {isLocating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Locating...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4" />
+                      Current
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Click &quot;Current&quot; to automatically detect your city and
+                state
+              </p>
             </div>
 
             {/* Travel Radius */}

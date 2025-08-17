@@ -272,10 +272,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // Calculate total price based on duration
+    // Calculate total price based on duration (handling overnight events)
     const durationHours =
       (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-    const totalPriceCents = Math.round(pkg.priceCents * durationHours);
+    const adjustedDurationHours =
+      endDateTime < startDateTime ? durationHours + 24 : durationHours;
+    const totalPriceCents = Math.round(pkg.priceCents * adjustedDurationHours);
 
     // Combine all details including preferences
     const bookingDetails = {
@@ -295,7 +297,7 @@ export async function POST(req: Request) {
       message,
       packageKey,
       basePricePerHourCents: pkg.priceCents,
-      durationHours,
+      durationHours: adjustedDurationHours,
       totalPriceCents,
       details: bookingDetails,
     });

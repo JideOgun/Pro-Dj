@@ -14,14 +14,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = registerSchema.parse(body);
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+    // Check if user already exists (case-insensitive)
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: validatedData.email,
+          mode: "insensitive",
+        },
+      },
     });
 
     if (existingUser) {
+      let errorMessage = "An account with this email already exists.";
+
+      if (existingUser.googleId) {
+        errorMessage +=
+          " This email is associated with a Google account. Please sign in with Google instead.";
+      } else if (existingUser.password) {
+        errorMessage +=
+          " Please sign in with your password or use the 'Forgot Password' option.";
+      }
+
       return NextResponse.json(
-        { ok: false, error: "User with this email already exists" },
+        { ok: false, error: errorMessage },
         { status: 400 }
       );
     }

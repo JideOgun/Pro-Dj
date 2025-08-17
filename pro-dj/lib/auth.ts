@@ -30,8 +30,13 @@ export const authOptions: NextAuthOptions = {
 
         console.log("Credentials login attempt:", { email: creds.email });
 
-        const user = await prisma.user.findUnique({
-          where: { email: creds.email },
+        const user = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: creds.email,
+              mode: "insensitive",
+            },
+          },
         });
 
         if (!user) {
@@ -72,20 +77,30 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google") {
         if (!user.email) return false;
 
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
+        // Check if user already exists (case-insensitive)
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: user.email,
+              mode: "insensitive",
+            },
+          },
         });
 
         if (existingUser) {
-          // Update existing user but preserve their role
+          // Update existing user but preserve their role and password
           await prisma.user.update({
-            where: { email: user.email },
+            where: { id: existingUser.id },
             data: {
-              name: user.name ?? undefined,
+              name: user.name ?? existingUser.name,
               googleId: account.providerAccountId,
+              // Preserve existing email case if different
+              email: existingUser.email,
             },
           });
+          console.log(
+            `✅ Merged Google account with existing user: ${existingUser.email}`
+          );
         } else {
           // Create new user with CLIENT role
           await prisma.user.create({
@@ -96,6 +111,7 @@ export const authOptions: NextAuthOptions = {
               role: "CLIENT",
             },
           });
+          console.log(`✅ Created new user from Google: ${user.email}`);
         }
       }
       return true;
@@ -104,8 +120,13 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, trigger, session }) {
       // Enrich token with DB user id + role
       if (token?.email) {
-        const u = await prisma.user.findUnique({
-          where: { email: token.email },
+        const u = await prisma.user.findFirst({
+          where: {
+            email: {
+              equals: token.email,
+              mode: "insensitive",
+            },
+          },
         });
         if (u) {
           token.id = u.id;

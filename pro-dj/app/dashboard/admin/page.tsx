@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
 import BookingCalendar from "@/components/BookingCalendar";
+import TimeoutManagement from "@/components/TimeoutManagement";
 import {
   Users,
   Calendar,
@@ -424,6 +425,9 @@ export default async function AdminDashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Timeout Management */}
+          <TimeoutManagement />
         </div>
       </div>
     </div>

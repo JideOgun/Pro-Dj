@@ -151,6 +151,7 @@ export async function getAvailableDjs(
     stageName: string;
     genres: string[];
     basePriceCents: number | null;
+    location: string;
   }>
 > {
   const allDjs = await prisma.djProfile.findMany({
@@ -162,7 +163,9 @@ export async function getAvailableDjs(
       },
     },
     include: {
-      user: { select: { name: true, email: true, status: true } },
+      user: {
+        select: { name: true, email: true, status: true, location: true },
+      },
     },
   });
 
@@ -171,7 +174,13 @@ export async function getAvailableDjs(
   for (const dj of allDjs) {
     const { available } = await isDjAvailable(dj.id, startTime, endTime);
     if (available) {
-      availableDjs.push(dj);
+      availableDjs.push({
+        id: dj.id,
+        stageName: dj.stageName,
+        genres: dj.genres || [],
+        basePriceCents: dj.basePriceCents,
+        location: dj.user.location || dj.location || "Location not set",
+      });
     }
   }
 

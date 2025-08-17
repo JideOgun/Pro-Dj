@@ -40,6 +40,9 @@ export async function POST(req: Request) {
       );
     }
 
+    const body = await req.json();
+    const validatedData = djProfileSchema.parse(body);
+
     // Check if user is already a DJ
     const existingDjProfile = await prisma.djProfile.findUnique({
       where: { userId: session.user.id },
@@ -52,41 +55,80 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const validatedData = djProfileSchema.parse(body);
-
-    // Create DJ profile
-    const djProfile = await prisma.djProfile.create({
-      data: {
-        userId: session.user.id,
-        stageName: validatedData.stageName,
-        bio: validatedData.bio,
-        genres: validatedData.genres,
-        customGenres: validatedData.customGenres,
-        experience: validatedData.experience,
-        location: validatedData.location,
-        travelRadius: validatedData.travelRadius || 50,
-        specialties: validatedData.specialties,
-        equipment: validatedData.equipment,
-        languages: validatedData.languages || [],
-        availability: validatedData.availability,
-        socialLinks: validatedData.socialLinks,
-        basePriceCents: validatedData.basePriceCents,
-        profileImage: validatedData.profileImage || null,
-        portfolio: validatedData.portfolio || [],
+    // Check if stage name is already taken (case-insensitive)
+    const existingStageName = await prisma.djProfile.findFirst({
+      where: {
+        stageName: {
+          equals: validatedData.stageName,
+          mode: "insensitive",
+        },
       },
     });
 
-    // Update user role to DJ and set status to PENDING for admin approval
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        role: "DJ",
-        status: "PENDING", // Require admin approval
-      },
+    if (existingStageName) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Stage name "${validatedData.stageName}" is already taken. Please choose a different name.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Create DJ profile and update user profile in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create DJ profile
+      const djProfile = await tx.djProfile.create({
+        data: {
+          userId: session.user.id,
+          stageName: validatedData.stageName,
+          bio: validatedData.bio,
+          genres: validatedData.genres,
+          customGenres: validatedData.customGenres,
+          experience: validatedData.experience,
+          location: validatedData.location,
+          travelRadius: validatedData.travelRadius || 50,
+          specialties: validatedData.specialties,
+          equipment: validatedData.equipment,
+          languages: validatedData.languages || [],
+          availability: validatedData.availability,
+          socialLinks: validatedData.socialLinks,
+          basePriceCents: validatedData.basePriceCents,
+          profileImage: validatedData.profileImage || null,
+          portfolio: validatedData.portfolio || [],
+        },
+      });
+
+      // Update user profile with DJ information
+      const updatedUser = await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          role: "DJ",
+          status: "PENDING", // Require admin approval
+          // Prefill user profile with DJ information
+          name: validatedData.stageName, // Use stage name as display name
+          location: validatedData.location,
+          bio: validatedData.bio,
+          profileImage: validatedData.profileImage || null,
+          website: validatedData.socialLinks?.website || null,
+          socialLinks: {
+            instagram: validatedData.socialLinks?.instagram || null,
+            twitter: null, // Not in DJ form
+            facebook: null, // Not in DJ form
+            linkedin: null, // Not in DJ form
+            youtube: validatedData.socialLinks?.youtube || null,
+            soundcloud: validatedData.socialLinks?.soundcloud || null,
+          },
+        },
+      });
+
+      return { djProfile, updatedUser };
     });
 
-    return NextResponse.json({ ok: true, djProfile }, { status: 201 });
+    return NextResponse.json(
+      { ok: true, djProfile: result.djProfile },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("DJ registration error:", error);
 

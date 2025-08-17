@@ -78,7 +78,7 @@ export async function POST(req: Request) {
           customGenres: profile.customGenres || "",
           basePriceCents: profile.basePriceCents || 0,
           bio: profile.bio || "",
-          location: profile.location || "",
+          location: user.location || profile.location || "Location not set",
           specialties: profile.specialties || "",
           equipment: profile.equipment || "",
           languages: profile.languages || [],

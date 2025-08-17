@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminOrDj } from "@/lib/auth-guard";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -12,9 +13,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const gate = await requireAdminOrDj();
-  if (!gate.ok) {
-    return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   // Get the booking
@@ -33,10 +38,11 @@ export async function GET(
     );
   }
 
-  // Check if DJ can access this booking (only if it's their booking)
-  if (gate.session?.user.role === "DJ") {
+  // Check if user can access this booking
+  if (session.user.role === "DJ") {
+    // DJs can only access their own bookings
     const djProfile = await prisma.djProfile.findUnique({
-      where: { userId: gate.session.user.id },
+      where: { userId: session.user.id },
     });
 
     if (!djProfile || booking.djId !== djProfile.id) {
@@ -48,11 +54,27 @@ export async function GET(
         { status: 403 }
       );
     }
+  } else if (session.user.role === "CLIENT") {
+    // Clients can only access their own bookings
+    if (booking.userId !== session.user.id) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Forbidden - You can only access your own bookings",
+        },
+        { status: 403 }
+      );
+    }
   }
+  // Admins can access any booking
 
   if (!booking.checkoutSessionId) {
     return NextResponse.json(
-      { ok: false, error: "No payment link available for this booking" },
+      {
+        ok: false,
+        error:
+          "No payment link available for this booking. The DJ may not have accepted the booking yet.",
+      },
       { status: 404 }
     );
   }

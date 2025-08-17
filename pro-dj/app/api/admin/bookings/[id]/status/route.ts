@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const session = await getServerSession(authOptions);
 
@@ -58,7 +59,12 @@ export async function PATCH(
     const updatedBooking = await prisma.booking.update({
       where: { id: params.id },
       data: {
-        status: status as any, // Type assertion for Prisma enum
+        status: status as
+          | "PENDING"
+          | "ACCEPTED"
+          | "CONFIRMED"
+          | "DECLINED"
+          | "CANCELLED",
       },
     });
 
@@ -74,7 +80,7 @@ export async function PATCH(
     });
 
     // Create notification for the DJ if assigned
-    if (booking.djId) {
+    if (booking.djId && booking.dj) {
       await prisma.notification.create({
         data: {
           userId: booking.dj.userId,
