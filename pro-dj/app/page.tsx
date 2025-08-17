@@ -14,6 +14,7 @@ import {
   Camera,
 } from "lucide-react";
 import DjShowcase from "@/components/DjShowcase";
+import PWAInfo from "@/components/PWAInfo";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -81,6 +82,9 @@ export default function Home() {
           </p>
         </div>
 
+        {/* PWA Info Section */}
+        <PWAInfo />
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
           {session?.user ? (
@@ -104,13 +108,6 @@ export default function Home() {
                   </Link>
                 </>
               )}
-              {session.user.role !== "CLIENT" && (
-                <div className="text-center">
-                  <p className="text-gray-400 mb-4">
-                    Booking is only available for client accounts
-                  </p>
-                </div>
-              )}
               {session.user.role === "DJ" && (
                 <>
                   <Link
@@ -125,7 +122,7 @@ export default function Home() {
                     className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
                     <ClipboardList className="w-5 h-5 inline mr-2" />
-                    My Bookings
+                    View Bookings
                   </Link>
                 </>
               )}
@@ -139,33 +136,32 @@ export default function Home() {
                     Admin Dashboard
                   </Link>
                   <Link
-                    href="/dashboard/bookings"
+                    href="/dashboard/users"
                     className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
                     <ClipboardList className="w-5 h-5 inline mr-2" />
-                    All Bookings
+                    Manage Users
                   </Link>
                 </>
               )}
             </div>
           ) : (
-            // Guest user actions
-            <div className="flex flex-col sm:flex-row gap-4">
+            // Non-logged in user actions
+            <>
               <Link
-                href="/book"
+                href="/auth/signin"
                 className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
-                <Music className="w-5 h-5 inline mr-2" />
-                Book a DJ
+                Get Started
+                <ArrowRight className="w-5 h-5 inline ml-2" />
               </Link>
               <Link
-                href="/auth"
+                href="/djs"
                 className="bg-gray-800/50 backdrop-blur-sm border border-gray-600/30 hover:border-violet-500/50 text-white font-semibold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
-                <Lock className="w-5 h-5 inline mr-2" />
-                Sign In
+                Browse DJs
               </Link>
-            </div>
+            </>
           )}
         </div>
 
