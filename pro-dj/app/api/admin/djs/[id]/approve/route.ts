@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -29,7 +30,7 @@ export async function POST(
 
     // Check if user exists and is a DJ
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         djProfile: true,
       },
@@ -52,7 +53,7 @@ export async function POST(
 
     // Approve the DJ
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status: "ACTIVE",
       },
@@ -60,7 +61,7 @@ export async function POST(
 
     // Update DJ profile to verified
     await prisma.djProfile.update({
-      where: { userId: params.id },
+      where: { userId: id },
       data: {
         isVerified: true,
       },

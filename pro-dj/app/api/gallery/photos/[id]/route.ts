@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // DELETE: Delete a specific photo
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);

@@ -555,19 +555,6 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* Message */}
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-lg ${
-              messageType === "success"
-                ? "bg-green-900/50 text-green-200 border border-green-500/30"
-                : "bg-red-900/50 text-red-200 border border-red-500/30"
-            }`}
-          >
-            {message}
-          </div>
-        )}
-
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Profile Picture Section */}
           <div className="lg:col-span-1">
@@ -836,6 +823,19 @@ export default function ProfilePage() {
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
+
+                {/* Message */}
+                {message && (
+                  <div
+                    className={`mt-4 p-4 rounded-lg ${
+                      messageType === "success"
+                        ? "bg-green-900/50 text-green-200 border border-green-500/30"
+                        : "bg-red-900/50 text-red-200 border border-red-500/30"
+                    }`}
+                  >
+                    {message}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Music, DollarSign, MapPin } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function DjRegisterPage() {
   const { data: session } = useSession();

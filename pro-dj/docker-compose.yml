@@ -1,0 +1,66 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: pro-dj-postgres
+    environment:
+      POSTGRES_DB: pro_dj
+      POSTGRES_USER: pro_dj_user
+      POSTGRES_PASSWORD: pro_dj_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pro-dj-network
+
+  # Redis for caching and sessions (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: pro-dj-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pro-dj-network
+
+  # Pro-DJ Application
+  app:
+    build: .
+    container_name: pro-dj-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://pro_dj_user:pro_dj_password@postgres:5432/pro_dj
+      - REDIS_URL=redis://redis:6379
+      # Add your other environment variables here
+      # - AWS_ACCESS_KEY_ID=your_aws_key
+      # - AWS_SECRET_ACCESS_KEY=your_aws_secret
+      # - AWS_REGION=your_aws_region
+      # - AWS_S3_BUCKET=your_s3_bucket
+      # - NEXTAUTH_SECRET=your_nextauth_secret
+      # - NEXTAUTH_URL=http://localhost:3000
+      # - STRIPE_SECRET_KEY=your_stripe_secret
+      # - STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+      # - RESEND_API_KEY=your_resend_key
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./uploads:/app/public/uploads
+      - ./prisma:/app/prisma
+    networks:
+      - pro-dj-network
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  pro-dj-network:
+    driver: bridge

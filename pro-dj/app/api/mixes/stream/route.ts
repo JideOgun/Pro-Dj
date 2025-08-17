@@ -21,23 +21,18 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
-    const s3Key = searchParams.get("key");
+    const mixId = searchParams.get("id");
 
-    console.log("Stream request:", {
-      s3Key,
-      userAgent: req.headers.get("user-agent"),
-    });
-
-    if (!s3Key) {
+    if (!mixId) {
       return NextResponse.json(
-        { error: "Missing s3Key parameter" },
+        { error: "Missing id parameter" },
         { status: 400 }
       );
     }
 
     // Find the mix to check permissions
     const mix = await prisma.djMix.findFirst({
-      where: { s3Key },
+      where: { id: mixId },
       include: {
         dj: {
           select: {
@@ -66,12 +61,7 @@ export async function GET(req: NextRequest) {
     // Get the file from S3
     const command = new GetObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
-      Key: s3Key,
-    });
-
-    console.log("S3 request:", {
-      bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
-      key: s3Key,
+      Key: mix.s3Key,
     });
 
     // Add timeout to prevent hanging requests
@@ -83,13 +73,6 @@ export async function GET(req: NextRequest) {
       s3Client.send(command),
       timeoutPromise,
     ])) as any;
-
-    console.log("S3 response:", {
-      statusCode: response.$metadata.httpStatusCode,
-      contentLength: response.ContentLength,
-      contentType: response.ContentType,
-      etag: response.ETag,
-    });
 
     if (!response.Body) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
@@ -107,7 +90,7 @@ export async function GET(req: NextRequest) {
       // Create a new command with range
       const rangeCommand = new GetObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
-        Key: s3Key,
+        Key: mix.s3Key,
         Range: `bytes=${start}-${end}`,
       });
 
@@ -181,8 +164,6 @@ export async function GET(req: NextRequest) {
       headers,
     });
   } catch (error) {
-    console.error("Error streaming mix:", error);
-
     let errorMessage = "Failed to stream mix";
     let statusCode = 500;
 

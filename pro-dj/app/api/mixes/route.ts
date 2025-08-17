@@ -95,8 +95,10 @@ export async function GET(req: Request) {
         include: {
           dj: {
             select: {
+              id: true,
               stageName: true,
               profileImage: true,
+              userId: true,
             },
           },
         },
@@ -117,10 +119,31 @@ export async function GET(req: Request) {
         mix.localUrl ||
         `/api/mixes/stream?key=${encodeURIComponent(mix.s3Key)}`;
 
+      // Generate album art URL if not set
+      let albumArtUrl = mix.albumArtUrl;
+      if (!albumArtUrl && mix.albumArtS3Key) {
+        if (process.env.AWS_CLOUDFRONT_DOMAIN) {
+          albumArtUrl = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${mix.albumArtS3Key}`;
+        } else {
+          // Generate direct S3 URL when CloudFront is not available
+          albumArtUrl = `https://${
+            process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2"
+          }.s3.${process.env.AWS_REGION || "us-east-2"}.amazonaws.com/${
+            mix.albumArtS3Key
+          }`;
+        }
+      }
+
+      // Set albumArtUrl to null if it's empty or invalid
+      if (!albumArtUrl || albumArtUrl === "/uploads/album-art/") {
+        albumArtUrl = null;
+      }
+
       return {
         ...mix,
         cloudFrontUrl,
         localUrl,
+        albumArtUrl,
       };
     });
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import AuthGuard from "@/components/AuthGuard";
 import { BOOKING_CONFIG, type BookingType } from "@/lib/booking-config";
 import toast from "react-hot-toast";
 import {
@@ -758,1026 +759,1041 @@ export default function BookPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Book Your Event</h1>
-          <p className="text-xl text-gray-300">
-            Let&apos;s create something amazing together
-          </p>
-        </div>
-
-        {/* Recovery Mode Banner */}
-        {isRecoveryMode && (
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-blue-400" />
-              <h3 className="text-blue-200 font-semibold">
-                DJ Replacement Mode
-              </h3>
-            </div>
-            <p className="text-blue-300 text-sm">
-              You are replacing a DJ for your event. Only one DJ can be booked
-              for this time slot. If you want to add more DJs, they must have
-              different time slots.
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="max-w-4xl mx-auto p-6">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">Book Your Event</h1>
+            <p className="text-xl text-gray-300">
+              Let&apos;s create something amazing together
             </p>
           </div>
-        )}
 
-        {/* Main Form */}
-        <div className="bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
-          <form onSubmit={submit} className="space-y-6">
-            {/* Event Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Event Type *
-              </label>
-              <select
-                value={bookingType}
-                onChange={(e) => {
-                  setBookingType(e.target.value as BookingType);
-                  clearErrorOnChange();
-                }}
-                required
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              >
-                <option value="">Select your event type</option>
-                {types.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+          {/* Recovery Mode Banner */}
+          {isRecoveryMode && (
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-blue-400" />
+                <h3 className="text-blue-200 font-semibold">
+                  DJ Replacement Mode
+                </h3>
+              </div>
+              <p className="text-blue-300 text-sm">
+                You are replacing a DJ for your event. Only one DJ can be booked
+                for this time slot. If you want to add more DJs, they must have
+                different time slots.
+              </p>
             </div>
+          )}
 
-            {/* Event Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Event Date *
-              </label>
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e) => {
-                  setEventDate(e.target.value);
-                  clearErrorOnChange();
-                }}
-                required
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Event Overview Time (for reference) */}
-            <div className="grid grid-cols-2 gap-4">
+          {/* Main Form */}
+          <div className="bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
+            <form onSubmit={submit} className="space-y-6">
+              {/* Event Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Event Start Time (Reference)
+                  Event Type *
                 </label>
-                <input
-                  type="time"
-                  value={startTime}
+                <select
+                  value={bookingType}
                   onChange={(e) => {
-                    setStartTime(e.target.value);
+                    setBookingType(e.target.value as BookingType);
                     clearErrorOnChange();
                   }}
+                  required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="When your event starts"
-                />
+                >
+                  <option value="">Select your event type</option>
+                  {types.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Event Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Event End Time (Reference)
+                  Event Date *
                 </label>
                 <input
-                  type="time"
-                  value={endTime}
+                  type="date"
+                  value={eventDate}
                   onChange={(e) => {
-                    setEndTime(e.target.value);
+                    setEventDate(e.target.value);
                     clearErrorOnChange();
                   }}
+                  required
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="When your event ends"
                 />
               </div>
-            </div>
 
-            {/* Extra Fields */}
-            {typeConfig?.extraFields.map((field) => (
-              <div key={field}>
+              {/* Event Overview Time (for reference) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Event Start Time (Reference)
+                  </label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => {
+                      setStartTime(e.target.value);
+                      clearErrorOnChange();
+                    }}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    placeholder="When your event starts"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Event End Time (Reference)
+                  </label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => {
+                      setEndTime(e.target.value);
+                      clearErrorOnChange();
+                    }}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    placeholder="When your event ends"
+                  />
+                </div>
+              </div>
+
+              {/* Extra Fields */}
+              {typeConfig?.extraFields.map((field) => (
+                <div key={field}>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {field}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={field}
+                    value={extra[field] ?? ""}
+                    onChange={(e) =>
+                      setExtra({ ...extra, [field]: e.target.value })
+                    }
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+              ))}
+
+              {/* Contact Email */}
+              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  {field}
+                  Contact Email *
                 </label>
                 <input
-                  type="text"
-                  placeholder={field}
-                  value={extra[field] ?? ""}
-                  onChange={(e) =>
-                    setExtra({ ...extra, [field]: e.target.value })
-                  }
+                  type="email"
+                  placeholder="your-email@example.com"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
               </div>
-            ))}
 
-            {/* Contact Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Contact Email *
-              </label>
-              <input
-                type="email"
-                placeholder="your-email@example.com"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                required
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              />
-            </div>
+              {/* Music Preferences */}
+              <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700/30">
+                <h3 className="text-lg font-semibold text-violet-400 mb-4 flex items-center gap-2">
+                  <Music className="w-5 h-5" />
+                  Music Preferences
+                </h3>
 
-            {/* Music Preferences */}
-            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700/30">
-              <h3 className="text-lg font-semibold text-violet-400 mb-4 flex items-center gap-2">
-                <Music className="w-5 h-5" />
-                Music Preferences
-              </h3>
-
-              {/* Preferred Genres */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Preferred Music Genres
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {availableGenres.map((genre) => (
-                    <label
-                      key={genre}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={preferredGenres.includes(genre)}
-                        onChange={(e) => {
-                          clearErrorOnChange();
-                          if (e.target.checked) {
-                            setPreferredGenres([...preferredGenres, genre]);
-                          } else {
-                            setPreferredGenres(
-                              preferredGenres.filter((g) => g !== genre)
-                            );
-                          }
-                        }}
-                        className="rounded border-gray-600 bg-gray-700 text-violet-500 focus:ring-violet-500"
-                      />
-                      <span className="text-sm text-gray-300">{genre}</span>
-                    </label>
-                  ))}
+                {/* Preferred Genres */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Preferred Music Genres
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {availableGenres.map((genre) => (
+                      <label
+                        key={genre}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={preferredGenres.includes(genre)}
+                          onChange={(e) => {
+                            clearErrorOnChange();
+                            if (e.target.checked) {
+                              setPreferredGenres([...preferredGenres, genre]);
+                            } else {
+                              setPreferredGenres(
+                                preferredGenres.filter((g) => g !== genre)
+                              );
+                            }
+                          }}
+                          className="rounded border-gray-600 bg-gray-700 text-violet-500 focus:ring-violet-500"
+                        />
+                        <span className="text-sm text-gray-300">{genre}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Select the genres you&apos;d like to hear at your event
+                  </p>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
-                  Select the genres you&apos;d like to hear at your event
-                </p>
+
+                {/* Music Style */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Music Style & Energy Level
+                  </label>
+                  <select
+                    value={musicStyle}
+                    onChange={(e) => {
+                      setMusicStyle(e.target.value);
+                      clearErrorOnChange();
+                    }}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  >
+                    <option value="">Select music style...</option>
+                    <option value="high-energy">
+                      High Energy (Upbeat, Dance-focused)
+                    </option>
+                    <option value="moderate">
+                      Moderate Energy (Mix of upbeat and chill)
+                    </option>
+                    <option value="chill">
+                      Chill/Relaxed (Background music, ambient)
+                    </option>
+                    <option value="romantic">Romantic (Slow, intimate)</option>
+                    <option value="professional">
+                      Professional (Corporate, formal)
+                    </option>
+                    <option value="mixed">
+                      Mixed (Variety throughout the event)
+                    </option>
+                  </select>
+                </div>
               </div>
 
-              {/* Music Style */}
-              <div className="mb-6">
+              {/* Equipment & Amenities */}
+              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Music Style & Energy Level
+                  Equipment & Amenities You&apos;ll Provide
                 </label>
-                <select
-                  value={musicStyle}
+                <textarea
+                  placeholder="Tell us what equipment/amenities you'll provide: e.g., 'We have our own speakers and DJ controller', 'Venue provides sound system', 'DJ needs to bring everything', 'We have lighting but need sound system', 'Venue has basic setup but needs professional equipment', etc."
+                  value={clientEquipment}
                   onChange={(e) => {
-                    setMusicStyle(e.target.value);
+                    setClientEquipment(e.target.value);
                     clearErrorOnChange();
                   }}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                >
-                  <option value="">Select music style...</option>
-                  <option value="high-energy">
-                    High Energy (Upbeat, Dance-focused)
-                  </option>
-                  <option value="moderate">
-                    Moderate Energy (Mix of upbeat and chill)
-                  </option>
-                  <option value="chill">
-                    Chill/Relaxed (Background music, ambient)
-                  </option>
-                  <option value="romantic">Romantic (Slow, intimate)</option>
-                  <option value="professional">
-                    Professional (Corporate, formal)
-                  </option>
-                  <option value="mixed">
-                    Mixed (Variety throughout the event)
-                  </option>
-                </select>
+                  rows={3}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  This helps DJs know what equipment to bring. Common setups:
+                  Clubs (own equipment), Weddings (venue provides some),
+                  Birthdays (DJ brings everything), Corporate (varies by venue).
+                </p>
               </div>
-            </div>
 
-            {/* Equipment & Amenities */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Equipment & Amenities You&apos;ll Provide
-              </label>
-              <textarea
-                placeholder="Tell us what equipment/amenities you'll provide: e.g., 'We have our own speakers and DJ controller', 'Venue provides sound system', 'DJ needs to bring everything', 'We have lighting but need sound system', 'Venue has basic setup but needs professional equipment', etc."
-                value={clientEquipment}
-                onChange={(e) => {
-                  setClientEquipment(e.target.value);
-                  clearErrorOnChange();
-                }}
-                rows={3}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                This helps DJs know what equipment to bring. Common setups:
-                Clubs (own equipment), Weddings (venue provides some), Birthdays
-                (DJ brings everything), Corporate (varies by venue).
-              </p>
-            </div>
-
-            {/* Event Details & Atmosphere */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Event Details & Atmosphere *
-              </label>
-              <textarea
-                placeholder="Tell us about your event: venue details, special requirements, desired atmosphere (e.g., 'Elegant and sophisticated', 'Fun and energetic', 'Intimate and romantic', 'Professional and formal'), guest count, any specific songs or moments you want to highlight, etc."
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  clearErrorOnChange();
-                }}
-                required
-                rows={5}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-2">
-                Include venue details, atmosphere preferences, special moments,
-                guest count, and any other important information about your
-                event.
-              </p>
-            </div>
-
-            {/* Available Time Slots Display */}
-            {startTime && endTime && (
-              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
-                <h4 className="text-sm font-medium text-green-300 mb-3">
-                  Event Time Management
-                </h4>
-                <div className="text-sm text-green-200 mb-2">
-                  Total Event Duration: {totalEventDuration} hours ({startTime}{" "}
-                  - {endTime})
-                  {needsMultipleDjs && (
-                    <div className="text-yellow-300 text-xs mt-1">
-                      💡 Event over 8 hours - consider multiple DJs for better
-                      coverage
-                    </div>
-                  )}
-                  <div className="text-blue-300 text-xs mt-2">
-                    💡 You can book DJs for part of your event - other
-                    entertainment can cover the rest
-                  </div>
-                  {isPartialBooking() && (
-                    <div className="text-orange-300 text-xs mt-2 p-2 bg-orange-900/20 rounded border border-orange-500/30">
-                      ⚠️ <strong>Partial Event Coverage Detected:</strong>
-                      <ul className="mt-1 space-y-1">
-                        <li>• DJs will only cover the specified time slots</li>
-                        <li>
-                          • Intermissions between DJs are the client&apos;s
-                          responsibility
-                        </li>
-                        <li>
-                          • DJs are not obligated to cover gaps or intermissions
-                        </li>
-                        <li>
-                          • Please ensure you have alternative entertainment for
-                          uncovered times
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                  {selectedDjs.length > 1 && isPartialBooking() && (
-                    <div className="text-yellow-300 text-xs mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30">
-                      🎵 <strong>Multi-DJ Event with Gaps:</strong>
-                      <ul className="mt-1 space-y-1">
-                        <li>
-                          • Each DJ will set up and tear down their own
-                          equipment
-                        </li>
-                        <li>• Plan for setup/teardown time between DJs</li>
-                        <li>
-                          • Consider having background music during transitions
-                        </li>
-                        <li>• Communicate transition times with your venue</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                <div className="text-sm text-green-200 mb-2">
-                  Selected DJs: {selectedDjs.length}
-                  {selectedDjs.length > 1 && (
-                    <span className="text-green-300 ml-2">
-                      • {totalEventDuration / selectedDjs.length} hours each
-                    </span>
-                  )}
-                </div>
-                {selectedDjs.length > 1 && (
-                  <div className="mt-3">
-                    <button
-                      onClick={() => {
-                        clearErrorOnChange();
-                        // Redistribute time evenly among all DJs
-                        const timePerDj =
-                          totalEventDuration / selectedDjs.length;
-                        const updatedDjs = selectedDjs.map((dj, index) => {
-                          const djStartTime = new Date(
-                            `2000-01-01T${startTime}`
-                          );
-                          djStartTime.setMinutes(
-                            djStartTime.getMinutes() + timePerDj * 60 * index
-                          );
-
-                          const djEndTime = new Date(djStartTime);
-                          djEndTime.setMinutes(
-                            djEndTime.getMinutes() + timePerDj * 60
-                          );
-
-                          return {
-                            ...dj,
-                            startTime: djStartTime.toTimeString().slice(0, 5),
-                            endTime: djEndTime.toTimeString().slice(0, 5),
-                            packageKey: autoSelectPackage(timePerDj),
-                          };
-                        });
-                        setSelectedDjs(updatedDjs);
-                      }}
-                      className="text-green-400 hover:text-green-300 text-sm font-medium transition-colors"
-                    >
-                      🔄 Redistribute Time Evenly
-                    </button>
-                  </div>
-                )}
-                {selectedDjs.length > 0 && (
-                  <div className="text-sm text-green-200 mt-2">
-                    <div className="text-xs text-green-300">
-                      💡 Tip: You can manually adjust individual DJ times below,
-                      or use &quot;Redistribute Time&quot; to evenly split the
-                      event duration.
-                    </div>
-                  </div>
-                )}
+              {/* Event Details & Atmosphere */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Event Details & Atmosphere *
+                </label>
+                <textarea
+                  placeholder="Tell us about your event: venue details, special requirements, desired atmosphere (e.g., 'Elegant and sophisticated', 'Fun and energetic', 'Intimate and romantic', 'Professional and formal'), guest count, any specific songs or moments you want to highlight, etc."
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    clearErrorOnChange();
+                  }}
+                  required
+                  rows={5}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  Include venue details, atmosphere preferences, special
+                  moments, guest count, and any other important information
+                  about your event.
+                </p>
               </div>
-            )}
 
-            {/* DJ Selection - Moved to end for intelligent suggestions */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select DJs for Your Event *
-              </label>
-
-              {/* DJ Selection Interface */}
-              <div className="space-y-4">
-                {/* Intelligent Suggestions Banner */}
-                {eventDate && startTime && endTime && bookingType && (
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Music className="w-5 h-5 text-blue-400" />
-                      <h4 className="text-blue-200 font-semibold">
-                        Intelligent DJ Suggestions
-                      </h4>
-                    </div>
-                    <p className="text-blue-300 text-sm mb-3">
-                      Based on your event details, music preferences, and
-                      availability, here are our top recommendations:
-                    </p>
-
-                    {isLoadingSuggestions ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div>
-                        <p className="text-blue-300 text-sm mt-2">
-                          Finding perfect DJs for your event...
-                        </p>
-                      </div>
-                    ) : suggestedDjs.length > 0 ? (
-                      <div className="space-y-2">
-                        {suggestedDjs.slice(0, 5).map((dj) => {
-                          const isSelected = selectedDjs.some(
-                            (sd) => sd.djId === dj.id
-                          );
-                          return (
-                            <div
-                              key={dj.id}
-                              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                isSelected
-                                  ? "border-violet-500 bg-violet-900/20"
-                                  : "border-blue-600 bg-blue-900/20 hover:border-blue-500"
-                              }`}
-                              onClick={() => {
-                                clearErrorOnChange();
-                                if (isSelected) {
-                                  setSelectedDjs(
-                                    selectedDjs.filter(
-                                      (sd) => sd.djId !== dj.id
-                                    )
-                                  );
-                                } else {
-                                  // In recovery mode, only allow one DJ
-                                  if (
-                                    isRecoveryMode &&
-                                    selectedDjs.length >= 1
-                                  ) {
-                                    setMsg(
-                                      "In recovery mode, you can only select one DJ to replace the original DJ."
-                                    );
-                                    return;
-                                  }
-
-                                  addDjWithTimeSlot(dj);
-                                }
-                              }}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="font-medium text-white">
-                                    {dj.stageName}
-                                  </div>
-                                  <div className="text-sm text-gray-400">
-                                    {dj.genres.slice(0, 3).join(", ")}
-                                    {dj.genres.length > 3 && "..."}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    ${(dj.basePriceCents / 100).toFixed(2)}/hr
-                                  </div>
-                                </div>
-                                <div
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
-                                    isSelected
-                                      ? "border-violet-500 bg-violet-500"
-                                      : "border-blue-400"
-                                  }`}
-                                >
-                                  {isSelected && (
-                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-blue-300">
-                        <p>No DJs available for your selected time slot.</p>
-                        <p className="text-sm">
-                          Try adjusting your event time or date.
-                        </p>
+              {/* Available Time Slots Display */}
+              {startTime && endTime && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-medium text-green-300 mb-3">
+                    Event Time Management
+                  </h4>
+                  <div className="text-sm text-green-200 mb-2">
+                    Total Event Duration: {totalEventDuration} hours (
+                    {startTime} - {endTime})
+                    {needsMultipleDjs && (
+                      <div className="text-yellow-300 text-xs mt-1">
+                        💡 Event over 8 hours - consider multiple DJs for better
+                        coverage
                       </div>
                     )}
-
-                    {/* Browse All DJs Button */}
-                    <div className="mt-4 pt-4 border-t border-blue-500/30">
+                    <div className="text-blue-300 text-xs mt-2">
+                      💡 You can book DJs for part of your event - other
+                      entertainment can cover the rest
+                    </div>
+                    {isPartialBooking() && (
+                      <div className="text-orange-300 text-xs mt-2 p-2 bg-orange-900/20 rounded border border-orange-500/30">
+                        ⚠️ <strong>Partial Event Coverage Detected:</strong>
+                        <ul className="mt-1 space-y-1">
+                          <li>
+                            • DJs will only cover the specified time slots
+                          </li>
+                          <li>
+                            • Intermissions between DJs are the client&apos;s
+                            responsibility
+                          </li>
+                          <li>
+                            • DJs are not obligated to cover gaps or
+                            intermissions
+                          </li>
+                          <li>
+                            • Please ensure you have alternative entertainment
+                            for uncovered times
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                    {selectedDjs.length > 1 && isPartialBooking() && (
+                      <div className="text-yellow-300 text-xs mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30">
+                        🎵 <strong>Multi-DJ Event with Gaps:</strong>
+                        <ul className="mt-1 space-y-1">
+                          <li>
+                            • Each DJ will set up and tear down their own
+                            equipment
+                          </li>
+                          <li>• Plan for setup/teardown time between DJs</li>
+                          <li>
+                            • Consider having background music during
+                            transitions
+                          </li>
+                          <li>
+                            • Communicate transition times with your venue
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-sm text-green-200 mb-2">
+                    Selected DJs: {selectedDjs.length}
+                    {selectedDjs.length > 1 && (
+                      <span className="text-green-300 ml-2">
+                        • {totalEventDuration / selectedDjs.length} hours each
+                      </span>
+                    )}
+                  </div>
+                  {selectedDjs.length > 1 && (
+                    <div className="mt-3">
                       <button
-                        type="button"
                         onClick={() => {
-                          if (showAllDjs) {
-                            setShowAllDjs(false);
-                            // Reset to suggestions when hiding
-                            setDjs(suggestedDjs);
-                          } else {
-                            loadAllDjs();
-                          }
+                          clearErrorOnChange();
+                          // Redistribute time evenly among all DJs
+                          const timePerDj =
+                            totalEventDuration / selectedDjs.length;
+                          const updatedDjs = selectedDjs.map((dj, index) => {
+                            const djStartTime = new Date(
+                              `2000-01-01T${startTime}`
+                            );
+                            djStartTime.setMinutes(
+                              djStartTime.getMinutes() + timePerDj * 60 * index
+                            );
+
+                            const djEndTime = new Date(djStartTime);
+                            djEndTime.setMinutes(
+                              djEndTime.getMinutes() + timePerDj * 60
+                            );
+
+                            return {
+                              ...dj,
+                              startTime: djStartTime.toTimeString().slice(0, 5),
+                              endTime: djEndTime.toTimeString().slice(0, 5),
+                              packageKey: autoSelectPackage(timePerDj),
+                            };
+                          });
+                          setSelectedDjs(updatedDjs);
                         }}
-                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                        className="text-green-400 hover:text-green-300 text-sm font-medium transition-colors"
                       >
-                        {showAllDjs ? "Hide" : "Browse"} All Available DJs
+                        🔄 Redistribute Time Evenly
                       </button>
                     </div>
-                  </div>
-                )}
-
-                {/* All DJs Section (when showAllDjs is true) */}
-                {showAllDjs && (
-                  <div className="bg-gray-700/50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-300 mb-3">
-                      All Available DJs
-                    </h4>
-
-                    {/* Search Bar */}
-                    <div className="mb-4">
-                      <input
-                        type="text"
-                        placeholder="Search DJs by name..."
-                        value={djSearchTerm}
-                        onChange={(e) => setDjSearchTerm(e.target.value)}
-                        className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                      <div>
-                        <label className="block text-xs text-gray-400 mb-1">
-                          Filter by Genre
-                        </label>
-                        <select
-                          value={selectedGenreFilter}
-                          onChange={(e) =>
-                            setSelectedGenreFilter(e.target.value)
-                          }
-                          className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        >
-                          <option value="">All Genres</option>
-                          {availableGenres.map((genre) => (
-                            <option key={genre} value={genre}>
-                              {genre}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs text-gray-400 mb-1">
-                          Price Range
-                        </label>
-                        <select
-                          value={priceRange}
-                          onChange={(e) => setPriceRange(e.target.value)}
-                          className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        >
-                          <option value="">All Prices</option>
-                          <option value="budget">Budget ($0-100/hr)</option>
-                          <option value="mid">Mid-Range ($100-200/hr)</option>
-                          <option value="premium">Premium ($200+/hr)</option>
-                        </select>
+                  )}
+                  {selectedDjs.length > 0 && (
+                    <div className="text-sm text-green-200 mt-2">
+                      <div className="text-xs text-green-300">
+                        💡 Tip: You can manually adjust individual DJ times
+                        below, or use &quot;Redistribute Time&quot; to evenly
+                        split the event duration.
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
 
-                    {/* Results Count */}
-                    <div className="text-xs text-gray-400 mb-3">
-                      Showing {filteredDjs.length} of {djs.length} DJs
-                    </div>
+              {/* DJ Selection - Moved to end for intelligent suggestions */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Select DJs for Your Event *
+                </label>
 
-                    {/* DJ List */}
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {filteredDjs.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
-                          <p>No DJs found matching your criteria</p>
-                          <button
-                            onClick={() => {
-                              setDjSearchTerm("");
-                              setSelectedGenreFilter("");
-                              setPriceRange("");
-                            }}
-                            className="text-violet-400 hover:text-violet-300 text-sm mt-2"
-                          >
-                            Clear filters
-                          </button>
+                {/* DJ Selection Interface */}
+                <div className="space-y-4">
+                  {/* Intelligent Suggestions Banner */}
+                  {eventDate && startTime && endTime && bookingType && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Music className="w-5 h-5 text-blue-400" />
+                        <h4 className="text-blue-200 font-semibold">
+                          Intelligent DJ Suggestions
+                        </h4>
+                      </div>
+                      <p className="text-blue-300 text-sm mb-3">
+                        Based on your event details, music preferences, and
+                        availability, here are our top recommendations:
+                      </p>
+
+                      {isLoadingSuggestions ? (
+                        <div className="text-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div>
+                          <p className="text-blue-300 text-sm mt-2">
+                            Finding perfect DJs for your event...
+                          </p>
                         </div>
-                      ) : (
-                        filteredDjs.map((dj) => {
-                          const isSelected = selectedDjs.some(
-                            (sd) => sd.djId === dj.id
-                          );
-                          return (
-                            <div
-                              key={dj.id}
-                              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                isSelected
-                                  ? "border-violet-500 bg-violet-900/20"
-                                  : "border-gray-600 bg-gray-700 hover:border-gray-500"
-                              }`}
-                              onClick={() => {
-                                clearErrorOnChange();
-                                if (isSelected) {
-                                  setSelectedDjs(
-                                    selectedDjs.filter(
-                                      (sd) => sd.djId !== dj.id
-                                    )
-                                  );
-                                } else {
-                                  // In recovery mode, only allow one DJ
-                                  if (
-                                    isRecoveryMode &&
-                                    selectedDjs.length >= 1
-                                  ) {
-                                    setMsg(
-                                      "In recovery mode, you can only select one DJ to replace the original DJ."
-                                    );
-                                    return;
-                                  }
-
-                                  addDjWithTimeSlot(dj);
-                                }
-                              }}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="font-medium text-white">
-                                    {dj.stageName}
-                                  </div>
-                                  <div className="text-sm text-gray-400">
-                                    {dj.genres.slice(0, 3).join(", ")}
-                                    {dj.genres.length > 3 && "..."}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    ${(dj.basePriceCents / 100).toFixed(2)}/hr
-                                  </div>
-                                </div>
-                                <div
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
-                                    isSelected
-                                      ? "border-violet-500 bg-violet-500"
-                                      : "border-gray-400"
-                                  }`}
-                                >
-                                  {isSelected && (
-                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Selected DJs with Time Slots */}
-                {selectedDjs.length > 0 && (
-                  <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-violet-300 mb-3">
-                      Selected DJs & Time Slots
-                    </h4>
-                    <div className="space-y-3">
-                      {selectedDjs.map((selectedDj, index) => (
-                        <div
-                          key={selectedDj.djId}
-                          className="bg-gray-800 rounded-lg p-3"
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <div className="font-medium text-white">
-                                {selectedDj.dj.stageName}
-                              </div>
-                              <div className="text-sm text-gray-400">
-                                {selectedDj.dj.genres.join(", ")}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
+                      ) : suggestedDjs.length > 0 ? (
+                        <div className="space-y-2">
+                          {suggestedDjs.slice(0, 5).map((dj) => {
+                            const isSelected = selectedDjs.some(
+                              (sd) => sd.djId === dj.id
+                            );
+                            return (
+                              <div
+                                key={dj.id}
+                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                  isSelected
+                                    ? "border-violet-500 bg-violet-900/20"
+                                    : "border-blue-600 bg-blue-900/20 hover:border-blue-500"
+                                }`}
                                 onClick={() => {
                                   clearErrorOnChange();
-                                  // Calculate optimal time slot for this DJ
-                                  const timePerDj =
-                                    totalEventDuration / selectedDjs.length;
-                                  const djStartTime = new Date(
-                                    `2000-01-01T${startTime}`
-                                  );
-                                  djStartTime.setMinutes(
-                                    djStartTime.getMinutes() +
-                                      timePerDj * 60 * index
-                                  );
-
-                                  const djEndTime = new Date(djStartTime);
-                                  djEndTime.setMinutes(
-                                    djEndTime.getMinutes() + timePerDj * 60
-                                  );
-
-                                  const updated = [...selectedDjs];
-                                  updated[index].startTime = djStartTime
-                                    .toTimeString()
-                                    .slice(0, 5);
-                                  updated[index].endTime = djEndTime
-                                    .toTimeString()
-                                    .slice(0, 5);
-                                  updated[index].packageKey =
-                                    autoSelectPackage(timePerDj);
-                                  setSelectedDjs(updated);
-                                }}
-                                className="text-blue-400 hover:text-blue-300 text-xs"
-                                title="Assign optimal time slot based on DJ position"
-                              >
-                                Auto Time
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setSelectedDjs(
-                                    selectedDjs.filter((_, i) => i !== index)
-                                  )
-                                }
-                                className="text-red-400 hover:text-red-300 text-sm"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <label className="block text-xs text-gray-400 mb-1">
-                                Start Time
-                              </label>
-                              <input
-                                type="time"
-                                value={selectedDj.startTime}
-                                min={startTime}
-                                max={endTime}
-                                onChange={(e) => {
-                                  clearErrorOnChange();
-                                  const updated = [...selectedDjs];
-                                  updated[index].startTime = e.target.value;
-
-                                  // Auto-select package based on duration
-                                  if (updated[index].endTime) {
-                                    const duration = calculateDuration(
-                                      e.target.value,
-                                      updated[index].endTime
+                                  if (isSelected) {
+                                    setSelectedDjs(
+                                      selectedDjs.filter(
+                                        (sd) => sd.djId !== dj.id
+                                      )
                                     );
-                                    updated[index].packageKey =
-                                      autoSelectPackage(duration);
+                                  } else {
+                                    // In recovery mode, only allow one DJ
+                                    if (
+                                      isRecoveryMode &&
+                                      selectedDjs.length >= 1
+                                    ) {
+                                      setMsg(
+                                        "In recovery mode, you can only select one DJ to replace the original DJ."
+                                      );
+                                      return;
+                                    }
+
+                                    addDjWithTimeSlot(dj);
                                   }
-
-                                  setSelectedDjs(updated);
                                 }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-400 mb-1">
-                                End Time
-                              </label>
-                              <input
-                                type="time"
-                                value={selectedDj.endTime}
-                                min={startTime}
-                                max={endTime}
-                                onChange={(e) => {
-                                  clearErrorOnChange();
-                                  const updated = [...selectedDjs];
-                                  updated[index].endTime = e.target.value;
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-white">
+                                      {dj.stageName}
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                      {dj.genres.slice(0, 3).join(", ")}
+                                      {dj.genres.length > 3 && "..."}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      ${(dj.basePriceCents / 100).toFixed(2)}/hr
+                                    </div>
+                                  </div>
+                                  <div
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
+                                      isSelected
+                                        ? "border-violet-500 bg-violet-500"
+                                        : "border-blue-400"
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-blue-300">
+                          <p>No DJs available for your selected time slot.</p>
+                          <p className="text-sm">
+                            Try adjusting your event time or date.
+                          </p>
+                        </div>
+                      )}
 
-                                  // Auto-select package based on duration
-                                  if (updated[index].startTime) {
-                                    const duration = calculateDuration(
-                                      updated[index].startTime,
-                                      e.target.value
-                                    );
-                                    updated[index].packageKey =
-                                      autoSelectPackage(duration);
-                                  }
+                      {/* Browse All DJs Button */}
+                      <div className="mt-4 pt-4 border-t border-blue-500/30">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (showAllDjs) {
+                              setShowAllDjs(false);
+                              // Reset to suggestions when hiding
+                              setDjs(suggestedDjs);
+                            } else {
+                              loadAllDjs();
+                            }
+                          }}
+                          className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                        >
+                          {showAllDjs ? "Hide" : "Browse"} All Available DJs
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                                  setSelectedDjs(updated);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
-                              />
-                            </div>
-                          </div>
+                  {/* All DJs Section (when showAllDjs is true) */}
+                  {showAllDjs && (
+                    <div className="bg-gray-700/50 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-gray-300 mb-3">
+                        All Available DJs
+                      </h4>
 
-                          {/* Duration Display */}
-                          {selectedDj.startTime && selectedDj.endTime && (
-                            <div className="text-xs text-gray-400 mb-2">
-                              Duration:{" "}
-                              {calculateDuration(
-                                selectedDj.startTime,
-                                selectedDj.endTime
-                              )}{" "}
-                              hours
-                            </div>
-                          )}
+                      {/* Search Bar */}
+                      <div className="mb-4">
+                        <input
+                          type="text"
+                          placeholder="Search DJs by name..."
+                          value={djSearchTerm}
+                          onChange={(e) => setDjSearchTerm(e.target.value)}
+                          className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                      </div>
 
-                          {/* Package Selection for this DJ */}
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">
-                              Package *
-                            </label>
-                            <select
-                              value={selectedDj.packageKey}
-                              onChange={(e) => {
-                                clearErrorOnChange();
-                                const updated = [...selectedDjs];
-                                updated[index].packageKey = e.target.value;
-                                setSelectedDjs(updated);
+                      {/* Filters */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            Filter by Genre
+                          </label>
+                          <select
+                            value={selectedGenreFilter}
+                            onChange={(e) =>
+                              setSelectedGenreFilter(e.target.value)
+                            }
+                            className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                          >
+                            <option value="">All Genres</option>
+                            {availableGenres.map((genre) => (
+                              <option key={genre} value={genre}>
+                                {genre}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            Price Range
+                          </label>
+                          <select
+                            value={priceRange}
+                            onChange={(e) => setPriceRange(e.target.value)}
+                            className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                          >
+                            <option value="">All Prices</option>
+                            <option value="budget">Budget ($0-100/hr)</option>
+                            <option value="mid">Mid-Range ($100-200/hr)</option>
+                            <option value="premium">Premium ($200+/hr)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Results Count */}
+                      <div className="text-xs text-gray-400 mb-3">
+                        Showing {filteredDjs.length} of {djs.length} DJs
+                      </div>
+
+                      {/* DJ List */}
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {filteredDjs.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <p>No DJs found matching your criteria</p>
+                            <button
+                              onClick={() => {
+                                setDjSearchTerm("");
+                                setSelectedGenreFilter("");
+                                setPriceRange("");
                               }}
-                              className={`w-full bg-gray-700 border rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500 ${
-                                selectedDj.packageKey
-                                  ? "border-green-500"
-                                  : "border-gray-600"
-                              }`}
-                              required
+                              className="text-violet-400 hover:text-violet-300 text-sm mt-2"
                             >
-                              <option value="">Select a package</option>
-                              {packages.length === 0 && (
-                                <option value="" disabled>
-                                  Loading packages...
-                                </option>
-                              )}
-                              {packages.map((pkg) => {
-                                const currentDuration = calculateDuration(
+                              Clear filters
+                            </button>
+                          </div>
+                        ) : (
+                          filteredDjs.map((dj) => {
+                            const isSelected = selectedDjs.some(
+                              (sd) => sd.djId === dj.id
+                            );
+                            return (
+                              <div
+                                key={dj.id}
+                                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                  isSelected
+                                    ? "border-violet-500 bg-violet-900/20"
+                                    : "border-gray-600 bg-gray-700 hover:border-gray-500"
+                                }`}
+                                onClick={() => {
+                                  clearErrorOnChange();
+                                  if (isSelected) {
+                                    setSelectedDjs(
+                                      selectedDjs.filter(
+                                        (sd) => sd.djId !== dj.id
+                                      )
+                                    );
+                                  } else {
+                                    // In recovery mode, only allow one DJ
+                                    if (
+                                      isRecoveryMode &&
+                                      selectedDjs.length >= 1
+                                    ) {
+                                      setMsg(
+                                        "In recovery mode, you can only select one DJ to replace the original DJ."
+                                      );
+                                      return;
+                                    }
+
+                                    addDjWithTimeSlot(dj);
+                                  }
+                                }}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-white">
+                                      {dj.stageName}
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                      {dj.genres.slice(0, 3).join(", ")}
+                                      {dj.genres.length > 3 && "..."}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      ${(dj.basePriceCents / 100).toFixed(2)}/hr
+                                    </div>
+                                  </div>
+                                  <div
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-3 ${
+                                      isSelected
+                                        ? "border-violet-500 bg-violet-500"
+                                        : "border-gray-400"
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected DJs with Time Slots */}
+                  {selectedDjs.length > 0 && (
+                    <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-violet-300 mb-3">
+                        Selected DJs & Time Slots
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedDjs.map((selectedDj, index) => (
+                          <div
+                            key={selectedDj.djId}
+                            className="bg-gray-800 rounded-lg p-3"
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <div className="font-medium text-white">
+                                  {selectedDj.dj.stageName}
+                                </div>
+                                <div className="text-sm text-gray-400">
+                                  {selectedDj.dj.genres.join(", ")}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    clearErrorOnChange();
+                                    // Calculate optimal time slot for this DJ
+                                    const timePerDj =
+                                      totalEventDuration / selectedDjs.length;
+                                    const djStartTime = new Date(
+                                      `2000-01-01T${startTime}`
+                                    );
+                                    djStartTime.setMinutes(
+                                      djStartTime.getMinutes() +
+                                        timePerDj * 60 * index
+                                    );
+
+                                    const djEndTime = new Date(djStartTime);
+                                    djEndTime.setMinutes(
+                                      djEndTime.getMinutes() + timePerDj * 60
+                                    );
+
+                                    const updated = [...selectedDjs];
+                                    updated[index].startTime = djStartTime
+                                      .toTimeString()
+                                      .slice(0, 5);
+                                    updated[index].endTime = djEndTime
+                                      .toTimeString()
+                                      .slice(0, 5);
+                                    updated[index].packageKey =
+                                      autoSelectPackage(timePerDj);
+                                    setSelectedDjs(updated);
+                                  }}
+                                  className="text-blue-400 hover:text-blue-300 text-xs"
+                                  title="Assign optimal time slot based on DJ position"
+                                >
+                                  Auto Time
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setSelectedDjs(
+                                      selectedDjs.filter((_, i) => i !== index)
+                                    )
+                                  }
+                                  className="text-red-400 hover:text-red-300 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">
+                                  Start Time
+                                </label>
+                                <input
+                                  type="time"
+                                  value={selectedDj.startTime}
+                                  min={startTime}
+                                  max={endTime}
+                                  onChange={(e) => {
+                                    clearErrorOnChange();
+                                    const updated = [...selectedDjs];
+                                    updated[index].startTime = e.target.value;
+
+                                    // Auto-select package based on duration
+                                    if (updated[index].endTime) {
+                                      const duration = calculateDuration(
+                                        e.target.value,
+                                        updated[index].endTime
+                                      );
+                                      updated[index].packageKey =
+                                        autoSelectPackage(duration);
+                                    }
+
+                                    setSelectedDjs(updated);
+                                  }}
+                                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">
+                                  End Time
+                                </label>
+                                <input
+                                  type="time"
+                                  value={selectedDj.endTime}
+                                  min={startTime}
+                                  max={endTime}
+                                  onChange={(e) => {
+                                    clearErrorOnChange();
+                                    const updated = [...selectedDjs];
+                                    updated[index].endTime = e.target.value;
+
+                                    // Auto-select package based on duration
+                                    if (updated[index].startTime) {
+                                      const duration = calculateDuration(
+                                        updated[index].startTime,
+                                        e.target.value
+                                      );
+                                      updated[index].packageKey =
+                                        autoSelectPackage(duration);
+                                    }
+
+                                    setSelectedDjs(updated);
+                                  }}
+                                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Duration Display */}
+                            {selectedDj.startTime && selectedDj.endTime && (
+                              <div className="text-xs text-gray-400 mb-2">
+                                Duration:{" "}
+                                {calculateDuration(
                                   selectedDj.startTime,
                                   selectedDj.endTime
-                                );
-                                const hourlyRate = pkg.priceCents / 100;
-                                const totalPrice =
-                                  currentDuration > 0
-                                    ? (hourlyRate * currentDuration).toFixed(2)
-                                    : hourlyRate.toFixed(2);
-
-                                return (
-                                  <option key={pkg.key} value={pkg.key}>
-                                    {pkg.label} - ${hourlyRate}/hr
-                                    {currentDuration > 0
-                                      ? ` ($${totalPrice} total for ${currentDuration}h)`
-                                      : ""}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                            {selectedDj.packageKey && (
-                              <div className="text-xs text-green-400 mt-1">
-                                <Check className="w-4 h-4 inline mr-1" />
-                                Package selected - price calculated per hour
+                                )}{" "}
+                                hours
                               </div>
                             )}
+
+                            {/* Package Selection for this DJ */}
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">
+                                Package *
+                              </label>
+                              <select
+                                value={selectedDj.packageKey}
+                                onChange={(e) => {
+                                  clearErrorOnChange();
+                                  const updated = [...selectedDjs];
+                                  updated[index].packageKey = e.target.value;
+                                  setSelectedDjs(updated);
+                                }}
+                                className={`w-full bg-gray-700 border rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500 ${
+                                  selectedDj.packageKey
+                                    ? "border-green-500"
+                                    : "border-gray-600"
+                                }`}
+                                required
+                              >
+                                <option value="">Select a package</option>
+                                {packages.length === 0 && (
+                                  <option value="" disabled>
+                                    Loading packages...
+                                  </option>
+                                )}
+                                {packages.map((pkg) => {
+                                  const currentDuration = calculateDuration(
+                                    selectedDj.startTime,
+                                    selectedDj.endTime
+                                  );
+                                  const hourlyRate = pkg.priceCents / 100;
+                                  const totalPrice =
+                                    currentDuration > 0
+                                      ? (hourlyRate * currentDuration).toFixed(
+                                          2
+                                        )
+                                      : hourlyRate.toFixed(2);
+
+                                  return (
+                                    <option key={pkg.key} value={pkg.key}>
+                                      {pkg.label} - ${hourlyRate}/hr
+                                      {currentDuration > 0
+                                        ? ` ($${totalPrice} total for ${currentDuration}h)`
+                                        : ""}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              {selectedDj.packageKey && (
+                                <div className="text-xs text-green-400 mt-1">
+                                  <Check className="w-4 h-4 inline mr-1" />
+                                  Package selected - price calculated per hour
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <p className="text-xs text-gray-400 mt-2">
-                Select one or more DJs and set their individual time slots.
-                Packages will be auto-selected based on duration. Each DJ will
-                receive a separate booking request.
-              </p>
-              <div className="text-xs text-blue-400 mt-2 p-2 bg-blue-900/20 rounded border border-blue-500/30">
-                <p className="font-medium mb-1">📋 Time Slot Requirements:</p>
-                <ul className="space-y-1">
-                  <li>• DJ time slots must be within your event duration</li>
-                  <li>• No overlaps between DJ time slots</li>
-                  <li>• Partial event coverage is allowed</li>
-                  <li>• Maximum 8 hours per DJ set</li>
-                  <li>
-                    • Use &quot;Auto Time&quot; or &quot;Redistribute Time&quot;
-                    for help
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Status Message - Positioned right above submit button for visibility */}
-            {msg && (
-              <div
-                id="booking-status-message"
-                className={`p-4 rounded-lg text-center font-medium ${
-                  msg.includes("All Requests Sent") || msg.includes("🎉")
-                    ? "bg-green-900/50 text-green-200 border border-green-500/30"
-                    : "bg-red-900/50 text-red-200 border border-red-500/30 animate-pulse"
-                }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {!msg.includes("All Requests Sent") &&
-                    !msg.includes("🎉") && <AlertCircle className="w-5 h-5" />}
-                  {msg}
+                <p className="text-xs text-gray-400 mt-2">
+                  Select one or more DJs and set their individual time slots.
+                  Packages will be auto-selected based on duration. Each DJ will
+                  receive a separate booking request.
+                </p>
+                <div className="text-xs text-blue-400 mt-2 p-2 bg-blue-900/20 rounded border border-blue-500/30">
+                  <p className="font-medium mb-1">📋 Time Slot Requirements:</p>
+                  <ul className="space-y-1">
+                    <li>• DJ time slots must be within your event duration</li>
+                    <li>• No overlaps between DJ time slots</li>
+                    <li>• Partial event coverage is allowed</li>
+                    <li>• Maximum 8 hours per DJ set</li>
+                    <li>
+                      • Use &quot;Auto Time&quot; or &quot;Redistribute
+                      Time&quot; for help
+                    </li>
+                  </ul>
                 </div>
               </div>
-            )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors text-lg"
-            >
-              Submit Booking Request
-            </button>
-          </form>
-        </div>
+              {/* Status Message - Positioned right above submit button for visibility */}
+              {msg && (
+                <div
+                  id="booking-status-message"
+                  className={`p-4 rounded-lg text-center font-medium ${
+                    msg.includes("All Requests Sent") || msg.includes("🎉")
+                      ? "bg-green-900/50 text-green-200 border border-green-500/30"
+                      : "bg-red-900/50 text-red-200 border border-red-500/30 animate-pulse"
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {!msg.includes("All Requests Sent") &&
+                      !msg.includes("🎉") && (
+                        <AlertCircle className="w-5 h-5" />
+                      )}
+                    {msg}
+                  </div>
+                </div>
+              )}
 
-        {/* Info Section */}
-        <div className="mt-8 text-center">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold mb-3 text-violet-400">
-              What happens next?
-            </h3>
-            <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
-              <div>
-                <div className="text-2xl mb-2">📝</div>
-                <p>
-                  We&apos;ll review your request and get back to you within 24
-                  hours
-                </p>
-              </div>
-              <div>
-                <DollarSign className="w-6 h-6 mb-2" />
-                <p>
-                  You&apos;ll receive a custom quote based on your event details
-                </p>
-              </div>
-              <div>
-                <Check className="w-6 h-6 mb-2" />
-                <p>Once confirmed, secure your booking with a payment</p>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors text-lg"
+              >
+                Submit Booking Request
+              </button>
+            </form>
+          </div>
+
+          {/* Info Section */}
+          <div className="mt-8 text-center">
+            <div className="bg-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold mb-3 text-violet-400">
+                What happens next?
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+                <div>
+                  <div className="text-2xl mb-2">📝</div>
+                  <p>
+                    We&apos;ll review your request and get back to you within 24
+                    hours
+                  </p>
+                </div>
+                <div>
+                  <DollarSign className="w-6 h-6 mb-2" />
+                  <p>
+                    You&apos;ll receive a custom quote based on your event
+                    details
+                  </p>
+                </div>
+                <div>
+                  <Check className="w-6 h-6 mb-2" />
+                  <p>Once confirmed, secure your booking with a payment</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Partial Booking Confirmation Modal */}
-      {showPartialBookingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-orange-500/30">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-orange-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-orange-200">
-                Partial Event Coverage Detected
-              </h3>
-            </div>
-
-            <div className="text-gray-300 mb-6 space-y-3">
-              <p className="text-sm">
-                Your booking has gaps or doesn&apos;t cover the entire event
-                duration. Please confirm you understand:
-              </p>
-
-              <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
-                <ul className="text-sm space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-orange-400">•</span>
-                    <span>DJs will only cover their specified time slots</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-orange-400">•</span>
-                    <span>
-                      Intermissions between DJs are your responsibility
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-orange-400">•</span>
-                    <span>
-                      DJs are not obligated to cover gaps or intermissions
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-orange-400">•</span>
-                    <span>
-                      You must provide alternative entertainment for uncovered
-                      times
-                    </span>
-                  </li>
-                </ul>
+        {/* Partial Booking Confirmation Modal */}
+        {showPartialBookingModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full border border-orange-500/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-orange-200">
+                  Partial Event Coverage Detected
+                </h3>
               </div>
 
-              {selectedDjs.length > 1 && (
-                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
-                  <p className="text-sm font-medium text-yellow-200 mb-2">
-                    Multi-DJ Event Considerations:
-                  </p>
-                  <ul className="text-sm space-y-1">
+              <div className="text-gray-300 mb-6 space-y-3">
+                <p className="text-sm">
+                  Your booking has gaps or doesn&apos;t cover the entire event
+                  duration. Please confirm you understand:
+                </p>
+
+                <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                  <ul className="text-sm space-y-2">
                     <li className="flex items-start gap-2">
-                      <span className="text-yellow-400">•</span>
+                      <span className="text-orange-400">•</span>
                       <span>
-                        Each DJ will set up and tear down their own equipment
+                        DJs will only cover their specified time slots
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-yellow-400">•</span>
-                      <span>Plan for setup/teardown time between DJs</span>
+                      <span className="text-orange-400">•</span>
+                      <span>
+                        Intermissions between DJs are your responsibility
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-yellow-400">•</span>
+                      <span className="text-orange-400">•</span>
                       <span>
-                        Consider having background music during transitions
+                        DJs are not obligated to cover gaps or intermissions
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-orange-400">•</span>
+                      <span>
+                        You must provide alternative entertainment for uncovered
+                        times
                       </span>
                     </li>
                   </ul>
                 </div>
-              )}
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowPartialBookingModal(false);
-                }}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Cancel & Adjust
-              </button>
-              <button
-                onClick={async () => {
-                  setShowPartialBookingModal(false);
-                  await submitBookings();
-                }}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Confirm & Proceed
-              </button>
+                {selectedDjs.length > 1 && (
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3">
+                    <p className="text-sm font-medium text-yellow-200 mb-2">
+                      Multi-DJ Event Considerations:
+                    </p>
+                    <ul className="text-sm space-y-1">
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400">•</span>
+                        <span>
+                          Each DJ will set up and tear down their own equipment
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400">•</span>
+                        <span>Plan for setup/teardown time between DJs</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400">•</span>
+                        <span>
+                          Consider having background music during transitions
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPartialBookingModal(false);
+                  }}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  Cancel & Adjust
+                </button>
+                <button
+                  onClick={async () => {
+                    setShowPartialBookingModal(false);
+                    await submitBookings();
+                  }}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  Confirm & Proceed
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AuthGuard>
   );
 }

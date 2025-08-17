@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context;
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -42,7 +42,7 @@ export async function PATCH(
 
     // Check if booking exists
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         user: true,
         dj: true,
@@ -57,7 +57,7 @@ export async function PATCH(
 
     // Update the booking status
     const updatedBooking = await prisma.booking.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status: status as
           | "PENDING"
@@ -94,7 +94,7 @@ export async function PATCH(
 
     // Log the admin action
     console.log(
-      `Admin ${adminId} changed booking ${params.id} status from ${oldStatus} to ${status}. Reason: ${reason}`
+      `Admin ${adminId} changed booking ${id} status from ${oldStatus} to ${status}. Reason: ${reason}`
     );
 
     return NextResponse.json({

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Play,
   Pause,
+  Image,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatFileSize, isValidAudioFormat, isValidFileSize } from "@/lib/aws";
@@ -33,6 +34,8 @@ export default function MixUpload({
 }: MixUploadProps) {
   const { data: session } = useSession();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedAlbumArt, setSelectedAlbumArt] = useState<File | null>(null);
+  const [albumArtPreview, setAlbumArtPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [mixDetails, setMixDetails] = useState<MixDetails>({
@@ -44,6 +47,7 @@ export default function MixUpload({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const albumArtInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const handleFileSelect = (file: File) => {
@@ -68,6 +72,29 @@ export default function MixUpload({
     }
   };
 
+  const handleAlbumArtSelect = (file: File) => {
+    // Check if it's an image file
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (JPEG, PNG, GIF)");
+      return;
+    }
+
+    // Check file size (max 5MB for album art)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Album art file too large. Maximum size is 5MB");
+      return;
+    }
+
+    setSelectedAlbumArt(file);
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAlbumArtPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
@@ -90,6 +117,9 @@ export default function MixUpload({
       // Create FormData
       const formData = new FormData();
       formData.append("file", selectedFile);
+      if (selectedAlbumArt) {
+        formData.append("albumArt", selectedAlbumArt);
+      }
       formData.append("title", mixDetails.title);
       formData.append("description", mixDetails.description);
       formData.append("genre", mixDetails.genre);
@@ -125,8 +155,13 @@ export default function MixUpload({
       setUploadProgress(100);
       toast.success("Mix uploaded successfully!");
 
+      // Call the upload complete callback
       onUploadComplete?.(mix);
+
+      // Reset form
       setSelectedFile(null);
+      setSelectedAlbumArt(null);
+      setAlbumArtPreview(null);
       setMixDetails({
         title: "",
         description: "",
@@ -134,6 +169,14 @@ export default function MixUpload({
         tags: "",
         isPublic: false,
       });
+
+      // Close modal and navigate to mixes page
+      onClose?.();
+
+      // Navigate to mixes page after a short delay
+      setTimeout(() => {
+        window.location.href = "/mixes";
+      }, 500);
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error(error.message || "Upload failed");
@@ -233,6 +276,69 @@ export default function MixUpload({
             className="hidden"
           />
         </div>
+
+        {/* Album Art Selection */}
+        {selectedFile && !isUploading && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-3">
+              Album Art (Optional)
+            </label>
+            <div className="flex items-center space-x-4">
+              {albumArtPreview ? (
+                <div className="flex items-center space-x-4">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-800 border border-gray-600">
+                    <img
+                      src={albumArtPreview}
+                      alt="Album art preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 mb-2">
+                      {selectedAlbumArt?.name}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSelectedAlbumArt(null);
+                        setAlbumArtPreview(null);
+                      }}
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center bg-gray-800">
+                    <Image className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => albumArtInputRef.current?.click()}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                    >
+                      Choose Image
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      JPEG, PNG, GIF up to 5MB
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <input
+              ref={albumArtInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAlbumArtSelect(file);
+              }}
+              className="hidden"
+            />
+          </div>
+        )}
 
         {/* Upload Progress */}
         {isUploading && (

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import AuthGuard from "@/components/AuthGuard";
 import {
   Calendar,
   MapPin,
@@ -353,529 +354,537 @@ export default function GalleryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-b from-violet-900/20 to-black">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-              Event Gallery
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Explore amazing moments from our DJ performances across various
-              events
-            </p>
+    <AuthGuard>
+      <div className="min-h-screen bg-black text-white">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-b from-violet-900/20 to-black">
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                Event Gallery
+              </h1>
+              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                Explore amazing moments from our DJ performances across various
+                events
+              </p>
 
-            {/* Upload Button */}
-            {canUpload() && (
-              <div className="mt-8">
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="inline-flex items-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-                >
-                  <Upload className="w-5 h-5 mr-2" />
-                  Upload Photos
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Events Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {events.length === 0 ? (
-          <div className="text-center py-16">
-            <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">
-              No Events Yet
-            </h3>
-            <p className="text-gray-500">
-              Event photos will appear here once they're uploaded.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events.map((event) => {
-              // Get the first photo as the cover image
-              const coverPhoto = event.photos[0];
-              const photoCount = event.photos.length;
-
-              return (
-                <div
-                  key={event.eventName}
-                  className="group bg-gray-900/50 rounded-xl overflow-hidden border border-gray-800 hover:border-violet-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 relative"
-                >
-                  {/* Options Menu */}
-                  {canDeleteEvent(event) && (
-                    <div className="absolute top-4 right-4 z-10">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowMenu(
-                            showMenu === event.eventName
-                              ? null
-                              : event.eventName
-                          );
-                        }}
-                        className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
-                        title="More options"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      {showMenu === event.eventName && (
-                        <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowMenu(null);
-                              setShowDeleteModal(event.eventName);
-                            }}
-                            className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Event
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <Link
-                    href={`/gallery/${encodeURIComponent(event.eventName)}`}
-                    className="block"
+              {/* Upload Button */}
+              {canUpload() && (
+                <div className="mt-8">
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="inline-flex items-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                   >
-                    {/* Cover Image */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      <Image
-                        src={coverPhoto.url}
-                        alt={coverPhoto.altText || event.eventName}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-
-                      {/* Photo Count Badge */}
-                      <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                        <Camera className="w-4 h-4 inline mr-1" />
-                        {photoCount} {photoCount === 1 ? "photo" : "photos"}
-                      </div>
-
-                      {/* Featured Badge */}
-                      {coverPhoto.isFeatured && (
-                        <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                          ⭐ Featured
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Event Info */}
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-violet-300 transition-colors">
-                        {event.eventName}
-                      </h3>
-
-                      <div className="space-y-2 mb-4">
-                        {/* Event Type */}
-                        {event.eventType && (
-                          <div
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getEventTypeColor(
-                              event.eventType
-                            )}`}
-                          >
-                            {event.eventType}
-                          </div>
-                        )}
-
-                        {/* Date */}
-                        <div className="flex items-center text-gray-400 text-sm">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          {formatDate(event.eventDate)}
-                        </div>
-
-                        {/* Venue/Location */}
-                        {(event.venue || event.location) && (
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <MapPin className="w-4 h-4 mr-2" />
-                            {event.venue && event.location
-                              ? `${event.venue}, ${event.location}`
-                              : event.venue || event.location}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* DJ Info */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          {coverPhoto.dj.profileImage ? (
-                            <div className="relative w-8 h-8 mr-3">
-                              <Image
-                                src={coverPhoto.dj.profileImage}
-                                alt={coverPhoto.dj.stageName}
-                                fill
-                                className="rounded-full object-cover"
-                                sizes="32px"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                              <Users className="w-4 h-4 text-gray-400" />
-                            </div>
-                          )}
-                          <span className="text-sm text-gray-300">
-                            {coverPhoto.dj.stageName}
-                          </span>
-                        </div>
-
-                        <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
-              <h3 className="text-xl font-bold text-white">Delete Event</h3>
-            </div>
-
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete{" "}
-              <strong>"{showDeleteModal}"</strong>? This will permanently delete
-              the entire event and all its associated photos.
-            </p>
-
-            <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-              ⚠️ This action cannot be undone. All photos for this event will be
-              permanently deleted.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(null)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                disabled={deletingEvent === showDeleteModal}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteEvent(showDeleteModal)}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
-                disabled={deletingEvent === showDeleteModal}
-              >
-                {deletingEvent === showDeleteModal ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Event
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                Upload Event Photos
-              </h3>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Upload Form */}
-            <div className="space-y-6">
-              {/* File Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Select Photos
-                </label>
-                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-violet-500 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="photo-upload"
-                  />
-                  <label
-                    htmlFor="photo-upload"
-                    className="cursor-pointer flex flex-col items-center"
-                  >
-                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-gray-300">
-                      Click to select photos or drag and drop
-                    </span>
-                    <span className="text-sm text-gray-500 mt-1">
-                      Max 10MB per file, up to {photoLimit - totalPhotos} photos
-                    </span>
-                  </label>
-                </div>
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm text-gray-300 mb-2">
-                      Selected {selectedFiles.length} file(s):
-                    </p>
-                    <div className="space-y-1">
-                      {selectedFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between bg-gray-800 rounded px-3 py-2"
-                        >
-                          <span className="text-sm text-gray-300">
-                            {file.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {(file.size / (1024 * 1024)).toFixed(1)}MB
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Photo Details Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Event Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadForm.eventName}
-                    onChange={(e) =>
-                      setUploadForm({
-                        ...uploadForm,
-                        eventName: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                    placeholder="e.g., Summer Wedding 2024"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Event Date
-                  </label>
-                  <input
-                    type="date"
-                    value={uploadForm.eventDate}
-                    onChange={(e) =>
-                      setUploadForm({
-                        ...uploadForm,
-                        eventDate: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Event Type
-                  </label>
-                  <select
-                    value={uploadForm.eventType}
-                    onChange={(e) =>
-                      setUploadForm({
-                        ...uploadForm,
-                        eventType: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                  >
-                    <option value="">Select event type</option>
-                    <option value="Wedding">Wedding</option>
-                    <option value="Birthday">Birthday</option>
-                    <option value="Corporate">Corporate</option>
-                    <option value="Club">Club</option>
-                    <option value="Party">Party</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Venue
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadForm.venue}
-                    onChange={(e) =>
-                      setUploadForm({ ...uploadForm, venue: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                    placeholder="e.g., Grand Hotel"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadForm.location}
-                    onChange={(e) =>
-                      setUploadForm({ ...uploadForm, location: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                    placeholder="e.g., Austin, TX"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Tags
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadForm.tags}
-                    onChange={(e) =>
-                      setUploadForm({ ...uploadForm, tags: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                    placeholder="e.g., wedding, outdoor, sunset"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Title (optional - will use filename if empty)
-                </label>
-                <input
-                  type="text"
-                  value={uploadForm.title}
-                  onChange={(e) =>
-                    setUploadForm({ ...uploadForm, title: e.target.value })
-                  }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                  placeholder="Photo title"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={uploadForm.description}
-                  onChange={(e) =>
-                    setUploadForm({
-                      ...uploadForm,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
-                  rows={3}
-                  placeholder="Photo description"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isFeatured"
-                  checked={uploadForm.isFeatured}
-                  onChange={(e) =>
-                    setUploadForm({
-                      ...uploadForm,
-                      isFeatured: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-violet-600 bg-gray-800 border-gray-700 rounded focus:ring-violet-500"
-                />
-                <label
-                  htmlFor="isFeatured"
-                  className="ml-2 text-sm text-gray-300"
-                >
-                  Mark as featured photo
-                </label>
-              </div>
-
-              {/* Upload Progress */}
-              {uploading && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-300">Uploading photos...</p>
-                  {Object.entries(uploadProgress).map(([fileId, progress]) => (
-                    <div key={fileId} className="space-y-1">
-                      <div className="flex justify-between text-xs text-gray-400">
-                        <span>{fileId}</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-700 rounded-full h-2">
-                        <div
-                          className="bg-violet-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
+                    <Upload className="w-5 h-5 mr-2" />
+                    Upload Photos
+                  </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+        {/* Events Grid */}
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          {events.length === 0 ? (
+            <div className="text-center py-16">
+              <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">
+                No Events Yet
+              </h3>
+              <p className="text-gray-500">
+                Event photos will appear here once they're uploaded.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {events.map((event) => {
+                // Get the first photo as the cover image
+                const coverPhoto = event.photos[0];
+                const photoCount = event.photos.length;
+
+                return (
+                  <div
+                    key={event.eventName}
+                    className="group bg-gray-900/50 rounded-xl overflow-hidden border border-gray-800 hover:border-violet-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 relative"
+                  >
+                    {/* Options Menu */}
+                    {canDeleteEvent(event) && (
+                      <div className="absolute top-4 right-4 z-10">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowMenu(
+                              showMenu === event.eventName
+                                ? null
+                                : event.eventName
+                            );
+                          }}
+                          className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
+                          title="More options"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showMenu === event.eventName && (
+                          <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowMenu(null);
+                                setShowDeleteModal(event.eventName);
+                              }}
+                              className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Event
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <Link
+                      href={`/gallery/${encodeURIComponent(event.eventName)}`}
+                      className="block"
+                    >
+                      {/* Cover Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <Image
+                          src={coverPhoto.url}
+                          alt={coverPhoto.altText || event.eventName}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+
+                        {/* Photo Count Badge */}
+                        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                          <Camera className="w-4 h-4 inline mr-1" />
+                          {photoCount} {photoCount === 1 ? "photo" : "photos"}
+                        </div>
+
+                        {/* Featured Badge */}
+                        {coverPhoto.isFeatured && (
+                          <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                            ⭐ Featured
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Event Info */}
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-violet-300 transition-colors">
+                          {event.eventName}
+                        </h3>
+
+                        <div className="space-y-2 mb-4">
+                          {/* Event Type */}
+                          {event.eventType && (
+                            <div
+                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getEventTypeColor(
+                                event.eventType
+                              )}`}
+                            >
+                              {event.eventType}
+                            </div>
+                          )}
+
+                          {/* Date */}
+                          <div className="flex items-center text-gray-400 text-sm">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            {formatDate(event.eventDate)}
+                          </div>
+
+                          {/* Venue/Location */}
+                          {(event.venue || event.location) && (
+                            <div className="flex items-center text-gray-400 text-sm">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              {event.venue && event.location
+                                ? `${event.venue}, ${event.location}`
+                                : event.venue || event.location}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* DJ Info */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            {coverPhoto.dj.profileImage ? (
+                              <div className="relative w-8 h-8 mr-3">
+                                <Image
+                                  src={coverPhoto.dj.profileImage}
+                                  alt={coverPhoto.dj.stageName}
+                                  fill
+                                  className="rounded-full object-cover"
+                                  sizes="32px"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-3">
+                                <Users className="w-4 h-4 text-gray-400" />
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-300">
+                              {coverPhoto.dj.stageName}
+                            </span>
+                          </div>
+
+                          <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
+                <h3 className="text-xl font-bold text-white">Delete Event</h3>
+              </div>
+
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to delete{" "}
+                <strong>"{showDeleteModal}"</strong>? This will permanently
+                delete the entire event and all its associated photos.
+              </p>
+
+              <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                ⚠️ This action cannot be undone. All photos for this event will
+                be permanently deleted.
+              </p>
+
+              <div className="flex gap-3">
                 <button
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() => setShowDeleteModal(null)}
                   className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                  disabled={uploading}
+                  disabled={deletingEvent === showDeleteModal}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleFileUpload}
-                  disabled={selectedFiles.length === 0 || uploading}
-                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  onClick={() => deleteEvent(showDeleteModal)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                  disabled={deletingEvent === showDeleteModal}
                 >
-                  {uploading ? (
+                  {deletingEvent === showDeleteModal ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
+                      Deleting...
                     </>
                   ) : (
                     <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload {selectedFiles.length} Photo
-                      {selectedFiles.length !== 1 ? "s" : ""}
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Event
                     </>
                   )}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  Upload Event Photos
+                </h3>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Upload Form */}
+              <div className="space-y-6">
+                {/* File Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Photos
+                  </label>
+                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-violet-500 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <label
+                      htmlFor="photo-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <span className="text-gray-300">
+                        Click to select photos or drag and drop
+                      </span>
+                      <span className="text-sm text-gray-500 mt-1">
+                        Max 10MB per file, up to {photoLimit - totalPhotos}{" "}
+                        photos
+                      </span>
+                    </label>
+                  </div>
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-300 mb-2">
+                        Selected {selectedFiles.length} file(s):
+                      </p>
+                      <div className="space-y-1">
+                        {selectedFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-gray-800 rounded px-3 py-2"
+                          >
+                            <span className="text-sm text-gray-300">
+                              {file.name}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {(file.size / (1024 * 1024)).toFixed(1)}MB
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Photo Details Form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Event Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadForm.eventName}
+                      onChange={(e) =>
+                        setUploadForm({
+                          ...uploadForm,
+                          eventName: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                      placeholder="e.g., Summer Wedding 2024"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Event Date
+                    </label>
+                    <input
+                      type="date"
+                      value={uploadForm.eventDate}
+                      onChange={(e) =>
+                        setUploadForm({
+                          ...uploadForm,
+                          eventDate: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Event Type
+                    </label>
+                    <select
+                      value={uploadForm.eventType}
+                      onChange={(e) =>
+                        setUploadForm({
+                          ...uploadForm,
+                          eventType: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                    >
+                      <option value="">Select event type</option>
+                      <option value="Wedding">Wedding</option>
+                      <option value="Birthday">Birthday</option>
+                      <option value="Corporate">Corporate</option>
+                      <option value="Club">Club</option>
+                      <option value="Party">Party</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Venue
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadForm.venue}
+                      onChange={(e) =>
+                        setUploadForm({ ...uploadForm, venue: e.target.value })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                      placeholder="e.g., Grand Hotel"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadForm.location}
+                      onChange={(e) =>
+                        setUploadForm({
+                          ...uploadForm,
+                          location: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                      placeholder="e.g., Austin, TX"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Tags
+                    </label>
+                    <input
+                      type="text"
+                      value={uploadForm.tags}
+                      onChange={(e) =>
+                        setUploadForm({ ...uploadForm, tags: e.target.value })
+                      }
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                      placeholder="e.g., wedding, outdoor, sunset"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Title (optional - will use filename if empty)
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadForm.title}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, title: e.target.value })
+                    }
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                    placeholder="Photo title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={uploadForm.description}
+                    onChange={(e) =>
+                      setUploadForm({
+                        ...uploadForm,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-violet-500 focus:outline-none"
+                    rows={3}
+                    placeholder="Photo description"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isFeatured"
+                    checked={uploadForm.isFeatured}
+                    onChange={(e) =>
+                      setUploadForm({
+                        ...uploadForm,
+                        isFeatured: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 text-violet-600 bg-gray-800 border-gray-700 rounded focus:ring-violet-500"
+                  />
+                  <label
+                    htmlFor="isFeatured"
+                    className="ml-2 text-sm text-gray-300"
+                  >
+                    Mark as featured photo
+                  </label>
+                </div>
+
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-300">Uploading photos...</p>
+                    {Object.entries(uploadProgress).map(
+                      ([fileId, progress]) => (
+                        <div key={fileId} className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-400">
+                            <span>{fileId}</span>
+                            <span>{progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-violet-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowUploadModal(false)}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    disabled={uploading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleFileUpload}
+                    disabled={selectedFiles.length === 0 || uploading}
+                    className="flex-1 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload {selectedFiles.length} Photo
+                        {selectedFiles.length !== 1 ? "s" : ""}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AuthGuard>
   );
 }

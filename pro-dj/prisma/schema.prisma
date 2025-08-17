@@ -7,6 +7,7 @@
 generator client {
 provider = "prisma-client-js"
 output = "../app/generated/prisma"
+binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -39,6 +40,8 @@ socialLinks Json? // {instagram, twitter, facebook, linkedin, tiktok}
 
 bookings Booking[]
 comments Comment[] @relation("UserComments")
+commentLikes CommentLike[]
+commentDislikes CommentDislike[]
 
 // DJ Profile relation
 djProfile DjProfile?
@@ -122,14 +125,75 @@ model Comment {
 id String @id @default(uuid())
 content String
 createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-//relations
-userId String
-user User @relation("UserComments", fields: [userId], references: [id])
+// Comment threading
+parentId String? // For reply comments
+parent Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+replies Comment[] @relation("CommentReplies")
+threadDepth Int @default(0) // How deep in the thread (0 = top level)
+
+// Comment type and relations
+commentType String // "mix", "video", "post", "photo"
 mixId String?
-mix Mix? @relation(fields: [mixId], references: [id])
+mix DjMix? @relation(fields: [mixId], references: [id])
+videoId String?
+video DjYouTubeVideo? @relation(fields: [videoId], references: [id])
 postId String?
 post Post? @relation(fields: [postId], references: [id])
+photoId String?
+photo EventPhoto? @relation(fields: [photoId], references: [id])
+
+// User relation
+userId String
+user User @relation("UserComments", fields: [userId], references: [id])
+
+// Moderation and engagement
+isEdited Boolean @default(false)
+isDeleted Boolean @default(false)
+deletedAt DateTime?
+likeCount Int @default(0)
+dislikeCount Int @default(0)
+isFlagged Boolean @default(false)
+flaggedReason String?
+
+// Likes/Dislikes tracking
+likes CommentLike[]
+dislikes CommentDislike[]
+
+@@index([commentType, mixId])
+@@index([commentType, videoId])
+@@index([commentType, postId])
+@@index([commentType, photoId])
+@@index([parentId])
+@@index([threadDepth])
+@@index([createdAt])
+}
+
+model CommentLike {
+id String @id @default(uuid())
+commentId String
+comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+createdAt DateTime @default(now())
+
+@@unique([commentId, userId])
+@@index([commentId])
+@@index([userId])
+}
+
+model CommentDislike {
+id String @id @default(uuid())
+commentId String
+comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+createdAt DateTime @default(now())
+
+@@unique([commentId, userId])
+@@index([commentId])
+@@index([userId])
 }
 
 model Pricing {
@@ -177,7 +241,7 @@ languages String[] // languages spoken
 availability String? // availability schedule and preferences
 
 // Social Media & Links
-socialLinks Json? // {instagram, youtube, soundcloud, website}
+socialLinks Json? // {instagram, tiktok, soundcloud, youtube, twitter, facebook, linkedin, website}
 
 // Media
 profileImage String?
@@ -203,6 +267,7 @@ pricing Pricing[]
 reviews Review[]
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 mixes DjMix[]
+youtubeVideos DjYouTubeVideo[]
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -322,6 +387,9 @@ isFeatured Boolean @default(false) // for portfolio highlights
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
+// Comments
+comments Comment[]
+
 @@index([djId, isFeatured])
 @@index([eventType])
 }
@@ -352,6 +420,10 @@ s3Key String // S3 object key
 cloudFrontUrl String? // CDN URL for fast delivery
 localUrl String? // Local URL for development/testing
 
+// Album Art
+albumArtS3Key String? // S3 key for album art image
+albumArtUrl String? // URL to album art image
+
 // Upload Information
 uploadStatus UploadStatus @default(PENDING)
 uploadProgress Int @default(0) // 0-100
@@ -371,10 +443,56 @@ quality String? // "high", "medium", "low"
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
+// Comments
+comments Comment[]
+
 @@index([djId, isPublic])
 @@index([genre])
 @@index([uploadStatus])
 @@index([isFeatured])
+}
+
+model DjYouTubeVideo {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+// Video Information
+title String
+description String?
+youtubeUrl String // Full YouTube URL
+youtubeId String // Extracted YouTube video ID
+thumbnailUrl String? // YouTube thumbnail URL
+duration String? // Video duration (e.g., "3:45")
+
+// Video Details
+eventType String? // "wedding", "club", "birthday", "corporate", "live performance"
+eventDate DateTime? // When the event/video was recorded
+venue String? // Venue where video was recorded
+location String?
+
+// Tags and Categories
+tags String[] // ["afrobeats", "amapiano", "live", "wedding", "club"]
+isFeatured Boolean @default(false) // For portfolio highlights
+isPublic Boolean @default(true)
+
+// Statistics (optional, can be updated manually)
+viewCount Int @default(0)
+likeCount Int @default(0)
+
+// Ordering
+sortOrder Int @default(0) // For manual ordering
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+// Comments
+comments Comment[]
+
+@@index([djId, isPublic])
+@@index([eventType])
+@@index([isFeatured])
+@@index([sortOrder])
 }
 
 enum UploadStatus {

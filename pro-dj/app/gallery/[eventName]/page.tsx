@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import AuthGuard from "@/components/AuthGuard";
 import {
   Calendar,
   MapPin,
@@ -234,355 +235,359 @@ export default function EventGalleryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-violet-900/20 to-black border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <Link
-              href="/gallery"
-              className="flex items-center text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Gallery
-            </Link>
-
-            {/* Delete Event Button */}
-            {event && canDeleteEvent(event) && (
-              <button
-                onClick={() => setShowDeleteModal("event")}
-                className="flex items-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                title="Delete Entire Event"
+    <AuthGuard>
+      <div className="min-h-screen bg-black text-white">
+        {/* Header */}
+        <div className="bg-gradient-to-b from-violet-900/20 to-black border-b border-gray-800">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between mb-6">
+              <Link
+                href="/gallery"
+                className="flex items-center text-gray-400 hover:text-white transition-colors"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Event
-              </button>
-            )}
-          </div>
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Gallery
+              </Link>
 
-          {/* Event Info */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-              {event.eventName}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-4 text-gray-300">
-              {/* Event Type */}
-              {event.eventType && (
-                <div
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getEventTypeColor(
-                    event.eventType
-                  )}`}
+              {/* Delete Event Button */}
+              {event && canDeleteEvent(event) && (
+                <button
+                  onClick={() => setShowDeleteModal("event")}
+                  className="flex items-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  title="Delete Entire Event"
                 >
-                  {event.eventType}
-                </div>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Event
+                </button>
               )}
-
-              {/* Date */}
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                {formatDate(event.eventDate)}
-              </div>
-
-              {/* Venue/Location */}
-              {(event.venue || event.location) && (
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {event.venue && event.location
-                    ? `${event.venue}, ${event.location}`
-                    : event.venue || event.location}
-                </div>
-              )}
-
-              {/* Photo Count */}
-              <div className="flex items-center">
-                <Camera className="w-4 h-4 mr-2" />
-                {event.photos.length}{" "}
-                {event.photos.length === 1 ? "photo" : "photos"}
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Photo Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {event.photos.map((photo) => (
-            <div
-              key={photo.id}
-              className="group cursor-pointer relative"
-              onClick={() => setSelectedPhoto(photo)}
-            >
-              {/* Options Menu */}
-              {canDeletePhoto(photo) && (
-                <div className="absolute top-3 right-3 z-10">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowMenu(showMenu === photo.id ? null : photo.id);
-                    }}
-                    className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
-                    title="More options"
+            {/* Event Info */}
+            <div className="mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                {event.eventName}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-4 text-gray-300">
+                {/* Event Type */}
+                {event.eventType && (
+                  <div
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getEventTypeColor(
+                      event.eventType
+                    )}`}
                   >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {showMenu === photo.id && (
-                    <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowMenu(null);
-                          setShowDeleteModal(photo.id);
-                        }}
-                        className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Photo
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-800 hover:border-violet-500/50 transition-all duration-300">
-                <Image
-                  src={photo.url}
-                  alt={photo.altText || photo.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                />
-
-                {/* Featured Badge */}
-                {photo.isFeatured && (
-                  <div className="absolute top-3 left-3 bg-violet-600/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium">
-                    <Star className="w-3 h-3 inline mr-1" />
-                    Featured
+                    {event.eventType}
                   </div>
                 )}
 
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-end">
-                  <div className="p-4 w-full transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <h3 className="text-white font-semibold mb-1">
-                      {photo.title}
-                    </h3>
-                    {photo.description && (
-                      <p className="text-gray-300 text-sm mb-2">
-                        {photo.description}
-                      </p>
-                    )}
+                {/* Date */}
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {formatDate(event.eventDate)}
+                </div>
 
-                    {/* DJ Info */}
-                    <div className="flex items-center">
-                      {photo.dj.profileImage ? (
-                        <div className="relative w-6 h-6 mr-2">
-                          <Image
-                            src={photo.dj.profileImage}
-                            alt={photo.dj.stageName}
-                            fill
-                            className="rounded-full object-cover"
-                            sizes="24px"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center mr-2">
-                          <Users className="w-3 h-3 text-gray-400" />
-                        </div>
-                      )}
-                      <span className="text-white text-sm">
-                        {photo.dj.stageName}
-                      </span>
-                    </div>
+                {/* Venue/Location */}
+                {(event.venue || event.location) && (
+                  <div className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {event.venue && event.location
+                      ? `${event.venue}, ${event.location}`
+                      : event.venue || event.location}
                   </div>
+                )}
+
+                {/* Photo Count */}
+                <div className="flex items-center">
+                  <Camera className="w-4 h-4 mr-2" />
+                  {event.photos.length}{" "}
+                  {event.photos.length === 1 ? "photo" : "photos"}
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
 
-      {/* Photo Modal */}
-      {selectedPhoto && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <div className="relative max-w-4xl max-h-full">
-            <button
-              onClick={() => setSelectedPhoto(null)}
-              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
-            >
-              ✕
-            </button>
+        {/* Photo Grid */}
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {event.photos.map((photo) => (
+              <div
+                key={photo.id}
+                className="group cursor-pointer relative"
+                onClick={() => setSelectedPhoto(photo)}
+              >
+                {/* Options Menu */}
+                {canDeletePhoto(photo) && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowMenu(showMenu === photo.id ? null : photo.id);
+                      }}
+                      className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
+                      title="More options"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
 
-            <div className="bg-gray-900 rounded-lg overflow-hidden">
-              <div className="relative w-full h-auto max-h-[70vh]">
-                <Image
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.altText || selectedPhoto.title}
-                  width={800}
-                  height={600}
-                  className="w-full h-auto max-h-[70vh] object-contain"
-                  sizes="(max-width: 768px) 100vw, 800px"
-                />
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">
-                      {selectedPhoto.title}
-                    </h3>
-                    {selectedPhoto.description && (
-                      <p className="text-gray-300 mb-3">
-                        {selectedPhoto.description}
-                      </p>
+                    {/* Dropdown Menu */}
+                    {showMenu === photo.id && (
+                      <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowMenu(null);
+                            setShowDeleteModal(photo.id);
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Photo
+                        </button>
+                      </div>
                     )}
                   </div>
+                )}
+                <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-800 hover:border-violet-500/50 transition-all duration-300">
+                  <Image
+                    src={photo.url}
+                    alt={photo.altText || photo.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                  />
 
-                  {selectedPhoto.isFeatured && (
-                    <div className="bg-violet-600/20 text-violet-300 px-3 py-1 rounded-full text-sm font-medium border border-violet-500/30">
-                      <Star className="w-4 h-4 inline mr-1" />
+                  {/* Featured Badge */}
+                  {photo.isFeatured && (
+                    <div className="absolute top-3 left-3 bg-violet-600/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium">
+                      <Star className="w-3 h-3 inline mr-1" />
                       Featured
                     </div>
                   )}
+
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-end">
+                    <div className="p-4 w-full transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      <h3 className="text-white font-semibold mb-1">
+                        {photo.title}
+                      </h3>
+                      {photo.description && (
+                        <p className="text-gray-300 text-sm mb-2">
+                          {photo.description}
+                        </p>
+                      )}
+
+                      {/* DJ Info */}
+                      <div className="flex items-center">
+                        {photo.dj.profileImage ? (
+                          <div className="relative w-6 h-6 mr-2">
+                            <Image
+                              src={photo.dj.profileImage}
+                              alt={photo.dj.stageName}
+                              fill
+                              className="rounded-full object-cover"
+                              sizes="24px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center mr-2">
+                            <Users className="w-3 h-3 text-gray-400" />
+                          </div>
+                        )}
+                        <span className="text-white text-sm">
+                          {photo.dj.stageName}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Photo Modal */}
+        {selectedPhoto && (
+          <div
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedPhoto(null)}
+          >
+            <div className="relative max-w-4xl max-h-full">
+              <button
+                onClick={() => setSelectedPhoto(null)}
+                className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+
+              <div className="bg-gray-900 rounded-lg overflow-hidden">
+                <div className="relative w-full h-auto max-h-[70vh]">
+                  <Image
+                    src={selectedPhoto.url}
+                    alt={selectedPhoto.altText || selectedPhoto.title}
+                    width={800}
+                    height={600}
+                    className="w-full h-auto max-h-[70vh] object-contain"
+                    sizes="(max-width: 768px) 100vw, 800px"
+                  />
                 </div>
 
-                {/* Tags */}
-                {selectedPhoto.tags.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex items-center mb-2">
-                      <Tag className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-400">Tags:</span>
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">
+                        {selectedPhoto.title}
+                      </h3>
+                      {selectedPhoto.description && (
+                        <p className="text-gray-300 mb-3">
+                          {selectedPhoto.description}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedPhoto.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* DJ Info */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {selectedPhoto.dj.profileImage ? (
-                      <div className="relative w-10 h-10 mr-3">
-                        <Image
-                          src={selectedPhoto.dj.profileImage}
-                          alt={selectedPhoto.dj.stageName}
-                          fill
-                          className="rounded-full object-cover"
-                          sizes="40px"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                        <Users className="w-5 h-5 text-gray-400" />
+                    {selectedPhoto.isFeatured && (
+                      <div className="bg-violet-600/20 text-violet-300 px-3 py-1 rounded-full text-sm font-medium border border-violet-500/30">
+                        <Star className="w-4 h-4 inline mr-1" />
+                        Featured
                       </div>
                     )}
-                    <div>
-                      <p className="text-white font-medium">
-                        {selectedPhoto.dj.stageName}
-                      </p>
-                      <p className="text-gray-400 text-sm">DJ</p>
-                    </div>
                   </div>
 
-                  <p className="text-gray-400 text-sm">
-                    {new Date(selectedPhoto.createdAt).toLocaleDateString()}
-                  </p>
+                  {/* Tags */}
+                  {selectedPhoto.tags.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center mb-2">
+                        <Tag className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="text-sm text-gray-400">Tags:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPhoto.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-xs"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* DJ Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {selectedPhoto.dj.profileImage ? (
+                        <div className="relative w-10 h-10 mr-3">
+                          <Image
+                            src={selectedPhoto.dj.profileImage}
+                            alt={selectedPhoto.dj.stageName}
+                            fill
+                            className="rounded-full object-cover"
+                            sizes="40px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
+                          <Users className="w-5 h-5 text-gray-400" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-white font-medium">
+                          {selectedPhoto.dj.stageName}
+                        </p>
+                        <p className="text-gray-400 text-sm">DJ</p>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-400 text-sm">
+                      {new Date(selectedPhoto.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
-              <h3 className="text-xl font-bold text-white">
-                {showDeleteModal === "event" ? "Delete Event" : "Delete Photo"}
-              </h3>
-            </div>
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
+                <h3 className="text-xl font-bold text-white">
+                  {showDeleteModal === "event"
+                    ? "Delete Event"
+                    : "Delete Photo"}
+                </h3>
+              </div>
 
-            {showDeleteModal === "event" ? (
-              <>
-                <p className="text-gray-300 mb-6">
-                  Are you sure you want to delete <strong>"{eventName}"</strong>
-                  ? This will permanently delete the entire event and all its
-                  associated photos.
-                </p>
+              {showDeleteModal === "event" ? (
+                <>
+                  <p className="text-gray-300 mb-6">
+                    Are you sure you want to delete{" "}
+                    <strong>"{eventName}"</strong>? This will permanently delete
+                    the entire event and all its associated photos.
+                  </p>
 
-                <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-                  ⚠️ This action cannot be undone. All {event?.photos.length}{" "}
-                  photos for this event will be permanently deleted.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-300 mb-6">
-                  Are you sure you want to delete this photo? This action cannot
-                  be undone.
-                </p>
+                  <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                    ⚠️ This action cannot be undone. All {event?.photos.length}{" "}
+                    photos for this event will be permanently deleted.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-300 mb-6">
+                    Are you sure you want to delete this photo? This action
+                    cannot be undone.
+                  </p>
 
-                <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-                  ⚠️ This photo will be permanently deleted from the gallery.
-                </p>
-              </>
-            )}
+                  <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                    ⚠️ This photo will be permanently deleted from the gallery.
+                  </p>
+                </>
+              )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(null)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                disabled={deletingPhoto === showDeleteModal}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (showDeleteModal === "event") {
-                    deleteEvent();
-                  } else {
-                    deletePhoto(showDeleteModal);
-                  }
-                }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
-                disabled={deletingPhoto === showDeleteModal}
-              >
-                {deletingPhoto === showDeleteModal ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {showDeleteModal === "event"
-                      ? "Delete Event"
-                      : "Delete Photo"}
-                  </>
-                )}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(null)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  disabled={deletingPhoto === showDeleteModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (showDeleteModal === "event") {
+                      deleteEvent();
+                    } else {
+                      deletePhoto(showDeleteModal);
+                    }
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+                  disabled={deletingPhoto === showDeleteModal}
+                >
+                  {deletingPhoto === showDeleteModal ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {showDeleteModal === "event"
+                        ? "Delete Event"
+                        : "Delete Photo"}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AuthGuard>
   );
 }

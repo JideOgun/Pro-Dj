@@ -6,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 // DELETE: Delete an entire event and all its photos
 export async function DELETE(
   req: Request,
-  { params }: { params: { eventName: string } }
+  { params }: { params: Promise<{ eventName: string }> }
 ) {
+  const { eventName } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -29,11 +30,11 @@ export async function DELETE(
       );
     }
 
-    const eventName = decodeURIComponent(params.eventName);
+    const decodedEventName = decodeURIComponent(eventName);
 
     // Get all photos for this event to check ownership
     const photos = await prisma.eventPhoto.findMany({
-      where: { eventName },
+      where: { eventName: decodedEventName },
       include: {
         dj: {
           select: { userId: true },
@@ -67,12 +68,12 @@ export async function DELETE(
 
     // Delete all photos for this event
     const deleteResult = await prisma.eventPhoto.deleteMany({
-      where: { eventName },
+      where: { eventName: decodedEventName },
     });
 
     return NextResponse.json({
       ok: true,
-      message: `Event "${eventName}" and ${deleteResult.count} photos deleted successfully`,
+      message: `Event "${decodedEventName}" and ${deleteResult.count} photos deleted successfully`,
     });
   } catch (error) {
     console.error("Error deleting event:", error);

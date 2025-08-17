@@ -1,12 +1,14 @@
 "use client";
 import { signIn } from "next-auth/react";
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Chrome, Music } from "lucide-react";
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,7 +21,7 @@ export default function AuthPage() {
 
   const handleGoogleSignIn = () => {
     setIsLoading(true);
-    signIn("google", { callbackUrl: "/dashboard" });
+    signIn("google", { callbackUrl });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -47,7 +49,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push(callbackUrl);
     } else {
       // Handle registration
       try {
@@ -80,7 +82,7 @@ export default function AuthPage() {
             return;
           }
 
-          router.push("/dashboard");
+          router.push(callbackUrl);
         } else {
           setError(data.error || "Registration failed");
           setIsLoading(false);
