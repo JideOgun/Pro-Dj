@@ -4,6 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SocketProvider, useSocketContext } from "@/components/SocketProvider";
+import { AlertTriangle, PartyPopper, Check, Calendar } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -24,12 +26,15 @@ interface Booking {
   };
 }
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get WebSocket context
+  const { socket, isConnected } = useSocketContext();
 
   const bookingId = searchParams.get("bid");
 
@@ -56,15 +61,29 @@ export default function SuccessPage() {
     }
 
     fetchBooking();
-
-    // Refresh booking data every 2 seconds to catch webhook updates
-    const interval = setInterval(() => {
-      fetchBooking();
-    }, 2000);
-
-    // Clean up interval on unmount
-    return () => clearInterval(interval);
   }, [bookingId]);
+
+  // Listen for real-time booking status changes via WebSocket
+  useEffect(() => {
+    if (!socket || !isConnected || !bookingId) return;
+
+    const handleBookingStatusChange = (data: {
+      bookingId: string;
+      status: string;
+    }) => {
+      if (data.bookingId === bookingId) {
+        setBooking((prev) => (prev ? { ...prev, status: data.status } : null));
+      }
+    };
+
+    // Set up WebSocket listener
+    socket.on("booking-status-changed", handleBookingStatusChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      socket.off("booking-status-changed", handleBookingStatusChange);
+    };
+  }, [socket, isConnected, bookingId]);
 
   if (loading) {
     return (
@@ -81,7 +100,7 @@ export default function SuccessPage() {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <AlertTriangle className="w-16 h-16 text-red-400 mb-4 mx-auto" />
           <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
           <p className="text-gray-300 mb-6">
             {error || "Unable to load your booking details"}
@@ -118,7 +137,7 @@ export default function SuccessPage() {
       <div className="max-w-4xl mx-auto p-6">
         {/* Success Header */}
         <div className="text-center mb-8">
-          <div className="text-green-400 text-6xl mb-4">🎉</div>
+          <PartyPopper className="w-16 h-16 text-green-400 mb-4 mx-auto" />
           <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
           <p className="text-gray-300 text-lg">
             Your booking has been confirmed and payment received
@@ -239,10 +258,16 @@ export default function SuccessPage() {
             What&apos;s Next?
           </h2>
           <div className="space-y-3 text-gray-300">
-            <p>✅ Your payment has been processed successfully</p>
+            <p>
+              <Check className="w-4 h-4 inline mr-1" />
+              Your payment has been processed successfully
+            </p>
             <p>📧 You&apos;ll receive a confirmation email shortly</p>
             <p>📞 Our DJ will contact you within 24 hours to discuss details</p>
-            <p>📅 We&apos;ll send you a reminder 1 week before your event</p>
+            <p>
+              <Calendar className="w-4 h-4 inline mr-1" />
+              We&apos;ll send you a reminder 1 week before your event
+            </p>
           </div>
         </div>
 
@@ -273,11 +298,12 @@ export default function SuccessPage() {
               {/* Current user is different from booking owner - only allow sign out */}
               <div className="text-center w-full">
                 <p className="text-yellow-400 mb-4">
-                  ⚠️ You are logged in as a different user than the one who made
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  You are logged in as a different user than the one who made
                   this payment.
                 </p>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  onClick={() => signOut({ callbackUrl: "/auth" })}
                   className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg text-center"
                 >
                   Sign Out & Sign In as Correct User
@@ -298,5 +324,19 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrapper component to provide Socket context
+export default function SuccessPage() {
+  const { data: session } = useSession();
+
+  return (
+    <SocketProvider
+      userId={session?.user?.id}
+      role={session?.user?.role || "CLIENT"}
+    >
+      <SuccessPageContent />
+    </SocketProvider>
   );
 }

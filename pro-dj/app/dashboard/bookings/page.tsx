@@ -1,61 +1,185 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth-guard";
-import Actions from "./row-actions"; // client component below
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import BookingsTable from "@/components/BookingsTable";
 
-export default async function BookingsPage() {
-  const gate = await requireAdmin();
-  if (!gate.ok) return <main className="p-5">Forbidden</main>;
+export default async function BookingsPage({
+  searchParams,
+}: {
+  searchParams: { status?: string };
+}) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/auth");
+  }
+
+  // Allow ADMIN, DJ, and CLIENT users to access bookings
+  if (
+    session.user.role !== "ADMIN" &&
+    session.user.role !== "DJ" &&
+    session.user.role !== "CLIENT"
+  ) {
+    redirect("/dashboard");
+  }
+
+  // Build the query based on user role and status filter
+  let whereClause: {
+    djId?: string | null;
+    userId?: string;
+    status?: "PENDING" | "ACCEPTED" | "CONFIRMED" | "DECLINED";
+  } = {};
+
+  if (session.user.role === "ADMIN") {
+    // Admin sees all bookings
+    whereClause = {};
+  } else if (session.user.role === "DJ") {
+    // DJ sees only their bookings - need to get their DJ profile first
+    const djProfile = await prisma.djProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    if (djProfile) {
+      whereClause = { djId: djProfile.id };
+    } else {
+      // If no DJ profile found, show no bookings
+      whereClause = { djId: null };
+    }
+  } else if (session.user.role === "CLIENT") {
+    // Client sees only their bookings
+    whereClause = { userId: session.user.id };
+  }
+
+  // Add status filter if provided
+  if (
+    searchParams.status &&
+    ["PENDING", "ACCEPTED", "CONFIRMED", "DECLINED"].includes(
+      searchParams.status
+    )
+  ) {
+    whereClause.status = searchParams.status as
+      | "PENDING"
+      | "ACCEPTED"
+      | "CONFIRMED"
+      | "DECLINED";
+  }
 
   const bookings = await prisma.booking.findMany({
+    where: whereClause,
     orderBy: { createdAt: "desc" },
-    include: { user: { select: { email: true, name: true } } },
+    include: {
+      user: { select: { email: true, name: true } },
+      dj: { select: { stageName: true } },
+    },
   });
 
   return (
-    <main className="p-5 text-gray-200">
-      <h1 className="text-2xl font-semibold mb-4">Bookings</h1>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="text-left border-b border-gray-800">
-            <th className="p-2">When</th>
-            <th className="p-2">Type</th>
-            <th className="p-2">Package</th>
-            <th className="p-2">Client</th>
-            <th className="p-2">Quote</th>
-            <th className="p-2">Status</th>
-            <th className="p-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map(b => (
-            <tr key={b.id} className="border-b border-gray-800/70">
-              <td className="p-2">{b.eventDate.toISOString().slice(0,10)}</td>
-              <td className="p-2">{b.eventType}</td>
-              <td className="p-2">{b.packageKey ?? "-"}</td>
-              <td className="p-2">{b.user?.email ?? "-"}</td>
-              <td className="p-2">{b.quotedPriceCents ? `$${(b.quotedPriceCents/100).toFixed(2)}` : "-"}</td>
-              <td className="p-2">
-                <span className={
-                  "px-2 py-1 rounded text-xs " +
-                  (b.status === "PENDING" ? "bg-yellow-900/40" :
-                   b.status === "ACCEPTED" ? "bg-blue-900/40" :
-                   b.status === "CONFIRMED" ? "bg-green-900/40" :
-                   b.status === "DECLINED" ? "bg-red-900/40" : "bg-gray-800")
-                }>
-                  {b.status}
-                </span>
-              </td>
-              <td className="p-2 text-right">
-                <Actions
-                  id={b.id}
-                  status={b.status}
-                  checkoutSessionId={b.checkoutSessionId}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="w-full mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {session.user.role === "ADMIN"
+                  ? "All Bookings"
+                  : session.user.role === "CLIENT"
+                  ? "My Bookings"
+                  : "My Bookings"}
+              </h1>
+              <p className="text-gray-300">
+                {session.user.role === "ADMIN"
+                  ? "Manage all booking requests across the platform"
+                  : session.user.role === "CLIENT"
+                  ? "View and track your booking requests"
+                  : "View and manage your booking requests"}
+              </p>
+            </div>
+            <Link
+              href={
+                session.user.role === "ADMIN"
+                  ? "/dashboard/admin"
+                  : session.user.role === "CLIENT"
+                  ? "/dashboard/client"
+                  : "/dashboard/dj"
+              }
+              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              ← Back to Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Link
+            href="/dashboard/bookings"
+            className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
+              !searchParams.status ? "ring-2 ring-violet-500" : ""
+            }`}
+          >
+            <div className="text-2xl font-bold text-white group-hover:text-violet-300">
+              {
+                bookings.filter(
+                  (b) =>
+                    !searchParams.status || b.status === searchParams.status
+                ).length
+              }
+            </div>
+            <div className="text-gray-400 text-sm group-hover:text-gray-300">
+              Total Bookings
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/bookings?status=PENDING"
+            className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
+              searchParams.status === "PENDING" ? "ring-2 ring-yellow-500" : ""
+            }`}
+          >
+            <div className="text-2xl font-bold text-yellow-400 group-hover:text-yellow-300">
+              {bookings.filter((b) => b.status === "PENDING").length}
+            </div>
+            <div className="text-gray-400 text-sm group-hover:text-gray-300">
+              Pending
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/bookings?status=ACCEPTED"
+            className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
+              searchParams.status === "ACCEPTED" ? "ring-2 ring-blue-500" : ""
+            }`}
+          >
+            <div className="text-2xl font-bold text-blue-400 group-hover:text-blue-300">
+              {bookings.filter((b) => b.status === "ACCEPTED").length}
+            </div>
+            <div className="text-gray-400 text-sm group-hover:text-gray-300">
+              Accepted
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/bookings?status=CONFIRMED"
+            className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
+              searchParams.status === "CONFIRMED" ? "ring-2 ring-green-500" : ""
+            }`}
+          >
+            <div className="text-2xl font-bold text-green-400 group-hover:text-green-300">
+              {bookings.filter((b) => b.status === "CONFIRMED").length}
+            </div>
+            <div className="text-gray-400 text-sm group-hover:text-gray-300">
+              Confirmed
+            </div>
+          </Link>
+        </div>
+
+        {/* Bookings Table */}
+        <BookingsTable
+          initialBookings={bookings}
+          userRole={session.user.role}
+          userId={session.user.id}
+        />
+      </div>
+    </div>
   );
 }

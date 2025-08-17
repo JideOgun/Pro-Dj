@@ -1,12 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
-import RowEditor from "./RowEditor";
+import PackageManager from "./PackageManager";
+import EventTypeManager from "./EventTypeManager";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { DollarSign, Settings, ArrowLeft } from "lucide-react";
 
 export default async function PricingPage() {
   const gate = await requireAdmin();
   if (!gate.ok) {
-    redirect("/auth/login");
+    redirect("/auth");
   }
 
   const rows = await prisma.pricing.findMany({
@@ -29,39 +32,97 @@ export default async function PricingPage() {
     return acc;
   }, {});
 
+  // Get event types with package counts
+  const eventTypes = Object.entries(byType).map(([type, packages]) => ({
+    type,
+    packageCount: packages.length,
+  }));
+
   return (
-    <main className="p-5 text-gray-200">
-      <h1 className="text-2xl font-bold mb-4">Pricing</h1>
-      {Object.entries(byType).map(([type, list]) => (
-        <section key={type} className="mt-6">
-          <h2 className="text-lg font-semibold opacity-85">{type}</h2>
-          <table className="w-full border-collapse mt-2">
-            <thead>
-              <tr className="text-left border-b border-gray-800">
-                <th className="p-2">Label</th>
-                <th className="p-2">Key</th>
-                <th className="p-2">Price</th>
-                <th className="p-2">Sort</th>
-                <th className="p-2">Active</th>
-                <th className="p-2 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((r) => (
-                <RowEditor
-                  key={r.id}
-                  id={r.id}
-                  label={r.label}
-                  keyName={r.key}
-                  priceCents={r.priceCents}
-                  sortOrder={r.sortOrder}
-                  isActive={r.isActive}
-                />
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
-    </main>
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                <DollarSign className="w-8 h-8 text-violet-400" />
+                Pricing Management
+              </h1>
+              <p className="text-gray-300">
+                Manage platform pricing packages and rates
+              </p>
+            </div>
+            <Link
+              href="/dashboard/admin"
+              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-white">{rows.length}</p>
+                <p className="text-gray-400 text-sm">Total Packages</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-violet-400" />
+            </div>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-green-400">
+                  {rows.filter((r) => r.isActive).length}
+                </p>
+                <p className="text-gray-400 text-sm">Active Packages</p>
+              </div>
+              <Settings className="w-8 h-8 text-green-400" />
+            </div>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-blue-400">
+                  {Object.keys(byType).length}
+                </p>
+                <p className="text-gray-400 text-sm">Event Types</p>
+              </div>
+              <div className="w-8 h-8 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                <span className="text-blue-400 text-sm font-bold">ET</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Event Type Manager */}
+        <EventTypeManager eventTypes={eventTypes} />
+
+        {/* Pricing Sections */}
+        <div className="space-y-8">
+          {Object.entries(byType).map(([type, list]) => (
+            <PackageManager key={type} type={type} rows={list} />
+          ))}
+        </div>
+
+        {/* Empty State */}
+        {Object.keys(byType).length === 0 && (
+          <div className="text-center py-12">
+            <DollarSign className="w-16 h-16 text-gray-400 mb-4 mx-auto" />
+            <h3 className="text-xl font-semibold mb-2 text-gray-300">
+              No Pricing Packages
+            </h3>
+            <p className="text-gray-400">
+              No pricing packages have been configured yet.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

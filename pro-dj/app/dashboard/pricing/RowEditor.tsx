@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { GripVertical } from "lucide-react";
 
 type Props = {
   id: string;
@@ -11,6 +12,9 @@ type Props = {
   priceCents: number;
   sortOrder: number;
   isActive: boolean;
+  onReorder?: (id: string, newSortOrder: number) => void;
+  isDragging?: boolean;
+  dragHandleProps?: Record<string, unknown>;
 };
 
 function toDollarString(cents: number) {
@@ -29,7 +33,6 @@ export default function RowEditor(p: Props) {
   // local state mirrors server values
   const [label, setLabel] = useState(p.label);
   const [price, setPrice] = useState(toDollarString(p.priceCents)); // display in dollars
-  const [sortOrder, setSortOrder] = useState(p.sortOrder);
   const [isActive, setIsActive] = useState(p.isActive);
 
   const [saving, setSaving] = useState(false);
@@ -40,10 +43,9 @@ export default function RowEditor(p: Props) {
     return (
       label.trim() !== p.label ||
       toCents(price) !== p.priceCents ||
-      sortOrder !== p.sortOrder ||
       isActive !== p.isActive
     );
-  }, [label, price, sortOrder, isActive, p]);
+  }, [label, price, isActive, p]);
 
   // guard price input to valid money format
   function onPriceChange(v: string) {
@@ -81,9 +83,7 @@ export default function RowEditor(p: Props) {
       body: JSON.stringify({
         label: label.trim(),
         priceCents,
-        sortOrder: Number.isFinite(sortOrder)
-          ? Math.max(0, Math.floor(sortOrder))
-          : 0,
+        sortOrder: p.sortOrder, // Keep existing sort order
         isActive,
       }),
     });
@@ -98,7 +98,7 @@ export default function RowEditor(p: Props) {
       setError(msg);
       toast.error("Save failed");
     }
-  }, [dirty, label, price, sortOrder, isActive, p.id, router]);
+  }, [dirty, label, price, isActive, p.id, p.sortOrder, router]);
 
   // ✅ Keyboard shortcut: depends on stable `save`
   useEffect(() => {
@@ -114,25 +114,30 @@ export default function RowEditor(p: Props) {
   }, [save]);
 
   return (
-    <tr
-      className={`border-b border-dotted border-gray-800 ${
-        dirty ? "bg-gray-900/40" : ""
-      }`}
-    >
-      <td className="p-2">
-        <input
-          className="w-full bg-transparent border border-gray-800 rounded px-2 py-1 outline-none focus:border-violet-600"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Label"
-        />
-      </td>
-      <td className="p-2 opacity-80">{p.keyName}</td>
-      <td className="p-2">
-        <div className="flex items-center gap-2">
-          <span>$</span>
+    <>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-300 transition-colors">
+            <GripVertical size={16} />
+          </div>
           <input
-            className="w-28 bg-transparent border border-gray-800 rounded px-2 py-1 outline-none focus:border-violet-600"
+            className="flex-1 bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Package name..."
+          />
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono bg-gray-700/50 text-gray-300 border border-gray-600">
+          {p.keyName}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400">$</span>
+          <input
+            className="w-24 bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-colors"
             value={price}
             onChange={(e) => onPriceChange(e.target.value)}
             inputMode="decimal"
@@ -140,36 +145,64 @@ export default function RowEditor(p: Props) {
           />
         </div>
       </td>
-      <td className="p-2">
-        <input
-          className="w-16 bg-transparent border border-gray-800 rounded px-2 py-1 outline-none focus:border-violet-600"
-          type="number"
-          value={sortOrder}
-          onChange={(e) => setSortOrder(parseInt(e.target.value || "0", 10))}
-          min={0}
-        />
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="sr-only"
+            />
+            <div
+              className={`w-10 h-6 bg-gray-600 rounded-full transition-colors duration-200 ease-in-out ${
+                isActive ? "bg-violet-600" : "bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out transform ${
+                  isActive ? "translate-x-5" : "translate-x-1"
+                } mt-1`}
+              />
+            </div>
+          </label>
+          <span
+            className={`text-sm font-medium ${
+              isActive ? "text-green-400" : "text-gray-400"
+            }`}
+          >
+            {isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
       </td>
-      <td className="p-2">
-        <label className="inline-flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-          />
-          <span className="text-sm opacity-80">Active</span>
-        </label>
+      <td className="px-6 py-4 text-right">
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={save}
+            disabled={saving || !dirty}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              dirty
+                ? "bg-violet-600 hover:bg-violet-700 text-white shadow-lg hover:shadow-violet-500/25"
+                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+            }`}
+            title={!dirty ? "No changes to save" : "Save changes (Ctrl+S)"}
+          >
+            {saving ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </div>
+            ) : (
+              "Save"
+            )}
+          </button>
+          {error && (
+            <div className="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded border border-red-500/30">
+              {error}
+            </div>
+          )}
+        </div>
       </td>
-      <td className="p-2 text-right">
-        <button
-          onClick={save}
-          disabled={saving || !dirty}
-          className="px-3 py-1 rounded bg-violet-600 hover:brightness-105 disabled:opacity-60"
-          title={!dirty ? "No changes" : "Save changes"}
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        {error && <div className="text-sm text-red-400 mt-1">{error}</div>}
-      </td>
-    </tr>
+    </>
   );
 }

@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect("/auth/login");
+    redirect("/auth");
   }
 
   const role = session.user.role;
@@ -16,6 +16,11 @@ export default async function DashboardPage() {
     redirect("/dashboard/client");
   }
 
-  // For ADMIN and DJ users, redirect to admin dashboard
+  // Redirect DJs to their dashboard
+  if (role === "DJ") {
+    redirect("/dashboard/dj");
+  }
+
+  // For ADMIN users, redirect to admin dashboard
   redirect("/dashboard/admin");
 }

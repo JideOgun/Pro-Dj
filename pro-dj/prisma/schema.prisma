@@ -5,108 +5,382 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+provider = "prisma-client-js"
+output = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+provider = "postgresql"
+url = env("DATABASE_URL")
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String?
-  password  String?
-  googleId  String?
-  role      Role      @default(CLIENT)
-  bookings  Booking[]
-  comments  Comment[] @relation("UserComments")
-  createdAt DateTime  @default(now())
+id String @id @default(uuid())
+email String @unique
+name String?
+password String?
+googleId String?
+role Role @default(CLIENT)
+status UserStatus @default(ACTIVE)
+suspendedAt DateTime?
+suspendedBy String? // Admin ID who suspended the user
+suspensionReason String?
+
+// Profile Information
+profileImage String? // URL to profile picture
+phone String?
+location String?
+bio String?
+dateOfBirth DateTime?
+website String?
+
+// Social Media Links
+socialLinks Json? // {instagram, twitter, facebook, linkedin, tiktok}
+
+bookings Booking[]
+comments Comment[] @relation("UserComments")
+
+// DJ Profile relation
+djProfile DjProfile?
+
+// Reviews relation
+reviews Review[] @relation("UserReviews")
+
+// Notifications relation
+notifications Notification[] @relation("UserNotifications")
+
+// User Media
+userMedia UserMedia[]
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  eventType String
-  eventDate DateTime
-  message   String
-  isPaid    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  bookingType String?
-  packageKey String?
-  quotedPriceCents Int?
-  details Json?
-  status BookingStatus @default(PENDING)
-  checkoutSessionId String? // Stripe session used to payment
-  paidAt DateTime?
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
 
-  @@index([status])
+// DJ assignment
+djId String?
+dj DjProfile? @relation(fields: [djId], references: [id])
+
+eventType String
+eventDate DateTime
+startTime DateTime // Start time of the event
+endTime DateTime // End time of the event
+message String
+isPaid Boolean @default(false)
+createdAt DateTime @default(now())
+bookingType String?
+packageKey String?
+quotedPriceCents Int?
+details Json?
+status BookingStatus @default(PENDING)
+checkoutSessionId String? // Stripe session used to payment
+paidAt DateTime?
+
+// Cancellation and refund fields
+cancellationReason String?
+cancelledAt DateTime?
+cancelledBy String? // ID of admin who cancelled
+refundId String? // Stripe refund ID
+refundedAt DateTime?
+refundAmount Int? // Amount refunded in cents
+totalAmount Int? // Total booking amount in cents
+
+// Review relation
+review Review?
+
+// Recovery relation
+recovery BookingRecovery[] @relation("OriginalBooking")
+
+@@index([status])
+@@index([djId])
 }
 
 model Mix {
-  id          String    @id @default(uuid())
-  title       String
-  description String
-  url         String
-  tags        String[]
-  uploadedAt  DateTime  @default(now())
-  comments    Comment[]
+id String @id @default(uuid())
+title String
+description String
+url String
+tags String[]
+uploadedAt DateTime @default(now())
+comments Comment[]
 }
 
 model Post {
-  id         String    @id @default(uuid())
-  title      String
-  content    String
-  coverImage String
-  createdAt  DateTime  @default(now())
-  comments   Comment[]
+id String @id @default(uuid())
+title String
+content String
+coverImage String
+createdAt DateTime @default(now())
+comments Comment[]
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
+id String @id @default(uuid())
+content String
+createdAt DateTime @default(now())
 
-  //relations
-  userId String
-  user   User    @relation("UserComments", fields: [userId], references: [id])
-  mixId  String?
-  mix    Mix?    @relation(fields: [mixId], references: [id])
-  postId String?
-  post   Post?   @relation(fields: [postId], references: [id])
+//relations
+userId String
+user User @relation("UserComments", fields: [userId], references: [id])
+mixId String?
+mix Mix? @relation(fields: [mixId], references: [id])
+postId String?
+post Post? @relation(fields: [postId], references: [id])
 }
 
 model Pricing {
-  id         String   @id @default(uuid())
-  type       String   // "Wedding" | "Club" | ...
-  key        String   // "silver" | "gold" | "2hr" | ...
-  label      String   // UI label shown in the dropdown
-  priceCents Int
-  isActive   Boolean  @default(true)
-  sortOrder  Int      @default(0)
+id String @id @default(uuid())
+type String // "Wedding" | "Club" | ...
+key String // "silver" | "gold" | "2hr" | ...
+label String // UI label shown in the dropdown
+priceCents Int // Base price per hour in cents
+isActive Boolean @default(true)
+sortOrder Int @default(0)
 
-  // v2 (multi-DJ): add this later
-  // djId     String?
-  // dj       DjProfile? @relation(fields: [djId], references: [id])
+// DJ assignment
+djId String?
+dj DjProfile? @relation(fields: [djId], references: [id])
 
-  @@unique([type, key]) // one package per type+key
-  @@index([type, sortOrder])
+@@unique([type, key, djId]) // one package per type+key+dj (null djId = platform default)
+@@index([type, sortOrder])
+@@index([djId])
 }
 
-
 enum Role {
-  ADMIN
-  DJ
-  CLIENT
+ADMIN
+DJ
+CLIENT
+}
+
+model DjProfile {
+id String @id @default(uuid())
+userId String @unique
+user User @relation(fields: [userId], references: [id])
+
+// DJ-specific fields
+stageName String @unique
+bio String?
+genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"]
+customGenres String? // additional genres not in the main list
+experience Int // years of experience
+location String?
+travelRadius Int? // miles willing to travel
+
+// Specialties & Skills
+specialties String? // unique skills and specialties
+equipment String? // equipment and setup details
+languages String[] // languages spoken
+availability String? // availability schedule and preferences
+
+// Social Media & Links
+socialLinks Json? // {instagram, youtube, soundcloud, website}
+
+// Media
+profileImage String?
+portfolio String[] // array of image URLs
+eventPhotos EventPhoto[] // enhanced event photos with metadata
+
+// Pricing
+basePriceCents Int? // base hourly rate
+
+// Availability
+isActive Boolean @default(true)
+isVerified Boolean @default(false)
+isFeatured Boolean @default(false) // For featuring DJs on homepage
+
+// Stats
+totalBookings Int @default(0)
+rating Float @default(0)
+reviewCount Int @default(0)
+
+// Relations
+bookings Booking[]
+pricing Pricing[]
+reviews Review[]
+recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
+mixes DjMix[]
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+}
+
+model Review {
+id String @id @default(uuid())
+bookingId String @unique
+booking Booking @relation(fields: [bookingId], references: [id])
+
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+clientId String
+client User @relation("UserReviews", fields: [clientId], references: [id])
+
+rating Int // 1-5 stars
+comment String?
+
+createdAt DateTime @default(now())
 }
 
 enum BookingStatus {
-  PENDING
-  ACCEPTED  // waiting on payment
-  DECLINED
-  CONFIRMED   // paid
-  CANCELLED
+PENDING
+ACCEPTED // waiting on payment
+DECLINED
+CONFIRMED // paid
+CANCELLED
+}
+
+enum UserStatus {
+ACTIVE
+SUSPENDED
+PENDING
+}
+
+model Notification {
+id String @id @default(uuid())
+userId String
+user User @relation("UserNotifications", fields: [userId], references: [id])
+
+type String // "BOOKING_DECLINED", "DJ_CANCELLED", "RECOVERY_SUGGESTION", etc.
+title String
+message String
+data Json? // additional data like suggested DJs, recovery options
+isRead Boolean @default(false)
+actionUrl String? // URL to take action (e.g., book new DJ)
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([userId, isRead])
+@@index([createdAt])
+}
+
+model BookingRecovery {
+id String @id @default(uuid())
+originalBookingId String
+originalBooking Booking @relation("OriginalBooking", fields: [originalBookingId], references: [id])
+
+recoveryType String // "EXTEND_DJ", "NEW_DJ", "REFUND"
+suggestedDjId String?
+suggestedDj DjProfile? @relation("SuggestedDj", fields: [suggestedDjId], references: [id])
+
+status String // "PENDING", "ACCEPTED", "DECLINED"
+clientResponse String? // client's response to recovery suggestion
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+}
+
+model UserMedia {
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
+
+type String // "PROFILE_PICTURE", "EVENT_PHOTO", "PORTFOLIO", "DOCUMENT"
+url String
+filename String
+originalName String
+mimeType String
+size Int // file size in bytes
+altText String? // for accessibility
+description String?
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([userId, type])
+}
+
+model EventPhoto {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+title String
+description String?
+url String
+filename String
+originalName String
+mimeType String
+size Int // file size in bytes
+altText String? // for accessibility
+
+// Event Details
+eventName String?
+eventDate DateTime?
+eventType String?
+venue String?
+location String?
+
+// Tags and Categories
+tags String[] // ["wedding", "club", "birthday", "corporate"]
+isFeatured Boolean @default(false) // for portfolio highlights
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([djId, isFeatured])
+@@index([eventType])
+}
+
+model DjMix {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+// Mix Information
+title String
+description String?
+genre String?
+tags String[] // ["afrobeats", "amapiano", "hip-hop", "house"]
+isPublic Boolean @default(false)
+isFeatured Boolean @default(false)
+
+// File Information
+fileName String
+originalName String
+fileSize Int // file size in bytes
+duration Int? // duration in seconds
+bitrate Int? // bitrate in kbps
+sampleRate Int? // sample rate in Hz
+
+// Storage Information
+s3Key String // S3 object key
+cloudFrontUrl String? // CDN URL for fast delivery
+localUrl String? // Local URL for development/testing
+
+// Upload Information
+uploadStatus UploadStatus @default(PENDING)
+uploadProgress Int @default(0) // 0-100
+uploadedAt DateTime?
+uploadError String?
+
+// Playback Statistics
+playCount Int @default(0)
+downloadCount Int @default(0)
+lastPlayedAt DateTime?
+
+// Metadata
+mimeType String
+format String? // "mp3", "wav", "ogg"
+quality String? // "high", "medium", "low"
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([djId, isPublic])
+@@index([genre])
+@@index([uploadStatus])
+@@index([isFeatured])
+}
+
+enum UploadStatus {
+PENDING
+UPLOADING
+COMPLETED
+FAILED
+CANCELLED
 }

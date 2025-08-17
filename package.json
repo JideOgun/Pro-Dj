@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lucide-react": "^0.539.0",
+    "react-image-crop": "^11.0.10"
+  }
+}
