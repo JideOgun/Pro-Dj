@@ -2,16 +2,55 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET: Fetch all event photos grouped by event name
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Get all event photos with DJ information
-    const eventPhotos = await prisma.eventPhoto.findMany({
-      where: {
-        // Only show photos that have an event name
-        eventName: {
-          not: null,
-        },
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const eventType = searchParams.get("eventType");
+    const djId = searchParams.get("djId");
+    const featured = searchParams.get("featured") === "true";
+    const sortBy = searchParams.get("sortBy") || "date"; // "date", "newest", "oldest"
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: Record<string, unknown> = {
+      eventName: {
+        not: null,
       },
+    };
+
+    if (eventType) {
+      where.eventType = eventType;
+    }
+
+    if (djId) {
+      where.djId = djId;
+    }
+
+    if (featured) {
+      where.isFeatured = true;
+    }
+
+    // Build order by clause
+    let orderBy: Array<Record<string, string>> = [];
+    switch (sortBy) {
+      case "newest":
+        orderBy = [{ createdAt: "desc" }];
+        break;
+      case "oldest":
+        orderBy = [{ createdAt: "asc" }];
+        break;
+      case "date":
+      default:
+        orderBy = [{ eventDate: "desc" }, { createdAt: "desc" }];
+        break;
+    }
+
+    // Get event photos with pagination
+    const eventPhotos = await prisma.eventPhoto.findMany({
+      where,
       include: {
         dj: {
           select: {
@@ -21,7 +60,9 @@ export async function GET() {
           },
         },
       },
-      orderBy: [{ eventDate: "desc" }, { createdAt: "desc" }],
+      orderBy,
+      skip,
+      take: limit,
     });
 
     // Group photos by event name
@@ -91,9 +132,25 @@ export async function GET() {
       return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
     });
 
+    // Get total count for pagination
+    const total = await prisma.eventPhoto.count({ where });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
     return NextResponse.json({
       ok: true,
       events,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
     });
   } catch (error) {
     console.error("Error fetching gallery:", error);

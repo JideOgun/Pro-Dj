@@ -12,7 +12,7 @@ import {
 } from "@/lib/booking-utils";
 
 // GET admin and DJ: list bookings
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -24,12 +24,22 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "20");
+  const status = searchParams.get("status");
+  const eventType = searchParams.get("eventType");
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
+  const sortBy = searchParams.get("sortBy") || "newest"; // "newest", "oldest", "date", "status"
+
+  const skip = (page - 1) * limit;
+
   // Build the query based on user role
-  let whereClause = {};
+  const whereClause: Record<string, unknown> = {};
 
   if (session.user.role === "ADMIN") {
     // Admin sees all bookings
-    whereClause = {};
   } else if (session.user.role === "DJ") {
     // DJ sees only their bookings - need to get their DJ profile first
     const djProfile = await prisma.djProfile.findUnique({
@@ -37,23 +47,83 @@ export async function GET() {
     });
 
     if (djProfile) {
-      whereClause = { djId: djProfile.id };
+      whereClause.djId = djProfile.id;
     } else {
       // If no DJ profile found, show no bookings
-      whereClause = { djId: null };
+      whereClause.djId = null;
     }
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: whereClause,
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { email: true, name: true } },
-      dj: { select: { stageName: true } },
+  // Add filters
+  if (status) {
+    whereClause.status = status;
+  }
+
+  if (eventType) {
+    whereClause.eventType = eventType;
+  }
+
+  if (dateFrom || dateTo) {
+    whereClause.eventDate = {};
+    if (dateFrom) {
+      (whereClause.eventDate as Record<string, unknown>).gte = new Date(
+        dateFrom
+      );
+    }
+    if (dateTo) {
+      (whereClause.eventDate as Record<string, unknown>).lte = new Date(dateTo);
+    }
+  }
+
+  // Build order by clause
+  const orderBy: Record<string, string> = {};
+  switch (sortBy) {
+    case "oldest":
+      orderBy.createdAt = "asc";
+      break;
+    case "date":
+      orderBy.eventDate = "desc";
+      break;
+    case "status":
+      orderBy.status = "asc";
+      break;
+    case "newest":
+    default:
+      orderBy.createdAt = "desc";
+      break;
+  }
+
+  // Fetch bookings with pagination
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where: whereClause,
+      orderBy,
+      skip,
+      take: limit,
+      include: {
+        user: { select: { email: true, name: true } },
+        dj: { select: { stageName: true } },
+      },
+    }),
+    prisma.booking.count({ where: whereClause }),
+  ]);
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(total / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  return NextResponse.json({
+    bookings,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
     },
   });
-
-  return NextResponse.json({ bookings });
 }
 
 // Post (public - create booking request)
