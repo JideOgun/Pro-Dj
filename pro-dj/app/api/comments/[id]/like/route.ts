@@ -66,9 +66,19 @@ export async function POST(
         }),
       ]);
 
+      // Get updated comment with new counts
+      const updatedComment = await prisma.comment.findUnique({
+        where: { id },
+        include: {
+          likes: true,
+          dislikes: true,
+        },
+      });
+
       return NextResponse.json({
         ok: true,
         liked: false,
+        likeCount: updatedComment?.likes.length || 0,
         message: "Comment unliked",
       });
     } else {
@@ -107,9 +117,19 @@ export async function POST(
         ]);
       }
 
+      // Get updated comment with new counts
+      const updatedComment = await prisma.comment.findUnique({
+        where: { id },
+        include: {
+          likes: true,
+          dislikes: true,
+        },
+      });
+
       return NextResponse.json({
         ok: true,
         liked: true,
+        likeCount: updatedComment?.likes.length || 0,
         message: "Comment liked",
       });
     }

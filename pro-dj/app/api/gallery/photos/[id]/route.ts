@@ -3,6 +3,61 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// GET: Fetch a specific photo with comment count
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const photoId = await params.then((p) => p.id);
+
+    const photo = await prisma.eventPhoto.findUnique({
+      where: { id: photoId },
+      include: {
+        dj: {
+          select: {
+            id: true,
+            stageName: true,
+            profileImage: true,
+            userId: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    });
+
+    if (!photo) {
+      return NextResponse.json(
+        { ok: false, error: "Photo not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      photo: {
+        ...photo,
+        commentCount: photo._count.comments,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching photo:", error);
+    return NextResponse.json(
+      { ok: false, error: "Failed to fetch photo" },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE: Delete a specific photo
 export async function DELETE(
   req: Request,

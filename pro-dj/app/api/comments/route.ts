@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET - Fetch comments for a specific item (mix, video, post)
 export async function GET(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
     const commentType = searchParams.get("type"); // "mix", "video", "post"
     const itemId = searchParams.get("itemId");
@@ -66,7 +67,7 @@ export async function GET(req: Request) {
     }
 
     // Fetch top-level comments (no parent)
-    const [comments, total] = await Promise.all([
+    const [rawComments, total] = await Promise.all([
       prisma.comment.findMany({
         where: {
           ...where,
@@ -111,6 +112,30 @@ export async function GET(req: Request) {
         },
       }),
     ]);
+
+    // Transform the comments to match the expected interface
+    const comments = rawComments.map((comment) => ({
+      ...comment,
+      likes: comment.likes.length,
+      dislikes: comment.dislikes.length,
+      userLiked: comment.likes.some(
+        (like) => like.userId === session?.user?.id
+      ),
+      userDisliked: comment.dislikes.some(
+        (dislike) => dislike.userId === session?.user?.id
+      ),
+      replies: comment.replies.map((reply) => ({
+        ...reply,
+        likes: reply.likes.length,
+        dislikes: reply.dislikes.length,
+        userLiked: reply.likes.some(
+          (like) => like.userId === session?.user?.id
+        ),
+        userDisliked: reply.dislikes.some(
+          (dislike) => dislike.userId === session?.user?.id
+        ),
+      })),
+    }));
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / limit);
@@ -184,8 +209,8 @@ export async function POST(req: Request) {
 
       threadDepth = parentComment.threadDepth + 1;
 
-      // Limit thread depth to prevent excessive nesting
-      if (threadDepth > 3) {
+      // Limit thread depth to 6 levels (allows 5-7 levels of conversation)
+      if (threadDepth > 6) {
         return NextResponse.json(
           { ok: false, error: "Maximum reply depth reached" },
           { status: 400 }
@@ -222,7 +247,7 @@ export async function POST(req: Request) {
     }
 
     // Create the comment
-    const comment = await prisma.comment.create({
+    const rawComment = await prisma.comment.create({
       data: commentData,
       include: {
         user: {
@@ -235,8 +260,46 @@ export async function POST(req: Request) {
         },
         likes: true,
         dislikes: true,
+        replies: {
+          where: { isDeleted: false },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                profileImage: true,
+                role: true,
+              },
+            },
+            likes: true,
+            dislikes: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
+
+    // Transform the comment to match the expected interface
+    const comment = {
+      ...rawComment,
+      likes: rawComment.likes.length,
+      dislikes: rawComment.dislikes.length,
+      userLiked: rawComment.likes.some(
+        (like) => like.userId === session.user.id
+      ),
+      userDisliked: rawComment.dislikes.some(
+        (dislike) => dislike.userId === session.user.id
+      ),
+      replies: rawComment.replies.map((reply) => ({
+        ...reply,
+        likes: reply.likes.length,
+        dislikes: reply.dislikes.length,
+        userLiked: reply.likes.some((like) => like.userId === session.user.id),
+        userDisliked: reply.dislikes.some(
+          (dislike) => dislike.userId === session.user.id
+        ),
+      })),
+    };
 
     return NextResponse.json({
       ok: true,

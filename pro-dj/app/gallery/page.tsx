@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -22,8 +22,13 @@ import {
   Edit,
   Eye,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Music,
+  Award,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface EventPhoto {
   id: string;
@@ -33,11 +38,6 @@ interface EventPhoto {
   altText: string | null;
   tags: string[];
   isFeatured: boolean;
-  dj: {
-    stageName: string;
-    profileImage: string | null;
-    userId: string;
-  };
   createdAt: Date;
 }
 
@@ -50,14 +50,31 @@ interface Event {
   photos: EventPhoto[];
 }
 
+interface DJ {
+  djId: string;
+  stageName: string;
+  profileImage: string | null;
+  userProfileImage: string | null;
+  userId: string;
+  events: Event[];
+}
+
 export default function GalleryPage() {
   const { data: session } = useSession();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [djs, setDjs] = useState<DJ[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<string | null>(null);
+
+  // Sliding gallery state
+  const [currentSlide, setCurrentSlide] = useState<{ [djId: string]: number }>(
+    {}
+  );
+  const scrollContainerRefs = useRef<{ [djId: string]: HTMLDivElement | null }>(
+    {}
+  );
 
   // Upload functionality
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -84,7 +101,7 @@ export default function GalleryPage() {
   });
 
   useEffect(() => {
-    fetchEvents();
+    fetchGallery();
   }, []);
 
   // Close menu when clicking outside
@@ -104,23 +121,77 @@ export default function GalleryPage() {
     };
   }, [showMenu]);
 
-  const fetchEvents = async () => {
+  const fetchGallery = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const response = await fetch("/api/gallery");
       const data = await response.json();
 
       if (data.ok) {
-        setEvents(data.events);
+        setDjs(data.djs);
+        setTotalPhotos(data.pagination.total);
       } else {
-        setError(data.error || "Failed to fetch events");
+        setError(data.error || "Failed to fetch gallery");
       }
-    } catch (err) {
-      setError("Failed to load gallery");
-      console.error("Error fetching events:", err);
+    } catch (error) {
+      console.error("Error fetching gallery:", error);
+      setError("Failed to fetch gallery");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sliding gallery functions
+  const scrollToEvent = (djId: string, direction: "left" | "right") => {
+    const container = scrollContainerRefs.current[djId];
+    if (!container) return;
+
+    const cardWidth = 320; // Approximate card width including gap
+    const currentScroll = currentSlide[djId] || 0;
+    const maxScroll = Math.max(
+      0,
+      djs.find((dj) => dj.djId === djId)?.events.length || 0 - 3
+    );
+
+    let newScroll;
+    if (direction === "left") {
+      newScroll = Math.max(0, currentScroll - 1);
+    } else {
+      newScroll = Math.min(maxScroll, currentScroll + 1);
+    }
+
+    setCurrentSlide((prev) => ({ ...prev, [djId]: newScroll }));
+    container.scrollTo({
+      left: newScroll * cardWidth,
+      behavior: "smooth",
+    });
+  };
+
+  const canScrollLeft = (djId: string) => {
+    return (currentSlide[djId] || 0) > 0;
+  };
+
+  const canScrollRight = (djId: string) => {
+    const dj = djs.find((d) => d.djId === djId);
+    if (!dj) return false;
+    // Show right arrow if there are more events than can fit in the visible area
+    // Assuming 3 events fit in the visible area
+    const visibleEvents = 3;
+    const hasMoreEvents = dj.events.length > visibleEvents;
+    const currentPosition = currentSlide[djId] || 0;
+    const maxScroll = Math.max(0, dj.events.length - visibleEvents);
+
+    console.log(
+      `DJ ${dj.stageName}: events=${
+        dj.events.length
+      }, current=${currentPosition}, maxScroll=${maxScroll}, hasMore=${hasMoreEvents}, canScroll=${
+        currentPosition < maxScroll
+      }`
+    );
+
+    return hasMoreEvents && currentPosition < maxScroll;
   };
 
   const deleteEvent = async (eventName: string) => {
@@ -138,7 +209,7 @@ export default function GalleryPage() {
       if (data.ok) {
         toast.success(data.message);
         // Refresh the events list
-        await fetchEvents();
+        await fetchGallery();
       } else {
         toast.error(data.error || "Failed to delete event");
       }
@@ -151,14 +222,10 @@ export default function GalleryPage() {
     }
   };
 
-  const canDeleteEvent = (event: Event) => {
+  const canDeleteEvent = (event: Event, djUserId: string) => {
     if (!session?.user) return false;
     if (session.user.role === "ADMIN") return true;
-    if (session.user.role === "DJ") {
-      // Check if the DJ owns all photos in this event
-      return event.photos.every((photo) => photo.dj.userId === session.user.id);
-    }
-    return false;
+    return djUserId === session.user.id;
   };
 
   // Upload functions
@@ -278,7 +345,7 @@ export default function GalleryPage() {
         isFeatured: false,
       });
       // Refresh the events list
-      await fetchEvents();
+      await fetchGallery();
     } else if (uploadedPhotos.length > 0 && errors.length > 0) {
       toast.success(
         `Uploaded ${uploadedPhotos.length} photo${
@@ -323,16 +390,7 @@ export default function GalleryPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto"></div>
-            <p className="mt-4 text-gray-400">Loading gallery...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading gallery..." />;
   }
 
   if (error) {
@@ -342,7 +400,7 @@ export default function GalleryPage() {
           <div className="text-center">
             <p className="text-red-400 mb-4">{error}</p>
             <button
-              onClick={fetchEvents}
+              onClick={fetchGallery}
               className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Try Again
@@ -384,162 +442,276 @@ export default function GalleryPage() {
           </div>
         </div>
 
-        {/* Events Grid */}
+        {/* Gallery Content */}
         <div className="max-w-7xl mx-auto px-6 py-12">
-          {events.length === 0 ? (
+          {djs.length === 0 ? (
             <div className="text-center py-16">
               <Camera className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-300 mb-2">
-                No Events Yet
+                No Photos Yet
               </h3>
-              <p className="text-gray-500">
-                Event photos will appear here once they're uploaded.
+              <p className="text-gray-500 mb-6">
+                Start by uploading some event photos to showcase your work.
               </p>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                Upload Photos
+              </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {events.map((event) => {
-                // Get the first photo as the cover image
-                const coverPhoto = event.photos[0];
-                const photoCount = event.photos.length;
-
-                return (
-                  <div
-                    key={event.eventName}
-                    className="group bg-gray-900/50 rounded-xl overflow-hidden border border-gray-800 hover:border-violet-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-500/10 relative"
-                  >
-                    {/* Options Menu */}
-                    {canDeleteEvent(event) && (
-                      <div className="absolute top-4 right-4 z-10">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowMenu(
-                              showMenu === event.eventName
-                                ? null
-                                : event.eventName
-                            );
-                          }}
-                          className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
-                          title="More options"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-
-                        {/* Dropdown Menu */}
-                        {showMenu === event.eventName && (
-                          <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setShowMenu(null);
-                                setShowDeleteModal(event.eventName);
-                              }}
-                              className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Event
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <Link
-                      href={`/gallery/${encodeURIComponent(event.eventName)}`}
-                      className="block"
-                    >
-                      {/* Cover Image */}
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <Image
-                          src={coverPhoto.url}
-                          alt={coverPhoto.altText || event.eventName}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-
-                        {/* Photo Count Badge */}
-                        <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                          <Camera className="w-4 h-4 inline mr-1" />
-                          {photoCount} {photoCount === 1 ? "photo" : "photos"}
+            <div className="space-y-12">
+              {djs.map((dj) => (
+                <div
+                  key={dj.djId}
+                  className="bg-gray-900/50 rounded-xl overflow-hidden border border-gray-800"
+                >
+                  {/* DJ Header */}
+                  <div className="p-3 border-b border-gray-800">
+                    <div className="flex items-center space-x-3">
+                      {/* DJ Profile Picture */}
+                      {dj.profileImage ? (
+                        <div className="relative w-10 h-10">
+                          <Image
+                            src={dj.profileImage}
+                            alt={dj.stageName}
+                            fill
+                            className="rounded-full object-cover border-2 border-violet-500/30"
+                            sizes="40px"
+                          />
                         </div>
-
-                        {/* Featured Badge */}
-                        {coverPhoto.isFeatured && (
-                          <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                            ⭐ Featured
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Event Info */}
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-violet-300 transition-colors">
-                          {event.eventName}
-                        </h3>
-
-                        <div className="space-y-2 mb-4">
-                          {/* Event Type */}
-                          {event.eventType && (
-                            <div
-                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getEventTypeColor(
-                                event.eventType
-                              )}`}
-                            >
-                              {event.eventType}
-                            </div>
-                          )}
-
-                          {/* Date */}
-                          <div className="flex items-center text-gray-400 text-sm">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            {formatDate(event.eventDate)}
-                          </div>
-
-                          {/* Venue/Location */}
-                          {(event.venue || event.location) && (
-                            <div className="flex items-center text-gray-400 text-sm">
-                              <MapPin className="w-4 h-4 mr-2" />
-                              {event.venue && event.location
-                                ? `${event.venue}, ${event.location}`
-                                : event.venue || event.location}
-                            </div>
-                          )}
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center border-2 border-violet-500/30">
+                          <Music className="w-5 h-5 text-white" />
                         </div>
+                      )}
 
-                        {/* DJ Info */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            {coverPhoto.dj.profileImage ? (
-                              <div className="relative w-8 h-8 mr-3">
-                                <Image
-                                  src={coverPhoto.dj.profileImage}
-                                  alt={coverPhoto.dj.stageName}
-                                  fill
-                                  className="rounded-full object-cover"
-                                  sizes="32px"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                                <Users className="w-4 h-4 text-gray-400" />
-                              </div>
-                            )}
-                            <span className="text-sm text-gray-300">
-                              {coverPhoto.dj.stageName}
+                      {/* DJ Information */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h2 className="text-lg font-bold text-white">
+                            {dj.stageName}
+                          </h2>
+                          <div className="flex items-center space-x-1 text-violet-400">
+                            <Award className="w-4 h-4" />
+                            <span className="text-xs font-medium">
+                              Professional DJ
                             </span>
                           </div>
+                        </div>
 
-                          <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
+                        <div className="flex items-center space-x-4 text-gray-400 text-xs">
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>
+                              {dj.events.length}{" "}
+                              {dj.events.length === 1 ? "Event" : "Events"}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Camera className="w-3 h-3" />
+                            <span>
+                              {dj.events.reduce(
+                                (total, event) => total + event.photos.length,
+                                0
+                              )}{" "}
+                              Photos
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Star className="w-3 h-3" />
+                            <span>
+                              {dj.events.reduce(
+                                (total, event) =>
+                                  total +
+                                  event.photos.filter((p) => p.isFeatured)
+                                    .length,
+                                0
+                              )}{" "}
+                              Featured
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </Link>
+
+                      {/* View Profile Button */}
+                      <Link
+                        href={`/dj/profile/${dj.djId}`}
+                        className="bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg transition-colors inline-flex items-center text-xs font-medium"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        View Profile
+                      </Link>
+                    </div>
                   </div>
-                );
-              })}
+
+                  {/* Events Sliding Gallery */}
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">
+                        Recent Events
+                      </h3>
+                    </div>
+
+                    {/* Scrollable Events Container with End Arrows */}
+                    <div className="relative group">
+                      {/* Left Arrow - Positioned at start */}
+                      <button
+                        onClick={() => scrollToEvent(dj.djId, "left")}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/80 hover:bg-black/90 backdrop-blur-sm text-white shadow-lg transition-all duration-300 hover:scale-110"
+                        style={{ opacity: canScrollLeft(dj.djId) ? 1 : 0.3 }}
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+
+                      {/* Right Arrow - Positioned at end */}
+                      <button
+                        onClick={() => scrollToEvent(dj.djId, "right")}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/80 hover:bg-black/90 backdrop-blur-sm text-white shadow-lg transition-all duration-300 hover:scale-110"
+                        style={{ opacity: canScrollRight(dj.djId) ? 1 : 0.3 }}
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+
+                      <div
+                        ref={(el) =>
+                          (scrollContainerRefs.current[dj.djId] = el)
+                        }
+                        className="flex space-x-6 overflow-x-auto scrollbar-hide pb-4 px-2"
+                        style={{
+                          scrollbarWidth: "none",
+                          msOverflowStyle: "none",
+                        }}
+                      >
+                        {dj.events.map((event) => {
+                          // Get the first photo as the cover image
+                          const coverPhoto = event.photos[0];
+                          const photoCount = event.photos.length;
+
+                          return (
+                            <div
+                              key={event.eventName}
+                              className="group bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700 hover:border-violet-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10 relative flex-shrink-0"
+                              style={{ width: "300px" }}
+                            >
+                              {/* Options Menu */}
+                              {canDeleteEvent(event, dj.userId) && (
+                                <div className="absolute top-4 right-4 z-10">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setShowMenu(
+                                        showMenu === event.eventName
+                                          ? null
+                                          : event.eventName
+                                      );
+                                    }}
+                                    className="bg-black/70 hover:bg-black/90 backdrop-blur-sm rounded-full p-2 text-white transition-colors"
+                                    title="More options"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Dropdown Menu */}
+                                  {showMenu === event.eventName && (
+                                    <div className="absolute right-0 top-10 bg-gray-900 border border-gray-700 rounded-lg shadow-xl min-w-[140px]">
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setShowMenu(null);
+                                          setShowDeleteModal(event.eventName);
+                                        }}
+                                        className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-sm"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete Event
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <Link
+                                href={`/gallery/${encodeURIComponent(
+                                  event.eventName
+                                )}`}
+                                className="block"
+                              >
+                                {/* Cover Image */}
+                                <div className="relative aspect-[4/3] overflow-hidden">
+                                  <Image
+                                    src={coverPhoto.url}
+                                    alt={coverPhoto.altText || event.eventName}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                    sizes="300px"
+                                  />
+
+                                  {/* Photo Count Badge */}
+                                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                                    <Camera className="w-4 h-4 inline mr-1" />
+                                    {photoCount}{" "}
+                                    {photoCount === 1 ? "photo" : "photos"}
+                                  </div>
+
+                                  {/* Featured Badge */}
+                                  {coverPhoto.isFeatured && (
+                                    <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                                      ⭐ Featured
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Event Info */}
+                                <div className="p-4">
+                                  <h3 className="text-lg font-bold mb-2 group-hover:text-violet-300 transition-colors">
+                                    {event.eventName}
+                                  </h3>
+
+                                  <div className="space-y-2 mb-3">
+                                    {/* Event Type */}
+                                    {event.eventType && (
+                                      <div
+                                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getEventTypeColor(
+                                          event.eventType
+                                        )}`}
+                                      >
+                                        {event.eventType}
+                                      </div>
+                                    )}
+
+                                    {/* Date */}
+                                    <div className="flex items-center text-gray-400 text-sm">
+                                      <Calendar className="w-4 h-4 mr-2" />
+                                      {formatDate(event.eventDate)}
+                                    </div>
+
+                                    {/* Venue/Location */}
+                                    {(event.venue || event.location) && (
+                                      <div className="flex items-center text-gray-400 text-sm">
+                                        <MapPin className="w-4 h-4 mr-2" />
+                                        {event.venue && event.location
+                                          ? `${event.venue}, ${event.location}`
+                                          : event.venue || event.location}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
+                                </div>
+                              </Link>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function PUT(
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: mixId } = await params;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -25,7 +27,6 @@ export async function PUT(
       );
     }
 
-    const mixId = params.id;
     const { progress, status } = await req.json();
 
     // Validate progress
@@ -98,4 +99,3 @@ export async function PUT(
     );
   }
 }
-

@@ -63,7 +63,7 @@ const Pagination: React.FC<PaginationProps> = ({
     >
       {/* Info */}
       {showInfo && (
-        <div className="text-sm text-gray-700">
+        <div className="text-sm text-gray-400">
           Showing {startItem} to {endItem} of {totalItems} results
         </div>
       )}
@@ -74,7 +74,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500"
+          className="flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-800 disabled:hover:text-gray-400 transition-colors"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
           Previous
@@ -85,16 +85,16 @@ const Pagination: React.FC<PaginationProps> = ({
           {getVisiblePages().map((page, index) => (
             <React.Fragment key={index}>
               {page === "..." ? (
-                <span className="px-3 py-2 text-sm text-gray-500">
+                <span className="px-3 py-2 text-sm text-gray-400">
                   <MoreHorizontal className="w-4 h-4" />
                 </span>
               ) : (
                 <button
                   onClick={() => onPageChange(page as number)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg border ${
+                  className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
                     currentPage === page
                       ? "bg-violet-600 text-white border-violet-600"
-                      : "text-gray-500 bg-white border-gray-300 hover:bg-gray-50 hover:text-gray-700"
+                      : "text-gray-400 bg-gray-800 border-gray-600 hover:bg-gray-700 hover:text-gray-300"
                   }`}
                 >
                   {page}
@@ -108,7 +108,7 @@ const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-500"
+          className="flex items-center px-3 py-2 text-sm font-medium text-gray-400 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-800 disabled:hover:text-gray-400 transition-colors"
         >
           Next
           <ChevronRight className="w-4 h-4 ml-1" />

@@ -30,5 +30,8 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
+# Set Node.js options for better memory management
+ENV NODE_OPTIONS="--max-old-space-size=4096 --expose-gc"
+
 # Start the application
 CMD ["npm", "start"]

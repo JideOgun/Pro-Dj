@@ -37,6 +37,7 @@ services:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://pro_dj_user:pro_dj_password@postgres:5432/pro_dj
       - REDIS_URL=redis://redis:6379
+      - NODE_OPTIONS=--max-old-space-size=4096
       # Add your other environment variables here
       # - AWS_ACCESS_KEY_ID=your_aws_key
       # - AWS_SECRET_ACCESS_KEY=your_aws_secret
@@ -55,6 +56,12 @@ services:
       - ./prisma:/app/prisma
     networks:
       - pro-dj-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     command: sh -c "npx prisma migrate deploy && npm run dev"
 
 volumes:

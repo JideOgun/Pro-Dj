@@ -159,6 +159,51 @@ body {
   box-shadow: 0 6px 12px rgba(139, 92, 246, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
+/* Ensure WaveformPlayer components are properly contained */
+.suggested-mixes-container {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.suggested-mixes-container * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure audio player controls don't overflow */
+.audio-player-container {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.audio-player-container * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Prevent any absolute positioned elements from overflowing */
+.audio-player-container [style*="position: absolute"] {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Ensure grid items are properly aligned */
+.grid {
+  align-items: start;
+}
+
+/* Ensure sidebar content doesn't interfere with main content */
+.lg\:col-span-1 {
+  position: relative;
+  z-index: 1;
+}
+
+.lg\:col-span-2 {
+  position: relative;
+  z-index: 2;
+}
+
 .fc-daygrid-day-number {
   color: #f3f4f6 !important;
   font-weight: 600 !important;
@@ -311,4 +356,14 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Hide scrollbars for sliding gallery */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
 }

@@ -19,6 +19,7 @@ interface MixActionsDropdownProps {
   onShare: () => void;
   canDelete: boolean;
   canDownload?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export default function MixActionsDropdown({
@@ -28,6 +29,7 @@ export default function MixActionsDropdown({
   onShare,
   canDelete,
   canDownload = false,
+  onClick,
 }: MixActionsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -131,7 +133,10 @@ export default function MixActionsDropdown({
     <div className="relative" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          onClick?.(e);
+          setIsOpen(!isOpen);
+        }}
         className="p-2 rounded-full hover:bg-gray-700/50 transition-colors duration-200 text-gray-400 hover:text-white"
         title="More options"
       >

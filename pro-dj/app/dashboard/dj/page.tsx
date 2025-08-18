@@ -1,428 +1,385 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
-import BookingCalendar from "@/components/BookingCalendar";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { motion } from "framer-motion";
 import {
   Music,
   Calendar,
-  User,
-  ClipboardList,
-  ArrowRight,
-  Image as ImageIcon,
+  DollarSign,
+  Users,
+  TrendingUp,
+  Star,
+  Clock,
+  MapPin,
+  Award,
+  CheckCircle,
 } from "lucide-react";
+import SocialMediaManager from "@/components/SocialMediaManager";
+import Image from "next/image";
 
-export default async function DjDashboardPage() {
-  const session = await getServerSession(authOptions);
+interface DashboardStats {
+  totalMixes: number;
+  totalBookings: number;
+  totalEarnings: number;
+  averageRating: number;
+  totalPlays: number;
+  upcomingEvents: number;
+}
 
-  if (!session?.user) {
-    redirect("/auth");
-  }
+interface DJProfile {
+  id: string;
+  stageName: string;
+  bio: string;
+  profileImage: string | null;
+  genres: string[];
+  experience: string;
+  location: string;
+  hourlyRate: number;
+  isVerified: boolean;
+  isFeatured: boolean;
+}
 
-  if (session.user.role !== "DJ") {
-    redirect("/dashboard");
-  }
+interface SocialLinks {
+  instagram?: string;
+  tiktok?: string;
+  soundcloud?: string;
+  youtube?: string;
+  twitter?: string;
+  facebook?: string;
+  linkedin?: string;
+  website?: string;
+}
 
-  // Get user with profile data
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: {
-      userMedia: {
-        where: { type: "PROFILE_PICTURE" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
+export default function DjDashboard() {
+  const { data: session } = useSession();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalMixes: 0,
+    totalBookings: 0,
+    totalEarnings: 0,
+    averageRating: 0,
+    totalPlays: 0,
+    upcomingEvents: 0,
   });
+  const [profile, setProfile] = useState<DJProfile | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
+  const [loading, setLoading] = useState(true);
 
-  // Get DJ profile first
-  const djProfile = await prisma.djProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  useEffect(() => {
+    if (session?.user) {
+      fetchDashboardData();
+    }
+  }, [session]);
 
-  if (!djProfile) {
-    redirect("/dj/register");
-  }
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
 
-  // Get bookings using DjProfile.id
-  const bookings = await prisma.booking.findMany({
-    where: { djId: djProfile.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { email: true, name: true } },
-      dj: { select: { stageName: true } },
-    },
-  });
+      // Fetch DJ stats and profile
+      const statsResponse = await fetch("/api/dj/dashboard/stats");
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData.stats);
+        setProfile(statsData.profile);
+      }
 
-  if (!djProfile) {
-    redirect("/dj/register");
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatPrice = (cents: number | null) => {
-    if (!cents) return "-";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(cents / 100);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-yellow-900/40 text-yellow-200";
-      case "ACCEPTED":
-        return "bg-blue-900/40 text-blue-200";
-      case "CONFIRMED":
-        return "bg-green-900/40 text-green-200";
-      case "DECLINED":
-        return "bg-red-900/40 text-red-200";
-      default:
-        return "bg-gray-800 text-gray-200";
+      // Fetch social links (no djId needed, uses session user)
+      const socialResponse = await fetch("/api/dj/profile/social-links");
+      if (socialResponse.ok) {
+        const socialData = await socialResponse.json();
+        setSocialLinks(socialData.socialLinks || {});
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const pendingBookings = bookings.filter((b) => b.status === "PENDING");
-  const confirmedBookings = bookings.filter((b) => b.status === "CONFIRMED");
-  const totalEarnings = bookings
-    .filter((b) => b.status === "CONFIRMED" && b.quotedPriceCents)
-    .reduce((sum, b) => sum + (b.quotedPriceCents || 0), 0);
+  const handleSocialLinksUpdate = (newSocialLinks: SocialLinks) => {
+    setSocialLinks(newSocialLinks);
+  };
+
+  const getDisplayName = () => {
+    if (profile?.stageName) {
+      return profile.stageName;
+    }
+    return session?.user?.name || "DJ";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Role Switcher */}
-        <ClientRoleSwitcher />
-
-        {/* Header with Profile Photo */}
+      <div className="max-w-7xl mx-auto">
+        {/* Header with Profile Info */}
         <div className="mb-8">
-          <div className="flex items-center gap-6 mb-6">
-            <Link href="/dashboard/profile" className="relative group">
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700 border-4 border-violet-500/30 shadow-lg group-hover:border-violet-400/50 transition-all duration-200">
-                {user?.profileImage || user?.userMedia[0]?.url ? (
-                  <img
-                    src={user.profileImage || user.userMedia[0]?.url}
-                    alt="Profile"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          <div className="flex items-center space-x-4 mb-4">
+            {profile?.profileImage ? (
+              <div className="relative w-16 h-16">
+                <Image
+                  src={profile.profileImage}
+                  alt={getDisplayName()}
+                  fill
+                  className="rounded-full object-cover"
+                  sizes="64px"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
+                <Users className="w-8 h-8 text-gray-400" />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-3xl font-bold">{getDisplayName()}</h1>
+                {profile?.isVerified && (
+                  <CheckCircle
+                    className="w-6 h-6 text-blue-500"
+                    title="Verified DJ"
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-gray-400 group-hover:text-violet-300 transition-colors" />
-                  </div>
+                )}
+                {profile?.isFeatured && (
+                  <Award
+                    className="w-6 h-6 text-yellow-500"
+                    title="Featured DJ"
+                  />
                 )}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900"></div>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Welcome back, {djProfile.stageName}!{" "}
-                <Music className="w-6 h-6 inline ml-2" />
-              </h1>
-              <p className="text-gray-300">
-                Manage your bookings, profile, and earnings
+              <p className="text-gray-400">
+                Welcome back! Here's your performance overview.
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Link
-            href="/dashboard/bookings"
-            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
-          >
-            <div className="text-2xl font-bold text-violet-400 group-hover:text-violet-300">
-              {bookings.length}
-            </div>
-            <div className="text-gray-400 group-hover:text-gray-300">
-              Total Bookings
-            </div>
-          </Link>
-          <Link
-            href="/dashboard/bookings?status=PENDING"
-            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
-          >
-            <div className="text-2xl font-bold text-yellow-400 group-hover:text-yellow-300">
-              {pendingBookings.length}
-            </div>
-            <div className="text-gray-400 group-hover:text-gray-300">
-              Pending Requests
-            </div>
-          </Link>
-          <Link
-            href="/dashboard/bookings?status=CONFIRMED"
-            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
-          >
-            <div className="text-2xl font-bold text-green-400 group-hover:text-green-300">
-              {confirmedBookings.length}
-            </div>
-            <div className="text-gray-400 group-hover:text-gray-300">
-              Confirmed Events
-            </div>
-          </Link>
-          <Link
-            href="/dashboard/earnings"
-            className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group"
-          >
-            <div className="text-2xl font-bold text-blue-400 group-hover:text-blue-300">
-              {formatPrice(totalEarnings)}
-            </div>
-            <div className="text-gray-400 group-hover:text-gray-300">
-              Total Earnings
-            </div>
-          </Link>
-        </div>
-
-        {/* Profile Card */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-xl font-semibold text-violet-400">
-              Your Profile
-            </h2>
-            <Link
-              href="/dashboard/profile"
-              className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm"
-            >
-              Edit Profile
-            </Link>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-gray-300 mb-2">Basic Info</h3>
-              <div className="space-y-2">
-                <div>
-                  <span className="text-gray-400">Stage Name:</span>
-                  <span className="ml-2 text-white">{djProfile.stageName}</span>
+          {/* Profile Info Cards */}
+          {profile && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {profile.location && (
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <MapPin className="w-4 h-4" />
+                  <span>{profile.location}</span>
                 </div>
-                <div>
-                  <span className="text-gray-400">Location:</span>
-                  <span className="ml-2 text-white">
-                    {user?.location || djProfile.location || "Location not set"}
-                  </span>
+              )}
+              {profile.experience && (
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <Clock className="w-4 h-4" />
+                  <span>{profile.experience} experience</span>
                 </div>
-                <div>
-                  <span className="text-gray-400">Experience:</span>
-                  <span className="ml-2 text-white">
-                    {djProfile.experience} years
-                  </span>
+              )}
+              {profile.hourlyRate && (
+                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <DollarSign className="w-4 h-4" />
+                  <span>${profile.hourlyRate}/hour</span>
                 </div>
-                <div>
-                  <span className="text-gray-400">Base Rate:</span>
-                  <span className="ml-2 text-white">
-                    {formatPrice(djProfile.basePriceCents)}/hour
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
+          )}
 
-            <div>
-              <h3 className="font-medium text-gray-300 mb-2">Genres</h3>
-              <div className="flex flex-wrap gap-2">
-                {djProfile.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="bg-violet-900/30 text-violet-200 px-3 py-1 rounded-full text-sm"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
+          {/* Genres */}
+          {profile?.genres && profile.genres.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {profile.genres.map((genre, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-violet-600/20 text-violet-300 rounded-full text-sm border border-violet-500/30"
+                >
+                  {genre}
+                </span>
+              ))}
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Booking Calendar */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 mb-8 shadow-2xl border border-gray-700">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-violet-400 mb-1">
-                <Calendar className="w-6 h-6 inline mr-2" />
-                Your Booking Calendar
-              </h2>
-              <p className="text-gray-400 text-sm">
-                Interactive calendar with all your DJ bookings
-              </p>
-            </div>
-            <Link
-              href="/dashboard/dj/calendar"
-              className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
-            >
-              View Full Calendar <ArrowRight className="w-4 h-4 inline ml-1" />
-            </Link>
-          </div>
-          <div className="h-[400px]">
-            <BookingCalendar bookings={bookings} />
-          </div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-gray-300">Pending</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-gray-300">Confirmed</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-gray-300">Declined</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-gray-300">Accepted</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Bookings */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-violet-400">
-              Recent Bookings
-            </h2>
-            <Link
-              href="/dashboard/bookings"
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm"
-            >
-              View All
-            </Link>
-          </div>
-
-          {bookings.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="w-16 h-16 text-gray-400 mb-4 mx-auto" />
-              <h3 className="text-lg font-medium mb-2">No bookings yet</h3>
-              <p className="text-gray-300 mb-4">
-                Your booking requests will appear here
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-left border-b border-gray-700">
-                    <th className="p-3 text-gray-300">Event Date</th>
-                    <th className="p-3 text-gray-300">Event Type</th>
-                    <th className="p-3 text-gray-300">Client</th>
-                    <th className="p-3 text-gray-300">Quote</th>
-                    <th className="p-3 text-gray-300">Status</th>
-                    <th className="p-3 text-gray-300">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.slice(0, 5).map((booking) => (
-                    <tr
-                      key={booking.id}
-                      className="border-b border-gray-700/50 hover:bg-gray-700/30"
-                    >
-                      <td className="p-3">
-                        <div className="font-medium">
-                          {formatDate(booking.eventDate)}
-                        </div>
-                      </td>
-                      <td className="p-3">{booking.eventType}</td>
-                      <td className="p-3">
-                        {booking.user?.name || booking.user?.email || "-"}
-                      </td>
-                      <td className="p-3 font-medium">
-                        {formatPrice(booking.quotedPriceCents)}
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-sm text-gray-400">
-                        {formatDate(booking.createdAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Bio */}
+          {profile?.bio && (
+            <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+              <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
             </div>
           )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            href="/dashboard/profile"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <User className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">Profile Settings</h3>
-            <p className="text-gray-400 text-sm">
-              Update your profile and social media
-            </p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Mixes</p>
+                <p className="text-2xl font-bold">{stats.totalMixes}</p>
+              </div>
+              <Music className="w-8 h-8 text-violet-500" />
+            </div>
+          </motion.div>
 
-          <Link
-            href="/gallery"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <ImageIcon className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">Gallery</h3>
-            <p className="text-gray-400 text-sm">
-              Upload and manage your event portfolio
-            </p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Bookings</p>
+                <p className="text-2xl font-bold">{stats.totalBookings}</p>
+              </div>
+              <Calendar className="w-8 h-8 text-blue-500" />
+            </div>
+          </motion.div>
 
-          <Link
-            href="/dashboard/bookings"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <ClipboardList className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">Manage Bookings</h3>
-            <p className="text-gray-400 text-sm">
-              View and respond to booking requests
-            </p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Earnings</p>
+                <p className="text-2xl font-bold">
+                  ${stats.totalEarnings.toLocaleString()}
+                </p>
+              </div>
+              <DollarSign className="w-8 h-8 text-green-500" />
+            </div>
+          </motion.div>
 
-          <Link
-            href="/dashboard/dj/calendar"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <Calendar className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">Full Calendar</h3>
-            <p className="text-gray-400 text-sm">
-              View your complete booking calendar
-            </p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Average Rating</p>
+                <p className="text-2xl font-bold">
+                  {stats.averageRating.toFixed(1)}
+                </p>
+              </div>
+              <Star className="w-8 h-8 text-yellow-500" />
+            </div>
+          </motion.div>
 
-          <Link
-            href="/dashboard/profile"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <Music className="w-8 h-8 mb-2" />
-            <h3 className="font-semibold mb-2">DJ Profile</h3>
-            <p className="text-gray-400 text-sm">
-              Edit your DJ information and pricing
-            </p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Plays</p>
+                <p className="text-2xl font-bold">
+                  {stats.totalPlays.toLocaleString()}
+                </p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-pink-500" />
+            </div>
+          </motion.div>
 
-          <Link
-            href="/"
-            className="bg-gray-800 hover:bg-gray-700 p-6 rounded-lg text-center transition-colors"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-gray-800/50 rounded-xl p-6"
           >
-            <div className="text-3xl mb-2">🏠</div>
-            <h3 className="font-semibold mb-2">Go Home</h3>
-            <p className="text-gray-400 text-sm">Return to the homepage</p>
-          </Link>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Upcoming Events</p>
+                <p className="text-2xl font-bold">{stats.upcomingEvents}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500" />
+            </div>
+          </motion.div>
         </div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-gray-800/50 rounded-xl p-6 mb-8"
+        >
+          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <a
+              href="/mixes"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Music className="w-6 h-6 mr-3 text-violet-500" />
+              <span>Upload Mix</span>
+            </a>
+            <a
+              href="/videos"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <svg
+                className="w-6 h-6 mr-3 text-red-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+              <span>Add Video</span>
+            </a>
+            <a
+              href="/social-media"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <svg
+                className="w-6 h-6 mr-3 text-pink-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+              <span>Social Media</span>
+            </a>
+            <a
+              href="/dashboard/bookings"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Calendar className="w-6 h-6 mr-3 text-blue-500" />
+              <span>View Bookings</span>
+            </a>
+            <a
+              href="/dashboard/earnings"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <DollarSign className="w-6 h-6 mr-3 text-green-500" />
+              <span>Earnings</span>
+            </a>
+            <a
+              href="/dashboard/profile"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Users className="w-6 h-6 mr-3 text-orange-500" />
+              <span>Profile</span>
+            </a>
+          </div>
+        </motion.div>
+
+        {/* Social Media Management */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <SocialMediaManager
+            djId={session?.user?.id || ""}
+            initialSocialLinks={socialLinks}
+            onUpdate={handleSocialLinksUpdate}
+          />
+        </motion.div>
       </div>
     </div>
   );

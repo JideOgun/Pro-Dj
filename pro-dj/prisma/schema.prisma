@@ -42,6 +42,7 @@ bookings Booking[]
 comments Comment[] @relation("UserComments")
 commentLikes CommentLike[]
 commentDislikes CommentDislike[]
+mixLikes MixLike[] // New relation for mix likes
 
 // DJ Profile relation
 djProfile DjProfile?
@@ -100,16 +101,6 @@ recovery BookingRecovery[] @relation("OriginalBooking")
 
 @@index([status])
 @@index([djId])
-}
-
-model Mix {
-id String @id @default(uuid())
-title String
-description String
-url String
-tags String[]
-uploadedAt DateTime @default(now())
-comments Comment[]
 }
 
 model Post {
@@ -402,7 +393,7 @@ dj DjProfile @relation(fields: [djId], references: [id])
 // Mix Information
 title String
 description String?
-genre String?
+genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"] - Multiple genres
 tags String[] // ["afrobeats", "amapiano", "hip-hop", "house"]
 isPublic Boolean @default(false)
 isFeatured Boolean @default(false)
@@ -433,6 +424,7 @@ uploadError String?
 // Playback Statistics
 playCount Int @default(0)
 downloadCount Int @default(0)
+likeCount Int @default(0) // New field for like count
 lastPlayedAt DateTime?
 
 // Metadata
@@ -443,13 +435,27 @@ quality String? // "high", "medium", "low"
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
-// Comments
+// Comments and Likes
 comments Comment[]
+likes MixLike[] // New relation for mix likes
 
 @@index([djId, isPublic])
-@@index([genre])
+@@index([genres])
 @@index([uploadStatus])
 @@index([isFeatured])
+}
+
+model MixLike {
+id String @id @default(uuid())
+mixId String
+userId String
+mix DjMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+createdAt DateTime @default(now())
+
+@@unique([mixId, userId]) // Prevent duplicate likes
+@@index([mixId])
+@@index([userId])
 }
 
 model DjYouTubeVideo {

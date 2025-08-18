@@ -75,7 +75,9 @@ export default function DjCard({ dj }: DjCardProps) {
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-violet-600/20 to-purple-600/20 flex items-center justify-center">
-            <Music className="w-16 h-16 text-gray-400" />
+            <span className="text-6xl text-gray-300 font-bold">
+              {dj.stageName.charAt(0)}
+            </span>
           </div>
         )}
 

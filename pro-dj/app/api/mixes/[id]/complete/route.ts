@@ -9,6 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: mixId } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -26,7 +27,6 @@ export async function POST(
       );
     }
 
-    const mixId = params.id;
     const { title, description, genre, tags, isPublic } = await req.json();
 
     // Get the mix and verify ownership
@@ -99,4 +99,3 @@ export async function POST(
     );
   }
 }
-

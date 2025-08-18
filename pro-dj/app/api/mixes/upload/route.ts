@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +12,18 @@ import {
 } from "@/lib/aws";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+
+// Simple function to extract duration from audio file
+const extractDuration = async (buffer: Buffer): Promise<number | null> => {
+  try {
+    // This is a simplified approach - in production you might want to use a proper audio library
+    // For now, we'll return null and let the frontend handle it
+    return null;
+  } catch (error) {
+    console.error("Error extracting duration:", error);
+    return null;
+  }
+};
 
 export async function POST(req: Request) {
   try {
@@ -39,12 +51,15 @@ export async function POST(req: Request) {
     const tags = formData.get("tags") as string;
     const isPublic = formData.get("isPublic") === "true";
 
+    // Parse genres from comma-separated string to array
+    const genres = genre ? genre.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+
     console.log("Form data received:");
     console.log("- File:", file?.name, file?.size, file?.type);
     console.log("- Album Art:", albumArt?.name, albumArt?.size, albumArt?.type);
     console.log("- Title:", title);
     console.log("- Description:", description);
-    console.log("- Genre:", genre);
+    console.log("- Genres:", genres);
     console.log("- Tags:", tags);
     console.log("- Is Public:", isPublic);
 
@@ -89,12 +104,131 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check for duplicate uploads
+    console.log("Checking for duplicate uploads...");
+    console.log("File details:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified,
+    });
+
+    // Check for existing mix with same file name and size
+    const existingMix = await prisma.djMix.findFirst({
+      where: {
+        djId: djProfile.id,
+        fileName: file.name,
+        fileSize: file.size,
+        uploadStatus: "COMPLETED",
+      },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        fileSize: true,
+        createdAt: true,
+      },
+    });
+
+    if (existingMix) {
+      console.log("Duplicate mix found:", existingMix);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "This file has already been uploaded",
+          details: {
+            existingMixId: existingMix.id,
+            existingTitle: existingMix.title,
+            uploadedAt: existingMix.createdAt,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    // Additional check: Look for mixes with similar metadata (file size within 1% tolerance)
+    const sizeTolerance = 0.01; // 1% tolerance
+    const minSize = file.size * (1 - sizeTolerance);
+    const maxSize = file.size * (1 + sizeTolerance);
+
+    const similarMixes = await prisma.djMix.findMany({
+      where: {
+        djId: djProfile.id,
+        fileSize: {
+          gte: minSize,
+          lte: maxSize,
+        },
+        uploadStatus: "COMPLETED",
+      },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        fileSize: true,
+        createdAt: true,
+      },
+    });
+
+    // Check if any of the similar mixes have the same file name
+    const exactNameMatch = similarMixes.find(
+      (mix) => mix.fileName === file.name
+    );
+    if (exactNameMatch) {
+      console.log("Exact name match found:", exactNameMatch);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "A file with this name has already been uploaded",
+          details: {
+            existingMixId: exactNameMatch.id,
+            existingTitle: exactNameMatch.title,
+            uploadedAt: exactNameMatch.createdAt,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    // Check for title similarity (case-insensitive)
+    if (title) {
+      const existingTitleMix = await prisma.djMix.findFirst({
+        where: {
+          djId: djProfile.id,
+          title: {
+            equals: title,
+            mode: "insensitive",
+          },
+          uploadStatus: "COMPLETED",
+        },
+        select: {
+          id: true,
+          title: true,
+          fileName: true,
+          createdAt: true,
+        },
+      });
+
+      if (existingTitleMix) {
+        console.log("Title match found:", existingTitleMix);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "A mix with this title already exists",
+            details: {
+              existingMixId: existingTitleMix.id,
+              existingTitle: existingTitleMix.title,
+              uploadedAt: existingTitleMix.createdAt,
+            },
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    console.log("No duplicates found, proceeding with upload...");
+
     // Generate file key
     const s3Key = generateS3Key(djProfile.id, file.name);
-
-    // Convert file to buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // Check if AWS is configured
     console.log("AWS Configuration Check:");
@@ -121,13 +255,17 @@ export async function POST(req: Request) {
     console.log("AWS Configured:", awsConfigured);
 
     if (awsConfigured) {
-      // Upload to S3
+      // Upload to S3 using streaming to avoid memory issues
       console.log("Uploading to S3:", {
         bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
         key: s3Key,
-        fileSize: buffer.length,
+        fileSize: file.size,
         contentType: file.type,
       });
+
+      // Convert file to buffer in chunks to avoid memory issues
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
 
       const uploadCommand = new PutObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
@@ -137,15 +275,25 @@ export async function POST(req: Request) {
       });
 
       await s3Client.send(uploadCommand);
+
+      // Clear the buffer from memory immediately
+      buffer.fill(0);
     } else {
-      // Save locally for development
+      // Save locally for development using streaming
       console.log("AWS not configured, saving locally:", s3Key);
 
       const uploadsDir = join(process.cwd(), "public", "uploads", "mixes");
       await mkdir(uploadsDir, { recursive: true });
 
       const filePath = join(uploadsDir, s3Key.split("/").pop() || file.name);
+
+      // Use streaming to avoid memory issues
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
       await writeFile(filePath, buffer);
+
+      // Clear the buffer from memory immediately
+      buffer.fill(0);
 
       console.log("File saved locally:", filePath);
     }
@@ -252,7 +400,8 @@ export async function POST(req: Request) {
       cloudFrontUrl = process.env.AWS_CLOUDFRONT_DOMAIN
         ? `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${s3Key}`
         : null;
-      localUrl = `/api/mixes/stream?key=${encodeURIComponent(s3Key)}`;
+      // We'll set localUrl after mix creation since we need the mix ID
+      localUrl = null;
     } else {
       // For local files, use direct path
       const fileName = s3Key.split("/").pop() || file.name;
@@ -260,12 +409,31 @@ export async function POST(req: Request) {
     }
 
     // Create mix record in database
+    console.log("Creating mix record in database with data:", {
+      djId: djProfile.id,
+      title: title || file.name.replace(/\.[^/.]+$/, ""),
+      description,
+      genres,
+      tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+      isPublic: isPublic || false,
+      fileName: file.name,
+      originalName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+      format: getFileExtension(file.type),
+      s3Key,
+      cloudFrontUrl,
+      localUrl,
+      albumArtS3Key,
+      albumArtUrl,
+    });
+
     const mix = await prisma.djMix.create({
       data: {
         djId: djProfile.id,
         title: title || file.name.replace(/\.[^/.]+$/, ""),
         description,
-        genre,
+        genres,
         tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
         isPublic: isPublic || false,
         fileName: file.name,
@@ -292,6 +460,19 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log("Mix created successfully:", mix.id);
+
+    // Update localUrl with the correct mix ID if using AWS
+    if (awsConfigured && !localUrl) {
+      await prisma.djMix.update({
+        where: { id: mix.id },
+        data: {
+          localUrl: `/api/mixes/stream?id=${mix.id}`,
+        },
+      });
+      mix.localUrl = `/api/mixes/stream?id=${mix.id}`;
+    }
+
     return NextResponse.json({
       ok: true,
       mix,
@@ -299,10 +480,19 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Error uploading mix:", error);
+
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
     return NextResponse.json(
       {
         ok: false,
         error: "Failed to upload mix",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );

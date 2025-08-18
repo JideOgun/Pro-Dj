@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   Play,
   ExternalLink,
+  Camera,
+  ArrowRight,
 } from "lucide-react";
 
 interface DjProfilePageProps {
@@ -100,7 +102,9 @@ export default async function DjProfilePage({ params }: DjProfilePageProps) {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Music className="w-16 h-16 text-gray-400" />
+                    <span className="text-4xl text-gray-300 font-bold">
+                      {dj.stageName.charAt(0)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -214,37 +218,163 @@ export default async function DjProfilePage({ params }: DjProfilePageProps) {
                 <h3 className="text-2xl font-bold mb-6 text-violet-400">
                   Event Portfolio
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dj.eventPhotos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="relative group overflow-hidden rounded-lg"
-                    >
-                      <Image
-                        src={photo.url}
-                        alt={photo.title}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <h4 className="font-semibold mb-1">{photo.title}</h4>
-                          {photo.eventName && (
-                            <p className="text-sm text-gray-300">
-                              {photo.eventName}
-                            </p>
-                          )}
-                          {photo.eventType && (
-                            <p className="text-xs text-gray-400">
-                              {photo.eventType}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+
+                {/* Group photos by events and create compact event cards */}
+                {(() => {
+                  // Group photos by event name
+                  const eventsMap = new Map<
+                    string,
+                    {
+                      eventName: string;
+                      eventDate: Date | null;
+                      eventType: string | null;
+                      venue: string | null;
+                      location: string | null;
+                      photos: Array<{
+                        id: string;
+                        title: string;
+                        description: string | null;
+                        url: string;
+                        altText: string | null;
+                        tags: string[];
+                        isFeatured: boolean;
+                        createdAt: Date;
+                      }>;
+                    }
+                  >();
+
+                  dj.eventPhotos.forEach((photo) => {
+                    const eventName = photo.eventName || "Uncategorized";
+
+                    if (!eventsMap.has(eventName)) {
+                      eventsMap.set(eventName, {
+                        eventName,
+                        eventDate: photo.eventDate,
+                        eventType: photo.eventType,
+                        venue: photo.venue,
+                        location: photo.location,
+                        photos: [],
+                      });
+                    }
+
+                    const event = eventsMap.get(eventName)!;
+                    event.photos.push({
+                      id: photo.id,
+                      title: photo.title,
+                      description: photo.description,
+                      url: photo.url,
+                      altText: photo.altText,
+                      tags: photo.tags,
+                      isFeatured: photo.isFeatured,
+                      createdAt: photo.createdAt,
+                    });
+                  });
+
+                  const events = Array.from(eventsMap.values()).sort((a, b) => {
+                    // Sort by event date (newest first), then by event name
+                    if (a.eventDate && b.eventDate) {
+                      return (
+                        new Date(b.eventDate).getTime() -
+                        new Date(a.eventDate).getTime()
+                      );
+                    }
+                    return a.eventName.localeCompare(b.eventName);
+                  });
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {events.map((event) => {
+                        // Get the first photo as cover and count total photos
+                        const coverPhoto = event.photos[0];
+                        const photoCount = event.photos.length;
+                        const featuredCount = event.photos.filter(
+                          (p) => p.isFeatured
+                        ).length;
+
+                        return (
+                          <Link
+                            key={event.eventName}
+                            href={`/gallery/${encodeURIComponent(
+                              event.eventName
+                            )}`}
+                            className="block bg-gray-900/30 rounded-xl overflow-hidden border border-gray-700/50 hover:border-violet-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10 group"
+                          >
+                            {/* Event Cover Image */}
+                            <div className="relative aspect-[4/3] overflow-hidden">
+                              <Image
+                                src={coverPhoto.url}
+                                alt={coverPhoto.altText || event.eventName}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+
+                              {/* Photo Count Badge */}
+                              <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                                <Camera className="w-4 h-4 inline mr-1" />
+                                {photoCount}{" "}
+                                {photoCount === 1 ? "photo" : "photos"}
+                              </div>
+
+                              {/* Featured Badge */}
+                              {featuredCount > 0 && (
+                                <div className="absolute top-3 left-3 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
+                                  ⭐ {featuredCount} Featured
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Event Info */}
+                            <div className="p-4">
+                              <h4 className="text-lg font-bold text-white mb-2 group-hover:text-violet-300 transition-colors">
+                                {event.eventName}
+                              </h4>
+
+                              <div className="space-y-2 mb-3">
+                                {/* Event Type */}
+                                {event.eventType && (
+                                  <div className="inline-block px-2 py-1 rounded-full text-xs font-medium border border-violet-500/30 text-violet-400 bg-violet-500/10">
+                                    {event.eventType}
+                                  </div>
+                                )}
+
+                                {/* Date */}
+                                {event.eventDate && (
+                                  <div className="flex items-center text-gray-400 text-sm">
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    <span>
+                                      {new Date(
+                                        event.eventDate
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Venue/Location */}
+                                {(event.venue || event.location) && (
+                                  <div className="flex items-center text-gray-400 text-sm">
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    <span className="truncate">
+                                      {event.venue && event.location
+                                        ? `${event.venue}, ${event.location}`
+                                        : event.venue || event.location}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* View Event Button */}
+                              <div className="inline-flex items-center text-violet-400 group-hover:text-violet-300 text-sm font-medium group-hover:translate-x-1 transition-all">
+                                View Event Photos
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             )}
           </div>

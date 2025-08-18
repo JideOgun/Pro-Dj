@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, X, Smartphone } from "lucide-react";
+import { Download, X } from "lucide-react";
+import ProDJLogo from "@/components/ProDJLogo";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -88,7 +89,7 @@ export default function PWAInstallPrompt() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-white/20 rounded-full p-2">
-              <Smartphone className="w-5 h-5 text-white" />
+              <ProDJLogo size="lg" />
             </div>
             <div>
               <h3 className="text-white font-semibold text-sm">

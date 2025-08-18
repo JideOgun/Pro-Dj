@@ -66,7 +66,11 @@ export default async function ClientDashboardPage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-gray-400 group-hover:text-violet-300 transition-colors" />
+                    <span className="text-2xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
+                      {session.user.name?.charAt(0) ||
+                        session.user.email?.charAt(0) ||
+                        "U"}
+                    </span>
                   </div>
                 )}
               </div>

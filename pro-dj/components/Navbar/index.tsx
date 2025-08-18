@@ -2,8 +2,10 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { Music, User } from "lucide-react";
 import { useEffect, useState } from "react";
+import ProDJLogo from "@/components/ProDJLogo";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -91,9 +93,9 @@ export default function Navbar() {
           <div className="flex items-center space-x-8">
             <Link
               href="/"
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
             >
-              <Music className="w-6 h-6" />
+              <ProDJLogo variant="transparent" size="2xl" format="png" />
               <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                 Pro-DJ
               </span>
@@ -116,10 +118,24 @@ export default function Navbar() {
             </Link>
 
             <Link
+              href="/videos"
+              className="text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              YouTube Sets
+            </Link>
+
+            <Link
               href="/gallery"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Gallery
+            </Link>
+
+            <Link
+              href="/social-media"
+              className="text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              Social Media
             </Link>
           </div>
 
@@ -143,9 +159,19 @@ export default function Navbar() {
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 border-2 border-violet-500/30 shadow-lg">
                       {profileImage ? (
-                        <img
+                        <Image
                           src={profileImage}
                           alt="Profile"
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : session.user.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt="Profile"
+                          width={40}
+                          height={40}
                           className="w-full h-full object-cover"
                         />
                       ) : (

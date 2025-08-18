@@ -1,121 +1,181 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { s3Client, S3_BUCKET_NAME } from "@/lib/aws";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
-export async function DELETE(
-  request: NextRequest,
+// GET: Fetch a single mix by ID
+export async function GET(
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("DELETE /api/mixes/[id]: Starting delete request");
-
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    console.log("DELETE /api/mixes/[id]: Session check completed", {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      userRole: session?.user?.role,
-    });
-
-    if (!session?.user) {
-      console.log(
-        "DELETE /api/mixes/[id]: No session found - user not authenticated"
-      );
-      return NextResponse.json(
-        { ok: false, error: "Unauthorized - Please log in to delete mixes" },
-        { status: 401 }
-      );
-    }
-
     const { id: mixId } = await params;
-    console.log(
-      `DELETE /api/mixes/${mixId}: User ${session.user.id} attempting to delete`
-    );
+    const session = await getServerSession(authOptions);
 
-    // Get the mix to check ownership and get S3 key
+    // Find the mix
     const mix = await prisma.djMix.findUnique({
       where: { id: mixId },
       include: {
         dj: {
-          include: {
-            user: true,
+          select: {
+            id: true,
+            stageName: true,
+            userId: true,
+            profileImage: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!mix) {
-      console.log(`DELETE /api/mixes/${mixId}: Mix not found`);
+      return NextResponse.json({ error: "Mix not found" }, { status: 404 });
+    }
+
+    // Check if user liked this mix
+    let userLiked = false;
+    if (session?.user?.id) {
+      const like = await prisma.mixLike.findUnique({
+        where: {
+          mixId_userId: {
+            mixId,
+            userId: session.user.id,
+          },
+        },
+      });
+      userLiked = !!like;
+    }
+
+    // Use user's profile image as primary, DJ profile image as fallback
+    const djProfileImage = mix.dj.user?.profileImage || mix.dj.profileImage;
+
+    // Generate album art URL if needed
+    let albumArtUrl = mix.albumArtUrl;
+    if (mix.albumArtS3Key && !albumArtUrl) {
+      if (process.env.AWS_S3_BUCKET_NAME && process.env.AWS_REGION) {
+        albumArtUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${mix.albumArtS3Key}`;
+      } else {
+        albumArtUrl = `/uploads/album-art/${mix.albumArtS3Key
+          .split("/")
+          .pop()}`;
+      }
+    }
+
+    // Increment play count
+    await prisma.djMix.update({
+      where: { id: mixId },
+      data: { playCount: { increment: 1 } },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      mix: {
+        id: mix.id,
+        title: mix.title,
+        description: mix.description,
+        genres: mix.genres,
+        tags: mix.tags,
+        duration: mix.duration,
+        s3Key: mix.s3Key,
+        cloudFrontUrl: mix.cloudFrontUrl,
+        localUrl: `/api/mixes/stream?id=${mix.id}`,
+        albumArtUrl,
+        createdAt: mix.createdAt,
+        playCount: mix.playCount + 1, // Include the increment
+        downloadCount: mix.downloadCount,
+        likeCount: mix.likeCount,
+        userLiked,
+        dj: {
+          ...mix.dj,
+          profileImage: djProfileImage,
+          userProfileImage: mix.dj.user?.profileImage,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching mix:", error);
+    return NextResponse.json(
+      { ok: false, error: "Failed to fetch mix" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Delete a mix (owner or admin only)
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { ok: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { id: mixId } = await params;
+
+    // Get the mix to check ownership
+    const mix = await prisma.djMix.findUnique({
+      where: { id: mixId },
+      include: {
+        dj: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!mix) {
       return NextResponse.json(
         { ok: false, error: "Mix not found" },
         { status: 404 }
       );
     }
 
-    console.log(
-      `DELETE /api/mixes/${mixId}: Mix found, owner: ${mix.dj.user.id}, user: ${session.user.id}, user role: ${session.user.role}`
-    );
-
-    // Check if user owns the mix or is an admin
-    const isOwner = mix.dj.user.id === session.user.id;
+    // Check if user is authorized to delete (owner or admin)
+    const isOwner = mix.dj.userId === session.user.id;
     const isAdmin = session.user.role === "ADMIN";
-    const canDelete = isOwner || isAdmin;
 
-    console.log(
-      `DELETE /api/mixes/${mixId}: Authorization check - isOwner: ${isOwner}, isAdmin: ${isAdmin}, canDelete: ${canDelete}`
-    );
-    console.log(
-      `DELETE /api/mixes/${mixId}: ID comparison - mix.dj.user.id: "${
-        mix.dj.user.id
-      }" (type: ${typeof mix.dj.user.id}), session.user.id: "${
-        session.user.id
-      }" (type: ${typeof session.user.id})`
-    );
-
-    if (!canDelete) {
-      console.log(
-        `DELETE /api/mixes/${mixId}: Access denied - user doesn't own mix and is not admin`
-      );
+    if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { ok: false, error: "Forbidden - You can only delete your own mixes" },
+        { ok: false, error: "Unauthorized to delete this mix" },
         { status: 403 }
       );
     }
 
-    console.log(
-      `DELETE /api/mixes/${mixId}: Authorization successful, proceeding with deletion`
-    );
-
-    // Delete from S3
-    try {
-      const deleteCommand = new DeleteObjectCommand({
-        Bucket: S3_BUCKET_NAME,
-        Key: mix.s3Key,
-      });
-
-      await s3Client.send(deleteCommand);
-      console.log(`Deleted file from S3: ${mix.s3Key}`);
-    } catch (s3Error) {
-      console.error("Error deleting from S3:", s3Error);
-      // Continue with database deletion even if S3 deletion fails
-    }
-
-    // Delete from database
+    // Delete the mix (this will cascade delete likes and comments due to schema constraints)
     await prisma.djMix.delete({
       where: { id: mixId },
     });
 
-    console.log(
-      `DELETE /api/mixes/${mixId}: Successfully deleted from database`
-    );
-    return NextResponse.json({ ok: true, message: "Mix deleted successfully" });
+    return NextResponse.json({
+      ok: true,
+      message: "Mix deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting mix:", error);
+
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
     return NextResponse.json(
-      { ok: false, error: "Failed to delete mix" },
+      {
+        ok: false,
+        error: "Failed to delete mix",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

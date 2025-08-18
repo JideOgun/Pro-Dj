@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import AuthGuard from "@/components/AuthGuard";
+import CommentSection from "@/components/CommentSection";
 import {
   Calendar,
   MapPin,
@@ -28,12 +29,22 @@ interface EventPhoto {
   altText: string | null;
   tags: string[];
   isFeatured: boolean;
+  commentCount: number;
   dj: {
     stageName: string;
     profileImage: string | null;
     userId: string;
   };
   createdAt: Date;
+}
+
+interface DJ {
+  djId: string;
+  stageName: string;
+  profileImage: string | null;
+  userProfileImage: string | null;
+  userId: string;
+  events: Event[];
 }
 
 interface Event {
@@ -82,18 +93,37 @@ export default function EventGalleryPage() {
   const fetchEventPhotos = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/gallery");
+      console.log("Looking for event:", eventName);
+
+      // Use the direct event API endpoint
+      const response = await fetch(
+        `/api/gallery/events/${encodeURIComponent(eventName)}`
+      );
       const data = await response.json();
 
       if (data.ok) {
-        const foundEvent = data.events.find(
-          (e: Event) => e.eventName === eventName
-        );
-        if (foundEvent) {
-          setEvent(foundEvent);
-        } else {
-          setError("Event not found");
-        }
+        const eventData = data.event;
+
+        // Transform the data to match our interface
+        const event: Event = {
+          eventName: eventData.eventName,
+          eventDate: eventData.eventDate,
+          eventType: eventData.eventType,
+          venue: eventData.venue,
+          location: eventData.location,
+          photos: eventData.photos.map((photo: any) => ({
+            ...photo,
+            dj: {
+              stageName: eventData.djs[0].stageName,
+              profileImage:
+                eventData.djs[0].profileImage ||
+                eventData.djs[0].userProfileImage,
+              userId: eventData.djs[0].userId,
+            },
+          })),
+        };
+
+        setEvent(event);
       } else {
         setError(data.error || "Failed to fetch event");
       }
@@ -379,26 +409,46 @@ export default function EventGalleryPage() {
                         </p>
                       )}
 
-                      {/* DJ Info */}
-                      <div className="flex items-center">
-                        {photo.dj.profileImage ? (
-                          <div className="relative w-6 h-6 mr-2">
-                            <Image
-                              src={photo.dj.profileImage}
-                              alt={photo.dj.stageName}
-                              fill
-                              className="rounded-full object-cover"
-                              sizes="24px"
+                      {/* DJ Info and Comment Count */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          {photo.dj.profileImage ? (
+                            <div className="relative w-6 h-6 mr-2">
+                              <Image
+                                src={photo.dj.profileImage}
+                                alt={photo.dj.stageName}
+                                fill
+                                className="rounded-full object-cover"
+                                sizes="24px"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center mr-2">
+                              <span className="text-xs text-gray-300 font-medium">
+                                {photo.dj.stageName.charAt(0)}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-white text-sm">
+                            {photo.dj.stageName}
+                          </span>
+                        </div>
+
+                        {/* Comment Count */}
+                        <div className="flex items-center text-gray-300 text-xs">
+                          <svg
+                            className="w-3 h-3 mr-1"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                              clipRule="evenodd"
                             />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center mr-2">
-                            <Users className="w-3 h-3 text-gray-400" />
-                          </div>
-                        )}
-                        <span className="text-white text-sm">
-                          {photo.dj.stageName}
-                        </span>
+                          </svg>
+                          {photo.commentCount || 0}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -414,7 +464,10 @@ export default function EventGalleryPage() {
             className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
             onClick={() => setSelectedPhoto(null)}
           >
-            <div className="relative max-w-4xl max-h-full">
+            <div
+              className="relative max-w-4xl w-full max-h-[95vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setSelectedPhoto(null)}
                 className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
@@ -422,8 +475,8 @@ export default function EventGalleryPage() {
                 ✕
               </button>
 
-              <div className="bg-gray-900 rounded-lg overflow-hidden">
-                <div className="relative w-full h-auto max-h-[70vh]">
+              <div className="bg-gray-900 rounded-lg overflow-hidden max-h-[95vh] flex flex-col">
+                <div className="relative w-full h-auto max-h-[70vh] flex-shrink-0">
                   <Image
                     src={selectedPhoto.url}
                     alt={selectedPhoto.altText || selectedPhoto.title}
@@ -434,7 +487,7 @@ export default function EventGalleryPage() {
                   />
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-violet-600 scrollbar-track-gray-900/50 hover:scrollbar-thumb-violet-500">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-bold mb-2">
@@ -476,7 +529,7 @@ export default function EventGalleryPage() {
                   )}
 
                   {/* DJ Info */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center">
                       {selectedPhoto.dj.profileImage ? (
                         <div className="relative w-10 h-10 mr-3">
@@ -490,7 +543,9 @@ export default function EventGalleryPage() {
                         </div>
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                          <Users className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm text-gray-300 font-medium">
+                            {selectedPhoto.dj.stageName.charAt(0)}
+                          </span>
                         </div>
                       )}
                       <div>
@@ -504,6 +559,17 @@ export default function EventGalleryPage() {
                     <p className="text-gray-400 text-sm">
                       {new Date(selectedPhoto.createdAt).toLocaleDateString()}
                     </p>
+                  </div>
+
+                  {/* Comments Section */}
+                  <div className="border-t border-gray-800 pt-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">
+                      Comments
+                    </h4>
+                    <CommentSection
+                      commentType="photo"
+                      itemId={selectedPhoto.id}
+                    />
                   </div>
                 </div>
               </div>

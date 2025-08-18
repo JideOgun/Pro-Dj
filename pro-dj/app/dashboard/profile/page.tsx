@@ -572,7 +572,12 @@ export default function ProfilePage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-16 h-16 text-gray-400" />
+                        <span className="text-3xl text-gray-300 font-bold">
+                          {profile?.name?.charAt(0) ||
+                            session?.user?.name?.charAt(0) ||
+                            session?.user?.email?.charAt(0) ||
+                            "U"}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -39,8 +39,8 @@ export async function GET(req: Request) {
     }
 
     // Apply filters
-    if (genre) {
-      where.genre = genre;
+    if (genre && genre !== "All Genres") {
+      where.genres = { has: genre };
     }
 
     if (search) {
@@ -99,12 +99,36 @@ export async function GET(req: Request) {
               stageName: true,
               profileImage: true,
               userId: true,
+              user: {
+                select: {
+                  profileImage: true,
+                },
+              },
             },
           },
         },
       }),
       prisma.djMix.count({ where }),
     ]);
+
+    // Fetch user like status for all mixes if user is authenticated
+    let userLikes: string[] = [];
+    if (session?.user?.id && mixes.length > 0) {
+      try {
+        const userLikeRecords = await prisma.mixLike.findMany({
+          where: {
+            userId: session.user.id,
+            mixId: { in: mixes.map((mix) => mix.id) },
+          },
+          select: { mixId: true },
+        });
+        userLikes = userLikeRecords.map((like) => like.mixId);
+      } catch (error) {
+        console.error("Error fetching user likes:", error);
+        // Continue without user likes rather than failing the entire request
+        userLikes = [];
+      }
+    }
 
     // Generate URLs for mixes that don't have them
     const mixesWithUrls = mixes.map((mix) => {
@@ -115,9 +139,7 @@ export async function GET(req: Request) {
           : null);
 
       // Use our optimized streaming endpoint
-      const localUrl =
-        mix.localUrl ||
-        `/api/mixes/stream?key=${encodeURIComponent(mix.s3Key)}`;
+      const localUrl = mix.localUrl || `/api/mixes/stream?id=${mix.id}`;
 
       // Generate album art URL if not set
       let albumArtUrl = mix.albumArtUrl;
@@ -139,11 +161,20 @@ export async function GET(req: Request) {
         albumArtUrl = null;
       }
 
+      // Use user's profile image as primary, DJ profile image as fallback
+      const djProfileImage = mix.dj.user?.profileImage || mix.dj.profileImage;
+
       return {
         ...mix,
         cloudFrontUrl,
         localUrl,
         albumArtUrl,
+        userLiked: userLikes.includes(mix.id),
+        dj: {
+          ...mix.dj,
+          profileImage: djProfileImage,
+          userProfileImage: mix.dj.user?.profileImage,
+        },
       };
     });
 
@@ -166,8 +197,20 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("Error fetching mixes:", error);
+
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
     return NextResponse.json(
-      { ok: false, error: "Failed to fetch mixes" },
+      {
+        ok: false,
+        error: "Failed to fetch mixes",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

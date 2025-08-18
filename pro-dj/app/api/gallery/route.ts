@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: Fetch all event photos grouped by event name
+// GET: Fetch all event photos grouped by DJ, then by event
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -48,15 +48,26 @@ export async function GET(req: Request) {
         break;
     }
 
-    // Get event photos with pagination
+    // Get event photos with pagination and comment counts
     const eventPhotos = await prisma.eventPhoto.findMany({
       where,
       include: {
         dj: {
           select: {
+            id: true,
             stageName: true,
             profileImage: true,
             userId: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
           },
         },
       },
@@ -65,38 +76,60 @@ export async function GET(req: Request) {
       take: limit,
     });
 
-    // Group photos by event name
-    const eventsMap = new Map<
+    // Group photos by DJ first, then by event
+    const djsMap = new Map<
       string,
       {
-        eventName: string;
-        eventDate: Date | null;
-        eventType: string | null;
-        venue: string | null;
-        location: string | null;
-        photos: Array<{
-          id: string;
-          title: string;
-          description: string | null;
-          url: string;
-          altText: string | null;
-          tags: string[];
-          isFeatured: boolean;
-          dj: {
-            stageName: string;
-            profileImage: string | null;
-            userId: string;
-          };
-          createdAt: Date;
-        }>;
+        djId: string;
+        stageName: string;
+        profileImage: string | null;
+        userProfileImage: string | null;
+        userId: string;
+        events: Map<
+          string,
+          {
+            eventName: string;
+            eventDate: Date | null;
+            eventType: string | null;
+            venue: string | null;
+            location: string | null;
+            photos: Array<{
+              id: string;
+              title: string;
+              description: string | null;
+              url: string;
+              altText: string | null;
+              tags: string[];
+              isFeatured: boolean;
+              commentCount: number;
+              createdAt: Date;
+            }>;
+          }
+        >;
       }
     >();
 
     eventPhotos.forEach((photo) => {
+      const djId = photo.djId;
       const eventName = photo.eventName!;
 
-      if (!eventsMap.has(eventName)) {
-        eventsMap.set(eventName, {
+      // Initialize DJ if not exists
+      if (!djsMap.has(djId)) {
+        djsMap.set(djId, {
+          djId,
+          stageName: photo.dj.stageName,
+          profileImage: photo.dj.profileImage,
+          userProfileImage: photo.dj.user?.profileImage || null,
+          userId: photo.dj.userId,
+          events: new Map(),
+        });
+      }
+
+      const dj = djsMap.get(djId)!;
+
+      // Initialize event if not exists
+      if (!dj.events.has(eventName)) {
+        dj.events.set(eventName, {
           eventName,
           eventDate: photo.eventDate,
           eventType: photo.eventType,
@@ -106,7 +139,9 @@ export async function GET(req: Request) {
         });
       }
 
-      const event = eventsMap.get(eventName)!;
+      const event = dj.events.get(eventName)!;
+
+      // Add photo to event
       event.photos.push({
         id: photo.id,
         title: photo.title,
@@ -115,41 +150,29 @@ export async function GET(req: Request) {
         altText: photo.altText,
         tags: photo.tags,
         isFeatured: photo.isFeatured,
-        dj: {
-          stageName: photo.dj.stageName,
-          profileImage: photo.dj.profileImage,
-          userId: photo.dj.userId,
-        },
+        commentCount: photo._count.comments,
         createdAt: photo.createdAt,
       });
     });
 
-    // Convert map to array and sort by event date (most recent first)
-    const events = Array.from(eventsMap.values()).sort((a, b) => {
-      if (!a.eventDate && !b.eventDate) return 0;
-      if (!a.eventDate) return 1;
-      if (!b.eventDate) return -1;
-      return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
-    });
+    // Convert to array format for response
+    const djs = Array.from(djsMap.values()).map((dj) => ({
+      ...dj,
+      events: Array.from(dj.events.values()),
+    }));
 
     // Get total count for pagination
-    const total = await prisma.eventPhoto.count({ where });
-
-    // Calculate pagination info
-    const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const totalPhotos = await prisma.eventPhoto.count({ where });
 
     return NextResponse.json({
       ok: true,
-      events,
+      djs,
       pagination: {
         page,
         limit,
-        total,
-        totalPages,
-        hasNextPage,
-        hasPrevPage,
+        total: totalPhotos,
+        totalPages: Math.ceil(totalPhotos / limit),
+        hasMore: page * limit < totalPhotos,
       },
     });
   } catch (error) {
