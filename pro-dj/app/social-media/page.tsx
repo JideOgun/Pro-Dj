@@ -1,4 +1,5 @@
-"use client";
+// Social Media page temporarily disabled until proper API integration
+// "use client";
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -33,7 +34,7 @@ interface InstagramPost {
   };
 }
 
-export default function SocialMediaPage() {
+// export default function SocialMediaPage() {
   const { data: session } = useSession();
   const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -493,6 +494,25 @@ export default function SocialMediaPage() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Placeholder component for when social media is disabled
+export default function SocialMediaPage() {
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold mb-4">Social Media</h1>
+          <p className="text-gray-400 mb-6">
+            Social media integration is temporarily disabled during development.
+          </p>
+          <p className="text-gray-500">
+            This feature will be available once proper API integrations are implemented.
+          </p>
+        </div>
       </div>
     </div>
   );

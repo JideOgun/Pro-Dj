@@ -191,12 +191,14 @@ export default function Navbar() {
               Gallery
             </Link>
 
+            {/* Social Media - Commented out until proper API integration
             <Link
               href="/social-media"
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Social Media
             </Link>
+            */}
           </div>
 
           {/* Right side - Auth & Actions */}

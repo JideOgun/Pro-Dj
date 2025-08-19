@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+// Instagram API route temporarily disabled until proper API integration
+// import { NextResponse } from "next/server";
+// import { getServerSession } from "next-auth";
+// import { authOptions } from "@/lib/auth";
+// import { prisma } from "@/lib/prisma";
 
 // Helper function to generate realistic mock Instagram posts
 function generateMockInstagramPosts(stageName: string, limit: number) {
@@ -82,7 +83,7 @@ function generateMockInstagramPosts(stageName: string, limit: number) {
 }
 
 // GET: Fetch Instagram posts for a specific DJ or all DJs
-export async function GET(req: Request) {
+// export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const djId = searchParams.get("djId");
@@ -246,11 +247,31 @@ export async function GET(req: Request) {
         hasPrevPage: page > 1,
       },
     });
-  } catch (error) {
-    console.error("Error fetching Instagram posts:", error);
-    return NextResponse.json(
-      { ok: false, error: "Failed to fetch Instagram posts" },
-      { status: 500 }
-    );
-  }
+  // } catch (error) {
+  //   console.error("Error fetching Instagram posts:", error);
+  //   return NextResponse.json(
+  //     { ok: false, error: "Failed to fetch Instagram posts" },
+  //     { status: 500 }
+  //   );
+  // }
+}
+
+// Placeholder API route for when Instagram integration is disabled
+export async function GET(req: Request) {
+  return NextResponse.json(
+    { 
+      ok: false, 
+      error: "Instagram integration temporarily disabled during development",
+      posts: [],
+      pagination: {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      }
+    },
+    { status: 503 }
+  );
 }
