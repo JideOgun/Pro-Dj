@@ -47,9 +47,15 @@ function BookingsTableContent({
 }: BookingsTableProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   // Get WebSocket context
   const { isConnected, socket } = useSocketContext();
+
+  // Ensure we're on the client side to prevent hydration issues
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Listen for real-time booking status changes via WebSocket
   useEffect(() => {
@@ -86,11 +92,45 @@ function BookingsTableContent({
     }
   };
 
-  // Helper function to calculate timeout information
+  // Helper function to format date for display (client-side only)
+  const formatDateForDisplay = (date: string | Date) => {
+    if (!isClient) return ""; // Return empty string during SSR
+    try {
+      return new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  // Helper function to format time for display (client-side only)
+  const formatTimeForDisplay = (date: string | Date) => {
+    if (!isClient) return ""; // Return empty string during SSR
+    try {
+      return new Date(date).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  // Helper function to calculate timeout information (client-side only)
   const getTimeoutInfo = (
     createdAt: string | Date,
     eventDate: string | Date
   ) => {
+    if (!isClient) {
+      return {
+        isExpired: false,
+        timeLeftFormatted: "",
+        color: "text-gray-400",
+      };
+    }
+
     const created = new Date(createdAt);
     const event = new Date(eventDate);
     const now = new Date();
@@ -206,24 +246,14 @@ function BookingsTableContent({
               <tr key={b.id} className="hover:bg-gray-700/30 transition-colors">
                 <td className="px-3 py-3">
                   <div className="text-white font-medium text-sm">
-                    {new Date(b.eventDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatDateForDisplay(b.eventDate)}
                   </div>
                 </td>
                 <td className="px-3 py-3 text-gray-300 text-sm">
                   {b.startTime && b.endTime ? (
                     <div>
-                      {new Date(b.startTime).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -{" "}
-                      {new Date(b.endTime).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTimeForDisplay(b.startTime)} -{" "}
+                      {formatTimeForDisplay(b.endTime)}
                     </div>
                   ) : (
                     <span className="text-gray-400">-</span>
@@ -347,24 +377,14 @@ function BookingsTableContent({
               <tr key={b.id} className="hover:bg-gray-700/30 transition-colors">
                 <td className="px-2 py-2">
                   <div className="text-white font-medium text-xs">
-                    {new Date(b.eventDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatDateForDisplay(b.eventDate)}
                   </div>
                 </td>
                 <td className="px-2 py-2 text-gray-300 text-xs">
                   {b.startTime && b.endTime ? (
                     <div>
-                      {new Date(b.startTime).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -{" "}
-                      {new Date(b.endTime).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTimeForDisplay(b.startTime)} -{" "}
+                      {formatTimeForDisplay(b.endTime)}
                     </div>
                   ) : (
                     <span className="text-gray-400">-</span>
@@ -468,23 +488,18 @@ function BookingsTableContent({
             <div className="flex justify-between items-start mb-3">
               <div>
                 <div className="text-white font-medium">
-                  {new Date(b.eventDate).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {isClient
+                    ? new Date(b.eventDate).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : ""}
                 </div>
                 {b.startTime && b.endTime && (
                   <div className="text-sm text-gray-400">
-                    {new Date(b.startTime).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -{" "}
-                    {new Date(b.endTime).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatTimeForDisplay(b.startTime)} -{" "}
+                    {formatTimeForDisplay(b.endTime)}
                   </div>
                 )}
               </div>

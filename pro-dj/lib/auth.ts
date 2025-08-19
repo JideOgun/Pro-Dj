@@ -102,19 +102,30 @@ export const authOptions: NextAuthOptions = {
             `✅ Merged Google account with existing user: ${existingUser.email}`
           );
         } else {
-          // Create new user with CLIENT role
+          // Create new user with CLIENT role (they'll select their role later)
           await prisma.user.create({
             data: {
               email: user.email,
               name: user.name ?? null,
               googleId: account.providerAccountId,
-              role: "CLIENT",
+              role: "CLIENT", // Default, will be updated in role selection
             },
           });
           console.log(`✅ Created new user from Google: ${user.email}`);
         }
       }
       return true;
+    },
+
+    async redirect({ url, baseUrl }) {
+      // Redirect new Google users to role selection
+      if (
+        url.startsWith(baseUrl) &&
+        url.includes("callbackUrl=/auth/role-selection")
+      ) {
+        return `${baseUrl}/auth/role-selection`;
+      }
+      return url;
     },
 
     async jwt({ token, trigger, session }) {

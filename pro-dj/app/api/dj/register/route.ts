@@ -6,10 +6,10 @@ import { z } from "zod";
 
 const djProfileSchema = z.object({
   stageName: z.string().min(1, "Stage name is required").max(100),
-  bio: z.string().max(1000).optional(),
+  bio: z.string().min(1, "Bio is required").max(1000),
   genres: z.array(z.string()).min(1, "At least one genre is required"),
   customGenres: z.string().max(200).optional(),
-  experience: z.number().min(0).max(50),
+  experience: z.number().min(1, "Experience must be at least 1 year").max(50),
   location: z.string().min(1, "Location is required").max(200),
   travelRadius: z.number().min(0).max(500).optional(),
   specialties: z.string().max(500).optional(),
@@ -24,8 +24,8 @@ const djProfileSchema = z.object({
       website: z.string().url().optional().or(z.literal("")),
     })
     .optional(),
-  basePriceCents: z.number().min(0).optional(),
-  profileImage: z.union([z.string().url(), z.literal("")]).optional(),
+  basePriceCents: z.number().min(1, "Base rate must be at least $1"),
+  profileImage: z.string().optional(),
   portfolio: z.array(z.string()).optional(),
 });
 
@@ -41,7 +41,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+    console.log("Received DJ registration data:", body);
+
     const validatedData = djProfileSchema.parse(body);
+    console.log("Validated data:", validatedData);
 
     // Check if user is already a DJ
     const existingDjProfile = await prisma.djProfile.findUnique({
@@ -96,6 +99,7 @@ export async function POST(req: Request) {
           basePriceCents: validatedData.basePriceCents,
           profileImage: validatedData.profileImage || null,
           portfolio: validatedData.portfolio || [],
+          isVerified: false, // Require admin approval
         },
       });
 
@@ -133,10 +137,14 @@ export async function POST(req: Request) {
     console.error("DJ registration error:", error);
 
     if (error instanceof z.ZodError) {
+      console.error("Validation errors:", error.issues);
+      const errorMessages = error.issues
+        .map((issue) => issue.message)
+        .join(", ");
       return NextResponse.json(
         {
           ok: false,
-          error: error.issues[0]?.message || "Invalid input",
+          error: errorMessages || "Invalid input",
         },
         { status: 400 }
       );

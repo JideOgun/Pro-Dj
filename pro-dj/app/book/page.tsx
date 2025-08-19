@@ -41,6 +41,9 @@ export default function BookPage() {
         stageName: string;
         genres: string[];
         basePriceCents: number;
+        bio?: string;
+        specialties?: string;
+        location?: string;
       };
     }>
   >([]);
@@ -50,6 +53,9 @@ export default function BookPage() {
       stageName: string;
       genres: string[];
       basePriceCents: number;
+      bio?: string;
+      specialties?: string;
+      location?: string;
     }>
   >([]);
   const [extra, setExtra] = useState<Record<string, string>>({});
@@ -63,7 +69,44 @@ export default function BookPage() {
   const [loading, setLoading] = useState(false);
   const [selectedGenreFilter, setSelectedGenreFilter] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [searchResults, setSearchResults] = useState<typeof djs>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingDjs, setIsLoadingDjs] = useState(true);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const typeConfig = bookingType ? BOOKING_CONFIG[bookingType] : null;
+
+  // Debounced search handler
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setDjSearchTerm(query);
+
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      if (query.trim().length >= 2) {
+        searchDjs(query);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    setSearchTimeout(timeout);
+  };
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   // Auto-scroll to error message when it appears
   useEffect(() => {
@@ -147,16 +190,44 @@ export default function BookPage() {
     "Disco",
   ];
 
-  // Filter DJs based on search and filters
-  const filteredDjs = djs.filter((dj) => {
-    // Search by name
-    const matchesSearch = dj.stageName
-      .toLowerCase()
-      .includes(djSearchTerm.toLowerCase());
+  // Determine which DJ list to use for filtering
+  const djListToFilter =
+    djSearchTerm.trim().length >= 2 ? searchResults || [] : djs || [];
 
-    // Filter by genre
+  // Filter DJs based on search and filters
+  const filteredDjs = djListToFilter.filter((dj) => {
+    // Ensure DJ has required properties
+    if (
+      !dj ||
+      !dj.stageName ||
+      !dj.genres ||
+      typeof dj.basePriceCents !== "number"
+    ) {
+      return false;
+    }
+
+    // If using search results, no need for client-side search filtering
+    const matchesSearch =
+      djSearchTerm.trim().length >= 2
+        ? true
+        : // Client-side search for short queries
+          !djSearchTerm ||
+          dj.stageName.toLowerCase().includes(djSearchTerm.toLowerCase()) ||
+          (dj.genres || []).some((genre) =>
+            genre.toLowerCase().includes(djSearchTerm.toLowerCase())
+          ) ||
+          (dj.bio &&
+            dj.bio.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
+          (dj.specialties &&
+            dj.specialties
+              .toLowerCase()
+              .includes(djSearchTerm.toLowerCase())) ||
+          (dj.location &&
+            dj.location.toLowerCase().includes(djSearchTerm.toLowerCase()));
+
+    // Filter by genre (independent of search)
     const matchesGenre =
-      !selectedGenreFilter || dj.genres.includes(selectedGenreFilter);
+      !selectedGenreFilter || (dj.genres || []).includes(selectedGenreFilter);
 
     // Filter by price range
     const matchesPrice =
@@ -377,7 +448,7 @@ export default function BookPage() {
     if (djId && isRecovery) {
       setIsRecoveryMode(true);
       // Auto-select the suggested DJ
-      const suggestedDj = djs.find((dj) => dj.id === djId);
+      const suggestedDj = (djs || []).find((dj) => dj?.id === djId);
       if (suggestedDj && !selectedDjs.some((sd) => sd.djId === djId)) {
         const nextSlot = getNextAvailableSlot();
         if (nextSlot) {
@@ -476,15 +547,73 @@ export default function BookPage() {
     }
   }, [eventDate, startTime, endTime, bookingType, preferredGenres, musicStyle]);
 
-  // Load all DJs when user wants to see all
-  const loadAllDjs = async () => {
-    const res = await fetch("/api/djs", { cache: "no-store" });
-    const json = await res.json();
-    if (res.ok && json.ok) {
-      setDjs(json.data);
-      setShowAllDjs(true);
+  // Server-side search for DJs
+  const searchDjs = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const params = new URLSearchParams({
+        search: query,
+        limit: "50", // Limit results for performance
+        sortBy: "name",
+      });
+
+      const res = await fetch(`/api/djs?${params}`, { cache: "no-store" });
+      const json = await res.json();
+
+      if (res.ok && json.ok) {
+        setSearchResults(json.djs);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error("Error searching DJs:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
   };
+
+  // Load all DJs when user wants to see all
+  const loadAllDjs = async () => {
+    setIsLoadingDjs(true);
+    try {
+      const res = await fetch("/api/djs", { cache: "no-store" });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setDjs(json.djs);
+        setShowAllDjs(true);
+      }
+    } catch (error) {
+      console.error("Error loading all DJs:", error);
+    } finally {
+      setIsLoadingDjs(false);
+    }
+  };
+
+  // Load all DJs initially when page loads
+  useEffect(() => {
+    const loadInitialDjs = async () => {
+      setIsLoadingDjs(true);
+      try {
+        const res = await fetch("/api/djs", { cache: "no-store" });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          setDjs(json.djs);
+        }
+      } catch (error) {
+        console.error("Error loading DJs:", error);
+      } finally {
+        setIsLoadingDjs(false);
+      }
+    };
+
+    loadInitialDjs();
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -869,17 +998,27 @@ export default function BookPage() {
               {typeConfig?.extraFields.map((field) => (
                 <div key={field}>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {field}
+                    {field === "age" ? "Age of Birthday Person" : field}
                   </label>
                   <input
-                    type="text"
-                    placeholder={field}
+                    type={field === "age" ? "number" : "text"}
+                    placeholder={
+                      field === "age"
+                        ? "e.g., 25 (or specify if it's for a kid/teenager)"
+                        : field
+                    }
                     value={extra[field] ?? ""}
                     onChange={(e) =>
                       setExtra({ ...extra, [field]: e.target.value })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
+                  {field === "age" && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      💡 Different age groups have different party vibes! Let us
+                      know if it&apos;s for a kid, teenager, or adult.
+                    </p>
+                  )}
                 </div>
               ))}
 
@@ -896,6 +1035,10 @@ export default function BookPage() {
                   required
                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  We&apos;ll use this to send you booking confirmations and
+                  updates.
+                </p>
               </div>
 
               {/* Music Preferences */}
@@ -1165,9 +1308,9 @@ export default function BookPage() {
                             Finding perfect DJs for your event...
                           </p>
                         </div>
-                      ) : suggestedDjs.length > 0 ? (
+                      ) : (suggestedDjs || []).length > 0 ? (
                         <div className="space-y-2">
-                          {suggestedDjs.slice(0, 5).map((dj) => {
+                          {(suggestedDjs || []).slice(0, 5).map((dj) => {
                             const isSelected = selectedDjs.some(
                               (sd) => sd.djId === dj.id
                             );
@@ -1209,8 +1352,8 @@ export default function BookPage() {
                                       {dj.stageName}
                                     </div>
                                     <div className="text-sm text-gray-400">
-                                      {dj.genres.slice(0, 3).join(", ")}
-                                      {dj.genres.length > 3 && "..."}
+                                      {(dj.genres || []).slice(0, 3).join(", ")}
+                                      {(dj.genres || []).length > 3 && "..."}
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       ${(dj.basePriceCents / 100).toFixed(2)}/hr
@@ -1249,7 +1392,7 @@ export default function BookPage() {
                             if (showAllDjs) {
                               setShowAllDjs(false);
                               // Reset to suggestions when hiding
-                              setDjs(suggestedDjs);
+                              setDjs(suggestedDjs || []);
                             } else {
                               loadAllDjs();
                             }
@@ -1270,14 +1413,19 @@ export default function BookPage() {
                       </h4>
 
                       {/* Search Bar */}
-                      <div className="mb-4">
+                      <div className="mb-4 relative">
                         <input
                           type="text"
-                          placeholder="Search DJs by name..."
+                          placeholder="Search DJs by name, genre, location, or specialties..."
                           value={djSearchTerm}
-                          onChange={(e) => setDjSearchTerm(e.target.value)}
+                          onChange={handleSearchChange}
                           className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                         />
+                        {isSearching && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-violet-500"></div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Filters */}
@@ -1321,19 +1469,36 @@ export default function BookPage() {
 
                       {/* Results Count */}
                       <div className="text-xs text-gray-400 mb-3">
-                        Showing {filteredDjs.length} of {djs.length} DJs
+                        {djSearchTerm.trim().length >= 2
+                          ? isSearching
+                            ? "Searching..."
+                            : `Found ${
+                                (filteredDjs || []).length
+                              } DJs matching "${djSearchTerm}"`
+                          : isLoadingDjs
+                          ? "Loading DJs..."
+                          : `Showing ${(filteredDjs || []).length} of ${
+                              (djs || []).length
+                            } DJs`}
                       </div>
 
                       {/* DJ List */}
                       <div className="max-h-64 overflow-y-auto space-y-2">
-                        {filteredDjs.length === 0 ? (
+                        {isLoadingDjs ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-2"></div>
+                            <p>Loading DJs...</p>
+                          </div>
+                        ) : (filteredDjs || []).length === 0 ? (
                           <div className="text-center py-8 text-gray-400">
                             <p>No DJs found matching your criteria</p>
                             <button
                               onClick={() => {
                                 setDjSearchTerm("");
+                                setSearchResults([]);
                                 setSelectedGenreFilter("");
                                 setPriceRange("");
+                                setSearchResults([]);
                               }}
                               className="text-violet-400 hover:text-violet-300 text-sm mt-2"
                             >
@@ -1341,7 +1506,7 @@ export default function BookPage() {
                             </button>
                           </div>
                         ) : (
-                          filteredDjs.map((dj) => {
+                          (filteredDjs || []).map((dj) => {
                             const isSelected = selectedDjs.some(
                               (sd) => sd.djId === dj.id
                             );
@@ -1383,8 +1548,8 @@ export default function BookPage() {
                                       {dj.stageName}
                                     </div>
                                     <div className="text-sm text-gray-400">
-                                      {dj.genres.slice(0, 3).join(", ")}
-                                      {dj.genres.length > 3 && "..."}
+                                      {(dj.genres || []).slice(0, 3).join(", ")}
+                                      {(dj.genres || []).length > 3 && "..."}
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       ${(dj.basePriceCents / 100).toFixed(2)}/hr
@@ -1428,7 +1593,7 @@ export default function BookPage() {
                                   {selectedDj.dj.stageName}
                                 </div>
                                 <div className="text-sm text-gray-400">
-                                  {selectedDj.dj.genres.join(", ")}
+                                  {(selectedDj.dj.genres || []).join(", ")}
                                 </div>
                               </div>
                               <div className="flex gap-2">

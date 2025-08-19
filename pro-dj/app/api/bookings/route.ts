@@ -305,8 +305,34 @@ export async function POST(req: Request) {
       );
     }
 
-    // If DJ is specified, check availability
+    // If DJ is specified, check availability and verification
     if (djId) {
+      // First check if DJ is verified
+      const djProfile = await prisma.djProfile.findUnique({
+        where: { id: djId },
+        select: { isVerified: true, stageName: true },
+      });
+
+      if (!djProfile) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "🎧 The selected DJ profile was not found.",
+          },
+          { status: 404 }
+        );
+      }
+
+      if (!djProfile.isVerified) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `🎧 ${djProfile.stageName} is not yet verified and cannot receive bookings. Please select a different DJ.`,
+          },
+          { status: 403 }
+        );
+      }
+
       const { available, conflictingBookings } = await isDjAvailable(
         djId,
         startDateTime,

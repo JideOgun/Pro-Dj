@@ -3,12 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 import BookingCalendar from "@/components/BookingCalendar";
 
 export default async function AdminCalendarPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 

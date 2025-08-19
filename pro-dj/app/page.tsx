@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -27,8 +28,36 @@ import PWAInfo from "@/components/PWAInfo";
 
 export default function Home() {
   const { data: session } = useSession();
-  const userName =
-    session?.user?.name || session?.user?.email?.split("@")[0] || "there";
+  const [displayName, setDisplayName] = useState<string>("there");
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      // Fetch user profile to get proper display name
+      fetch(`/api/profile`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ok && data.data) {
+            const user = data.data;
+            // For DJs, prioritize stage name
+            if (user.role === "DJ" && user.djProfile?.stageName) {
+              setDisplayName(user.djProfile.stageName);
+            } else if (user.role === "ADMIN" && user.djProfile?.stageName) {
+              // For admins who are also DJs, use stage name
+              setDisplayName(user.djProfile.stageName);
+            } else {
+              // Fallback to name or email
+              setDisplayName(user.name || user.email.split("@")[0] || "there");
+            }
+          }
+        })
+        .catch(() => {
+          // Fallback to session data
+          setDisplayName(
+            session.user.name || session.user.email?.split("@")[0] || "there"
+          );
+        });
+    }
+  }, [session]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative overflow-hidden">
@@ -63,7 +92,7 @@ export default function Home() {
               <div className="mb-12">
                 <div className="bg-gradient-to-r from-violet-900/40 to-purple-900/40 backdrop-blur-md border border-violet-500/30 rounded-3xl p-8 max-w-3xl mx-auto shadow-2xl">
                   <p className="text-3xl text-violet-200 font-bold mb-4">
-                    Welcome back, {userName}! 👋
+                    Welcome back, {displayName}! 👋
                   </p>
                   <p className="text-xl text-gray-300 leading-relaxed">
                     {session.user.role === "CLIENT"

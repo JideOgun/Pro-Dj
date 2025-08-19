@@ -13,8 +13,10 @@ import CommentSection from "@/components/CommentSection";
 import SimpleCommentInput from "@/components/SimpleCommentInput";
 import SuggestedMixes from "@/components/SuggestedMixes";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import RepostButton from "@/components/RepostButton";
+import FollowButton from "@/components/FollowButton";
 import { useSocketContext } from "@/components/SocketProvider";
-import { Upload, Plus, ChevronDown, Filter } from "lucide-react";
+import { Upload, Plus, ChevronDown, Filter, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Predefined list of genres for filtering
@@ -90,12 +92,16 @@ export default function MixesPage() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState("All Genres");
   const [showGenreFilter, setShowGenreFilter] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const genreFilterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMixes();
-  }, [page, sortBy, selectedGenre]);
+  }, [page, sortBy, selectedGenre, searchQuery]);
 
   // Listen for real-time mix like updates
   useEffect(() => {
@@ -123,6 +129,15 @@ export default function MixesPage() {
       socket.off("mix-like-updated", handleMixLikeUpdate);
     };
   }, [socket, isConnected]);
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -153,8 +168,11 @@ export default function MixesPage() {
         selectedGenre !== "All Genres"
           ? `&genre=${encodeURIComponent(selectedGenre)}`
           : "";
+      const searchParam = searchQuery
+        ? `&search=${encodeURIComponent(searchQuery)}`
+        : "";
       const response = await fetch(
-        `/api/mixes?page=${page}&limit=10&sortBy=${sortBy}${genreParam}`
+        `/api/mixes?page=${page}&limit=10&sortBy=${sortBy}${genreParam}${searchParam}`
       );
       const data = await response.json();
 
@@ -171,6 +189,23 @@ export default function MixesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      setPage(1); // Reset to first page when searching
+    }, 500);
+
+    setSearchTimeout(timeout);
   };
 
   const handleDelete = async (mixId: string) => {
@@ -302,6 +337,31 @@ export default function MixesPage() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Search Bar */}
+              <div className="relative flex-1 max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search mixes by title or DJ name..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setPage(1);
+                    }}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
               {/* Genre Filter */}
               <div className="relative" ref={genreFilterRef}>
                 <button
@@ -405,9 +465,9 @@ export default function MixesPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Main Content and Sidebar Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 lg:gap-8 items-start">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2 lg:col-span-3">
             {/* Mixes Grid */}
             <div className="space-y-6 lg:space-y-8">
               {mixes.map((mix, index) => (
@@ -426,15 +486,23 @@ export default function MixesPage() {
                     <h3 className="text-lg font-semibold text-white truncate flex-1">
                       {mix.title}
                     </h3>
-                    <MixActionsDropdown
-                      mixId={mix.id}
-                      mixTitle={mix.title}
-                      onDelete={() => handleDelete(mix.id)}
-                      onShare={() => handleShare(mix)}
-                      canDelete={canDeleteMix(mix)}
-                      canDownload={true}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div className="flex items-center space-x-2">
+                      <RepostButton
+                        mixId={mix.id}
+                        djUserId={mix.dj.userId}
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <MixActionsDropdown
+                        mixId={mix.id}
+                        mixTitle={mix.title}
+                        onDelete={() => handleDelete(mix.id)}
+                        onShare={() => handleShare(mix)}
+                        canDelete={canDeleteMix(mix)}
+                        canDownload={true}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                   </div>
 
                   {/* Audio Player - Non-clickable, controls only */}
@@ -450,6 +518,7 @@ export default function MixesPage() {
                         duration={mix.duration}
                         albumArtUrl={mix.albumArtUrl}
                         mixId={mix.id}
+                        djUserId={mix.dj.userId}
                         initialLiked={mix.userLiked || false}
                         initialLikeCount={mix.likeCount || 0}
                         showLikeButton={true}
@@ -459,11 +528,11 @@ export default function MixesPage() {
                   </div>
 
                   {/* Mix Info - Clickable for navigation */}
-                  <div
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-gray-400 mb-3 space-y-2 sm:space-y-0 cursor-pointer"
-                    onClick={() => router.push(`/mixes/${mix.id}`)}
-                  >
-                    <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm text-gray-400 mb-3 space-y-2 sm:space-y-0">
+                    <div
+                      className="flex items-center space-x-2 sm:space-x-3 flex-wrap cursor-pointer"
+                      onClick={() => router.push(`/mixes/${mix.id}`)}
+                    >
                       <div className="flex items-center space-x-2">
                         {mix.dj.profileImage ? (
                           <img
@@ -490,6 +559,9 @@ export default function MixesPage() {
                       <div className="text-xs flex-shrink-0">
                         {formatDate(mix.createdAt)}
                       </div>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <FollowButton userId={mix.dj.userId} size="sm" />
                     </div>
                   </div>
 
@@ -539,7 +611,7 @@ export default function MixesPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 lg:sticky lg:top-8">
+          <div className="md:col-span-1 lg:col-span-2 lg:sticky lg:top-8">
             <SuggestedMixes />
           </div>
         </div>

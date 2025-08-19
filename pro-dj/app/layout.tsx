@@ -17,13 +17,25 @@ export const metadata: Metadata = {
     "Book professional DJs for your events. Browse portfolios, listen to mixes, and secure your perfect DJ.",
   icons: {
     icon: [
-      { url: "/icons/prodj_logo.png", type: "image/png" },
-      { url: "/icons/prodj_logo.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/icons/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/icons/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      {
+        url: "/icons/android-chrome-192x192.png",
+        type: "image/png",
+        sizes: "192x192",
+      },
+      {
+        url: "/icons/android-chrome-512x512.png",
+        type: "image/png",
+        sizes: "512x512",
+      },
     ],
     apple: [
       {
-        url: "/icons/prodj_logo.png",
+        url: "/icons/apple-touch-icon.png",
         type: "image/png",
+        sizes: "180x180",
       },
     ],
   },
@@ -63,8 +75,8 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#8b5cf6" />
 
-        <link rel="apple-touch-icon" href="/icons/prodj_logo.png" />
-        <link rel="icon" type="image/x-icon" href="/icons/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link
           rel="icon"
           type="image/png"
@@ -83,7 +95,7 @@ export default function RootLayout({
           href="/icons/safari-pinned-tab.svg"
           color="#8b5cf6"
         />
-        <link rel="shortcut icon" href="/icons/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className} bg-black text-white`}>
         <Providers>

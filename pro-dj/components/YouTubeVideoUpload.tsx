@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLoading } from "./LoadingProvider";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 interface VideoDetails {
   title: string;
@@ -170,7 +171,7 @@ export default function YouTubeVideoUpload() {
 
   if (
     !session?.user ||
-    (session.user.role !== "DJ" && session.user.role !== "ADMIN")
+    (session.user.role !== "DJ" && !hasAdminPrivileges(session.user))
   ) {
     return null;
   }

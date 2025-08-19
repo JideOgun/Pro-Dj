@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 import UserManagementActions from "./UserManagementActions";
 
 interface PageProps {
@@ -19,7 +20,7 @@ export default async function UserManagementPage({ params }: PageProps) {
     redirect("/auth");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 

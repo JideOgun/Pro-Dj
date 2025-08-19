@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 export default async function AdminDjsPage() {
   const session = await getServerSession(authOptions);
@@ -12,7 +13,7 @@ export default async function AdminDjsPage() {
     redirect("/auth");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 
@@ -148,7 +149,9 @@ export default async function AdminDjsPage() {
                         </div>
                         <div className="text-gray-400 text-sm">{dj.email}</div>
                         <div className="text-gray-400 text-sm">
-                          {dj.location || dj.djProfile?.location || "No location"}
+                          {dj.location ||
+                            dj.djProfile?.location ||
+                            "No location"}
                         </div>
                       </div>
                     </td>

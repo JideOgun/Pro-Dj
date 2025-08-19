@@ -3,10 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
+
 import NotificationsContainer from "@/components/NotificationsContainer";
 import { Music, AlertTriangle, Calendar, User } from "lucide-react";
 import BookingsTable from "@/components/BookingsTable";
+import { getDisplayName } from "@/lib/user-utils";
 
 export default async function ClientDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,9 @@ export default async function ClientDashboardPage() {
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: {
+      djProfile: {
+        select: { stageName: true },
+      },
       userMedia: {
         where: { type: "PROFILE_PICTURE" },
         orderBy: { createdAt: "desc" },
@@ -26,6 +30,9 @@ export default async function ClientDashboardPage() {
       },
     },
   });
+
+  // Get proper display name
+  const displayName = await getDisplayName(session.user.id);
 
   // Get user's bookings
   const bookings = await prisma.booking.findMany({
@@ -50,9 +57,6 @@ export default async function ClientDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Role Switcher */}
-        <ClientRoleSwitcher />
-
         {/* Header with Profile Photo */}
         <div className="mb-8">
           <div className="flex items-center gap-6 mb-6">
@@ -78,11 +82,7 @@ export default async function ClientDashboardPage() {
             </Link>
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                Welcome back,{" "}
-                {session.user.name ||
-                  session.user.email?.split("@")[0] ||
-                  "there"}
-                ! 👋
+                Welcome back, {displayName}! 👋
               </h1>
               <p className="text-gray-300">
                 Ready to create more amazing events? Here&apos;s everything you

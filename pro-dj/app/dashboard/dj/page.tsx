@@ -118,6 +118,25 @@ export default function DjDashboard() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Pending Approval Banner */}
+        {profile && !profile.isVerified && (
+          <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="w-6 h-6 text-yellow-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-300">
+                  Pending Approval
+                </h3>
+                <p className="text-yellow-200 text-sm">
+                  Your DJ profile is currently under review. You can upload
+                  mixes and manage your profile, but you won't receive booking
+                  requests until an admin approves your account.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header with Profile Info */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
@@ -345,7 +364,7 @@ export default function DjDashboard() {
               <span>Social Media</span>
             </a>
             <a
-              href="/dashboard/bookings"
+              href="/dashboard/bookings?view=dj"
               className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
             >
               <Calendar className="w-6 h-6 mr-3 text-blue-500" />

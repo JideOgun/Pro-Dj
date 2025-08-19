@@ -211,9 +211,11 @@ export default function SuggestedMixes({
                   duration={mix.duration}
                   albumArtUrl={mix.albumArtUrl}
                   mixId={mix.id}
+                  djUserId={mix.dj.userId}
                   initialLiked={mix.userLiked || false}
                   initialLikeCount={mix.likeCount || 0}
                   showLikeButton={true}
+                  showRepostButton={true}
                   className="w-full max-w-full"
                   onPlayStart={() => globalAudioManager.stopOtherMixes(mix.id)}
                 />

@@ -18,6 +18,7 @@ import {
   Facebook,
   Linkedin,
   Crop as CropIcon,
+  Music,
 } from "lucide-react";
 
 interface UserProfile {
@@ -55,6 +56,8 @@ export default function ProfilePage() {
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success"
   );
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [isNewDj, setIsNewDj] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -70,6 +73,10 @@ export default function ProfilePage() {
       linkedin: "",
     },
   });
+
+  // Track if form has been initialized with profile data
+  const [formInitialized, setFormInitialized] = useState(false);
+  const formInitializedRef = useRef(false);
 
   // Phone validation state
   const [phoneError, setPhoneError] = useState("");
@@ -102,19 +109,38 @@ export default function ProfilePage() {
 
       if (result.ok) {
         setProfile(result.data);
-        setFormData({
-          name: result.data.name || "",
-          phone: result.data.phone ? formatPhoneNumber(result.data.phone) : "",
-          location: result.data.location || "",
-          bio: result.data.bio || "",
-          website: result.data.website || "",
-          socialLinks: {
-            instagram: result.data.socialLinks?.instagram || "",
-            twitter: result.data.socialLinks?.twitter || "",
-            facebook: result.data.socialLinks?.facebook || "",
-            linkedin: result.data.socialLinks?.linkedin || "",
-          },
-        });
+
+        // Check if this is a new user (no profile photo and minimal data)
+        const hasProfilePhoto =
+          result.data.profileImage ||
+          (result.data.userMedia && result.data.userMedia.length > 0);
+        const hasBasicInfo = result.data.name && result.data.phone;
+        setIsNewUser(!hasProfilePhoto || !hasBasicInfo);
+
+        // Check if this is a new DJ (has DJ profile but might need to complete user profile)
+        const hasDjProfile = result.data.djProfile;
+        setIsNewDj(hasDjProfile && (!hasProfilePhoto || !hasBasicInfo));
+
+        // Only initialize form data if it hasn't been initialized yet
+        if (!formInitializedRef.current) {
+          setFormData({
+            name: result.data.name || "",
+            phone: result.data.phone
+              ? formatPhoneNumber(result.data.phone)
+              : "",
+            location: result.data.location || "",
+            bio: result.data.bio || "",
+            website: result.data.website || "",
+            socialLinks: {
+              instagram: result.data.socialLinks?.instagram || "",
+              twitter: result.data.socialLinks?.twitter || "",
+              facebook: result.data.socialLinks?.facebook || "",
+              linkedin: result.data.socialLinks?.linkedin || "",
+            },
+          });
+          formInitializedRef.current = true;
+          setFormInitialized(true);
+        }
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -325,6 +351,27 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
+    // Validate required fields for new users
+    if (isNewUser) {
+      if (!formData.name || formData.name.trim() === "") {
+        setMessage("Full name is required for new users");
+        setMessageType("error");
+        return;
+      }
+
+      if (!formData.phone || formData.phone.trim() === "") {
+        setMessage("Phone number is required for new users");
+        setMessageType("error");
+        return;
+      }
+
+      if (!profile?.profileImage) {
+        setMessage("Profile photo is required for new users");
+        setMessageType("error");
+        return;
+      }
+    }
+
     // Validate required fields
     if (!formData.location || formData.location.trim() === "") {
       setMessage(
@@ -357,6 +404,9 @@ export default function ProfilePage() {
         setProfile(result.data);
         setMessage("Profile updated successfully!");
         setMessageType("success");
+        // Reset form initialization flag so form can be reinitialized with new data
+        formInitializedRef.current = false;
+        setFormInitialized(false);
       } else {
         setMessage(result.error || "Failed to update profile");
         setMessageType("error");
@@ -555,11 +605,116 @@ export default function ProfilePage() {
           </p>
         </div>
 
+        {/* Welcome Message for New Users */}
+        {isNewUser && !isNewDj && (
+          <div className="bg-gradient-to-r from-violet-600/20 to-purple-600/20 border border-violet-500/30 rounded-lg p-6 mb-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-violet-300 mb-3">
+                Welcome to Pro-DJ! 🎉
+              </h2>
+              <p className="text-gray-300 mb-4">
+                Let's get your profile set up so you can start booking amazing
+                DJs for your events.
+              </p>
+              <div className="bg-gray-800/50 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-violet-300 mb-2">
+                  Required to complete:
+                </h3>
+                <ul className="text-sm text-gray-300 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        profile?.profileImage ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Profile Photo
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.name ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Full Name
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.phone ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Phone Number
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Welcome Message for New DJs */}
+        {isNewDj && (
+          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-lg p-6 mb-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-blue-300 mb-3">
+                Welcome DJ! 🎧
+              </h2>
+              <p className="text-gray-300 mb-4">
+                Great job setting up your DJ profile! Now let's complete your
+                user profile so you can start receiving bookings.
+              </p>
+              <div className="bg-gray-800/50 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-blue-300 mb-2">
+                  Complete your profile:
+                </h3>
+                <ul className="text-sm text-gray-300 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        profile?.profileImage ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Profile Photo
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.name ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Full Name
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.phone ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></span>
+                    Phone Number
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Profile Picture Section */}
           <div className="lg:col-span-1">
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Profile Picture</h2>
+            <div
+              className={`bg-gray-800 rounded-lg p-6 ${
+                isNewUser && !profile?.profileImage
+                  ? "border-2 border-violet-500/50"
+                  : ""
+              }`}
+            >
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                Profile Picture
+                {isNewUser && !profile?.profileImage && (
+                  <span className="text-red-400 text-sm font-normal">
+                    (Required)
+                  </span>
+                )}
+              </h2>
 
               <div className="text-center">
                 <div className="relative inline-block">
@@ -633,8 +788,11 @@ export default function ProfilePage() {
                 {/* Basic Information */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
                       Full Name
+                      {isNewUser && !formData.name && (
+                        <span className="text-red-400 text-sm">(Required)</span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -642,14 +800,21 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         handleInputChange("name", e.target.value)
                       }
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                        isNewUser && !formData.name
+                          ? "border-red-500"
+                          : "border-gray-600"
+                      }`}
                       placeholder="Enter your full name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
                       Phone Number
+                      {isNewUser && !formData.phone && (
+                        <span className="text-red-400 text-sm">(Required)</span>
+                      )}
                     </label>
                     <input
                       type="tel"
@@ -659,7 +824,11 @@ export default function ProfilePage() {
                         handleInputChange("phone", formatted);
                       }}
                       className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
-                        phoneError ? "border-red-500" : "border-gray-600"
+                        phoneError
+                          ? "border-red-500"
+                          : isNewUser && !formData.phone
+                          ? "border-red-500"
+                          : "border-gray-600"
                       }`}
                       placeholder="(555) 123-4567"
                       maxLength={20}
@@ -817,6 +986,96 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
+                {/* DJ Profile Section */}
+                {profile?.djProfile && (
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-blue-300 mb-4 flex items-center gap-2">
+                      <Music className="w-5 h-5" />
+                      DJ Profile Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Stage Name
+                        </label>
+                        <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                          <div className="text-lg font-semibold text-white">
+                            {profile.djProfile.stageName}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            This is how clients will see you
+                          </div>
+                        </div>
+                      </div>
+
+                      {profile.djProfile.bio && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            DJ Bio
+                          </label>
+                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                            <div className="text-sm text-gray-300">
+                              {profile.djProfile.bio}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {profile.djProfile.genres &&
+                        profile.djProfile.genres.length > 0 && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Music Genres
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {profile.djProfile.genres.map((genre, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-blue-600/30 text-blue-200 px-2 py-1 rounded-full text-xs"
+                                >
+                                  {genre}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Experience
+                          </label>
+                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                            <div className="text-sm text-white">
+                              {profile.djProfile.experience} years
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Base Rate
+                          </label>
+                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                            <div className="text-sm text-white">
+                              $
+                              {(profile.djProfile.basePriceCents / 100).toFixed(
+                                2
+                              )}
+                              /hr
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-400 mt-3">
+                        💡 To edit your DJ profile information, visit your DJ
+                        dashboard
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Save Button */}
                 <div className="pt-4">
                   <button
@@ -825,8 +1084,18 @@ export default function ProfilePage() {
                     className="w-full bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     <Save className="w-5 h-5" />
-                    {saving ? "Saving..." : "Save Changes"}
+                    {saving
+                      ? "Saving..."
+                      : isNewUser
+                      ? "Complete Profile Setup"
+                      : "Save Changes"}
                   </button>
+
+                  {isNewUser && (
+                    <p className="text-xs text-gray-400 mt-2 text-center">
+                      Complete your profile to start booking DJs
+                    </p>
+                  )}
                 </div>
 
                 {/* Message */}

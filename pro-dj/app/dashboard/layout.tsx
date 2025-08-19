@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import SuspensionNotice from "@/components/SuspensionNotice";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 export default async function DashboardLayout({
   children,
@@ -15,10 +16,13 @@ export default async function DashboardLayout({
     redirect("/auth");
   }
 
-  const role = session.user.role;
-
-  // Allow ADMIN, DJ, and CLIENT users
-  if (!role || (role !== "ADMIN" && role !== "DJ" && role !== "CLIENT")) {
+  // Allow users with any role (ADMIN, DJ, CLIENT) or admin privileges
+  if (
+    !session.user.role ||
+    (!hasAdminPrivileges(session.user) &&
+      session.user.role !== "DJ" &&
+      session.user.role !== "CLIENT")
+  ) {
     redirect("/auth");
   }
 

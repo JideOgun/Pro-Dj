@@ -1,17 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Music, DollarSign, MapPin } from "lucide-react";
+import { DollarSign, MapPin, Upload, X, Camera } from "lucide-react";
 import AuthGuard from "@/components/AuthGuard";
+import ReactCrop, { Crop, PixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+
+// Type assertion to fix TypeScript issue
+const ReactCropComponent = ReactCrop as any;
 
 export default function DjRegisterPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState<Crop>({
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+  });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [formData, setFormData] = useState({
     stageName: "",
@@ -88,6 +111,212 @@ export default function DjRegisterPage() {
     "Igbo",
     "Hausa",
     "Other",
+  ];
+
+  const majorAmericanCities = [
+    "New York, NY",
+    "Los Angeles, CA",
+    "Chicago, IL",
+    "Houston, TX",
+    "Phoenix, AZ",
+    "Philadelphia, PA",
+    "San Antonio, TX",
+    "San Diego, CA",
+    "Dallas, TX",
+    "San Jose, CA",
+    "Austin, TX",
+    "Jacksonville, FL",
+    "Fort Worth, TX",
+    "Columbus, OH",
+    "Charlotte, NC",
+    "San Francisco, CA",
+    "Indianapolis, IN",
+    "Seattle, WA",
+    "Denver, CO",
+    "Washington, DC",
+    "Boston, MA",
+    "El Paso, TX",
+    "Nashville, TN",
+    "Detroit, MI",
+    "Oklahoma City, OK",
+    "Portland, OR",
+    "Las Vegas, NV",
+    "Memphis, TN",
+    "Louisville, KY",
+    "Baltimore, MD",
+    "Milwaukee, WI",
+    "Albuquerque, NM",
+    "Tucson, AZ",
+    "Fresno, CA",
+    "Sacramento, CA",
+    "Mesa, AZ",
+    "Kansas City, MO",
+    "Atlanta, GA",
+    "Long Beach, CA",
+    "Colorado Springs, CO",
+    "Raleigh, NC",
+    "Miami, FL",
+    "Virginia Beach, VA",
+    "Omaha, NE",
+    "Oakland, CA",
+    "Minneapolis, MN",
+    "Tampa, FL",
+    "Tulsa, OK",
+    "Arlington, TX",
+    "New Orleans, LA",
+    "Wichita, KS",
+    "Cleveland, OH",
+    "Bakersfield, CA",
+    "Aurora, CO",
+    "Anaheim, CA",
+    "Honolulu, HI",
+    "Santa Ana, CA",
+    "Corpus Christi, TX",
+    "Riverside, CA",
+    "Lexington, KY",
+    "Stockton, CA",
+    "Henderson, NV",
+    "Saint Paul, MN",
+    "St. Louis, MO",
+    "Fort Wayne, IN",
+    "Jersey City, NJ",
+    "Chandler, AZ",
+    "Madison, WI",
+    "Lubbock, TX",
+    "Scottsdale, AZ",
+    "Reno, NV",
+    "Buffalo, NY",
+    "Gilbert, AZ",
+    "Glendale, AZ",
+    "North Las Vegas, NV",
+    "Winston-Salem, NC",
+    "Chesapeake, VA",
+    "Norfolk, VA",
+    "Fremont, CA",
+    "Garland, TX",
+    "Irving, TX",
+    "Hialeah, FL",
+    "Richmond, VA",
+    "Boise, ID",
+    "Spokane, WA",
+    "Baton Rouge, LA",
+    "Tacoma, WA",
+    "San Bernardino, CA",
+    "Grand Rapids, MI",
+    "Huntsville, AL",
+    "Salt Lake City, UT",
+    "Frisco, TX",
+    "Yonkers, NY",
+    "Amarillo, TX",
+    "Glendale, CA",
+    "McKinney, TX",
+    "Montgomery, AL",
+    "Aurora, IL",
+    "Akron, OH",
+    "Little Rock, AR",
+    "Durham, NC",
+    "Reno, NV",
+    "Modesto, CA",
+    "Arlington, VA",
+    "Oxnard, CA",
+    "Fontana, CA",
+    "Columbus, GA",
+    "Moreno Valley, CA",
+    "Fayetteville, NC",
+    "Huntington Beach, CA",
+    "Yuma, AZ",
+    "Worcester, MA",
+    "Rochester, NY",
+    "Cape Coral, FL",
+    "Palm Springs, CA",
+    "Palm Bay, FL",
+    "Springfield, MO",
+    "Salem, OR",
+    "Corona, CA",
+    "Eugene, OR",
+    "Pasadena, CA",
+    "Joliet, IL",
+    "Pembroke Pines, FL",
+    "Paterson, NJ",
+    "Hampton, VA",
+    "Lancaster, CA",
+    "Alexandria, VA",
+    "Salinas, CA",
+    "Palmdale, CA",
+    "Naperville, IL",
+    "Pomona, CA",
+    "Hayward, CA",
+    "Lakewood, CO",
+    "Escondido, CA",
+    "Sunnyvale, CA",
+    "Torrance, CA",
+    "Sandy Springs, GA",
+    "Olathe, KS",
+    "Pasadena, TX",
+    "Metairie, LA",
+    "Columbia, SC",
+    "Surprise, AZ",
+    "Roseville, CA",
+    "Thornton, CO",
+    "McAllen, TX",
+    "Lake Forest, CA",
+    "Hollywood, FL",
+    "Denton, TX",
+    "Sterling Heights, MI",
+    "Garden Grove, CA",
+    "Cary, NC",
+    "Oceanside, CA",
+    "Elk Grove, CA",
+    "Santa Rosa, CA",
+    "Rancho Cucamonga, CA",
+    "Fort Lauderdale, FL",
+    "Peoria, AZ",
+    "Springfield, MA",
+    "Murfreesboro, TN",
+    "Temecula, CA",
+    "Lancaster, PA",
+    "Eugene, OR",
+    "Palm Bay, FL",
+    "Salem, OR",
+    "Pasadena, TX",
+    "Pembroke Pines, FL",
+    "Paterson, NJ",
+    "Hampton, VA",
+    "Lancaster, CA",
+    "Alexandria, VA",
+    "Salinas, CA",
+    "Palmdale, CA",
+    "Naperville, IL",
+    "Pomona, CA",
+    "Hayward, CA",
+    "Lakewood, CO",
+    "Escondido, CA",
+    "Sunnyvale, CA",
+    "Torrance, CA",
+    "Sandy Springs, GA",
+    "Olathe, KS",
+    "Metairie, LA",
+    "Columbia, SC",
+    "Surprise, AZ",
+    "Roseville, CA",
+    "Thornton, CO",
+    "McAllen, TX",
+    "Lake Forest, CA",
+    "Hollywood, FL",
+    "Denton, TX",
+    "Sterling Heights, MI",
+    "Garden Grove, CA",
+    "Cary, NC",
+    "Oceanside, CA",
+    "Elk Grove, CA",
+    "Santa Rosa, CA",
+    "Rancho Cucamonga, CA",
+    "Fort Lauderdale, FL",
+    "Peoria, AZ",
+    "Springfield, MA",
+    "Murfreesboro, TN",
+    "Temecula, CA",
+    "Lancaster, PA",
   ];
 
   const handleGenreToggle = (genre: string) => {
@@ -241,34 +470,218 @@ export default function DjRegisterPage() {
     }));
   };
 
+  // Profile picture upload functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file");
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setSelectedFile(file);
+    setShowCropModal(true);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setSelectedFile(null);
+  };
+
+  const handleCropComplete = (crop: PixelCrop) => {
+    setCompletedCrop(crop);
+  };
+
+  const getCroppedImg = (
+    image: HTMLImageElement,
+    crop: PixelCrop
+  ): Promise<Blob> => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          }
+        },
+        "image/jpeg",
+        0.9
+      );
+    });
+  };
+
+  const handleCropSave = async () => {
+    if (!selectedFile || !completedCrop || !imgRef.current) {
+      toast.error("Please select a crop area");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const croppedImageBlob = await getCroppedImg(
+        imgRef.current,
+        completedCrop
+      );
+      const croppedFile = new File([croppedImageBlob], selectedFile.name, {
+        type: "image/jpeg",
+      });
+
+      const formData = new FormData();
+      formData.append("file", croppedFile);
+
+      const response = await fetch("/api/profile/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.ok) {
+        console.log("Profile image upload result:", result.data);
+        setFormData((prev) => ({
+          ...prev,
+          profileImage: result.data.url,
+        }));
+        toast.success("Profile picture uploaded successfully!");
+        setShowCropModal(false);
+        setSelectedFile(null);
+      } else {
+        toast.error(result.error || "Failed to upload profile picture");
+      }
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      toast.error("Failed to upload profile picture");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveProfilePicture = () => {
+    setFormData((prev) => ({
+      ...prev,
+      profileImage: "",
+    }));
+    toast.success("Profile picture removed");
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".location-input-container")) {
+        setShowCityDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
+    // Collect all validation errors
+    const errorFields: string[] = [];
+
+    if (!formData.stageName || formData.stageName.trim() === "") {
+      errorFields.push("Stage Name");
+    }
+
+    if (!formData.profileImage) {
+      errorFields.push("Profile Picture");
+    }
+
     if (!formData.location || formData.location.trim() === "") {
-      toast.error(
-        "Location is required. Please enter your location or use the 'Current' button to detect it automatically."
-      );
+      errorFields.push("Location");
+    }
+
+    if (!formData.bio || formData.bio.trim() === "") {
+      errorFields.push("Bio");
+    }
+
+    if (formData.genres.length === 0) {
+      errorFields.push("Genres");
+    }
+
+    if (!formData.experience || formData.experience === 0) {
+      errorFields.push("Experience");
+    }
+
+    if (!formData.basePriceCents || formData.basePriceCents <= 0) {
+      errorFields.push("Base Rate");
+    }
+
+    // Show comprehensive error message if any fields are missing
+    if (errorFields.length > 0) {
+      const errorMessage = `Please fill in the following required fields: ${errorFields.join(
+        ", "
+      )}`;
+      toast.error(errorMessage);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      console.log(
+        "Submitting DJ registration data:",
+        JSON.stringify(formData, null, 2)
+      );
+
       const response = await fetch("/api/dj/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
+      console.log("Response status:", response.status);
       const data = await response.json();
+      console.log("Response data:", data);
 
       if (response.ok) {
-        toast.success("DJ profile created successfully!");
+        toast.success(
+          "DJ profile created successfully! Your profile is now pending admin approval."
+        );
 
-        // Force a complete page reload to refresh the session with new role
+        // Redirect to DJ dashboard
         window.location.href = "/dashboard/dj";
       } else {
+        console.error("DJ registration failed:", data);
         toast.error(data.error || "Failed to create DJ profile");
       }
     } catch (error) {
@@ -278,12 +691,26 @@ export default function DjRegisterPage() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-gray-800 rounded-lg p-8">
+            <div className="w-16 h-16 mb-4 mx-auto bg-gray-700 rounded-lg animate-pulse"></div>
+            <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+            <p className="text-gray-300 mb-6">Please wait...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center">
           <div className="bg-gray-800 rounded-lg p-8">
-            <Music className="w-16 h-16 mb-4 mx-auto" />
+            <div className="w-16 h-16 mb-4 mx-auto text-4xl">🎵</div>
             <h1 className="text-2xl font-bold mb-4">Join as a DJ</h1>
             <p className="text-gray-300 mb-6">
               Please sign in to create your DJ profile and start getting
@@ -316,6 +743,12 @@ export default function DjRegisterPage() {
               provide here will automatically be used to prefill your user
               profile, so you won&apos;t need to enter it twice!
             </p>
+            <p className="text-yellow-200 text-sm mt-2">
+              ⏳ <strong>Approval Process:</strong> After creating your profile,
+              it will be reviewed by our admin team. You can upload mixes and
+              manage your profile, but you won&apos;t receive booking requests
+              until approved.
+            </p>
           </div>
         </div>
 
@@ -327,6 +760,34 @@ export default function DjRegisterPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Stage Name *
               </label>
+              <div className="mb-3">
+                <p className="text-sm text-gray-400 mb-2">
+                  This is how you&apos;ll be displayed to clients. You can
+                  choose to include &quot;DJ&quot; or not:
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                    <div className="text-xs text-gray-400 mb-1">
+                      Example with &quot;DJ&quot;:
+                    </div>
+                    <div className="text-sm text-white font-medium">
+                      DJ Concept
+                    </div>
+                  </div>
+                  <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                    <div className="text-xs text-gray-400 mb-1">
+                      Example without &quot;DJ&quot;:
+                    </div>
+                    <div className="text-sm text-white font-medium">
+                      Concept
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  💡 Tip: Most professional DJs prefer just their name without
+                  &quot;DJ&quot; prefix
+                </p>
+              </div>
               <input
                 type="text"
                 value={formData.stageName}
@@ -335,8 +796,69 @@ export default function DjRegisterPage() {
                 }
                 required
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                placeholder="Your DJ name"
+                placeholder="e.g., JAY BABA, DJ Concept, or just Concept"
               />
+            </div>
+
+            {/* Profile Picture */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Profile Picture *
+              </label>
+              <div className="text-center">
+                <div className="relative inline-block">
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-700 mx-auto mb-4 border-2 border-gray-600">
+                    {formData.profileImage ? (
+                      <img
+                        src={formData.profileImage}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Camera className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <span className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      {uploading ? "Uploading..." : "Upload Photo"}
+                    </span>
+                  </label>
+
+                  {formData.profileImage && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfilePicture}
+                      className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-3">
+                  Recommended: Square image, 400x400px or larger
+                </p>
+              </div>
             </div>
 
             {/* Bio */}
@@ -469,16 +991,54 @@ export default function DjRegisterPage() {
                 Location *
               </label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
-                  required
-                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="City, State or use current location"
-                />
+                <div className="flex-1 relative location-input-container">
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => {
+                      setFormData({ ...formData, location: e.target.value });
+                      setShowCityDropdown(true);
+                    }}
+                    onFocus={() => setShowCityDropdown(true)}
+                    required
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    placeholder="City, State or use current location"
+                  />
+
+                  {/* City Dropdown */}
+                  {showCityDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="p-2">
+                        <div className="text-xs text-gray-400 mb-2 px-2">
+                          Major US Cities:
+                        </div>
+                        {majorAmericanCities
+                          .filter(
+                            (city) =>
+                              city
+                                .toLowerCase()
+                                .includes(formData.location.toLowerCase()) ||
+                              formData.location === ""
+                          )
+                          .slice(0, 10)
+                          .map((city, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, location: city });
+                                setShowCityDropdown(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
+                            >
+                              {city}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={getCurrentLocation}
@@ -499,8 +1059,8 @@ export default function DjRegisterPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                Click &quot;Current&quot; to automatically detect your city and
-                state
+                Choose from major US cities or click &quot;Current&quot; to
+                auto-detect your location
               </p>
             </div>
 
@@ -607,22 +1167,6 @@ export default function DjRegisterPage() {
               </div>
             </div>
 
-            {/* Profile Image URL */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Profile Image URL
-              </label>
-              <input
-                type="url"
-                value={formData.profileImage}
-                onChange={(e) =>
-                  setFormData({ ...formData, profileImage: e.target.value })
-                }
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                placeholder="https://example.com/your-image.jpg"
-              />
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
@@ -646,17 +1190,78 @@ export default function DjRegisterPage() {
                 <p>Your profile will be reviewed and verified</p>
               </div>
               <div>
-                <DollarSign className="w-6 h-6 mb-2" />
+                <div className="w-6 h-6 mb-2 text-lg">💰</div>
                 <p>Set up your pricing packages</p>
               </div>
               <div>
-                <Music className="w-6 h-6 mb-2" />
+                <div className="w-6 h-6 mb-2 text-lg">🎵</div>
                 <p>Start receiving booking requests</p>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Image Cropping Modal */}
+      {showCropModal && selectedFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">
+                Crop Profile Picture
+              </h3>
+              <button
+                onClick={handleCropCancel}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-300 text-sm mb-4">
+                Drag to select the area you want to crop. The image will be
+                cropped to a square format.
+              </p>
+
+              <div className="flex justify-center">
+                <ReactCropComponent
+                  crop={crop}
+                  onChange={(c: Crop) => setCrop(c)}
+                  onComplete={handleCropComplete}
+                  aspect={1}
+                  circularCrop
+                  className="max-w-full max-h-96"
+                >
+                  <img
+                    ref={imgRef}
+                    src={URL.createObjectURL(selectedFile)}
+                    alt="Crop preview"
+                    className="max-w-full max-h-96 object-contain"
+                  />
+                </ReactCropComponent>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCropCancel}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCropSave}
+                disabled={uploading || !completedCrop}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {uploading ? "Uploading..." : "Save Cropped Image"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

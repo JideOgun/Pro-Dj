@@ -4,13 +4,17 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import BookingsTable from "@/components/BookingsTable";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; view?: string };
 }) {
   const session = await getServerSession(authOptions);
+
+  // Check if the view parameter is explicitly set to "dj"
+  const isDjView = searchParams.view === "dj";
 
   if (!session?.user) {
     redirect("/auth");
@@ -18,7 +22,7 @@ export default async function BookingsPage({
 
   // Allow ADMIN, DJ, and CLIENT users to access bookings
   if (
-    session.user.role !== "ADMIN" &&
+    !hasAdminPrivileges(session.user) &&
     session.user.role !== "DJ" &&
     session.user.role !== "CLIENT"
   ) {
@@ -32,15 +36,23 @@ export default async function BookingsPage({
     status?: "PENDING" | "ACCEPTED" | "CONFIRMED" | "DECLINED";
   } = {};
 
-  if (session.user.role === "ADMIN") {
-    // Admin sees all bookings
-    whereClause = {};
-  } else if (session.user.role === "DJ") {
-    // DJ sees only their bookings - need to get their DJ profile first
-    const djProfile = await prisma.djProfile.findUnique({
-      where: { userId: session.user.id },
-    });
+  // Check if user is a DJ (including admin users who are also DJs)
+  const djProfile = await prisma.djProfile.findUnique({
+    where: { userId: session.user.id },
+  });
 
+  // Determine what bookings to show based on user role and context
+  if (hasAdminPrivileges(session.user)) {
+    // Admin user - check if they want to see their DJ bookings or all bookings
+    if (djProfile && isDjView) {
+      // Admin who is also a DJ and wants to see their DJ bookings
+      whereClause = { djId: djProfile.id };
+    } else {
+      // Admin wants to see all bookings
+      whereClause = {};
+    }
+  } else if (session.user.role === "DJ") {
+    // Regular DJ sees only their bookings
     if (djProfile) {
       whereClause = { djId: djProfile.id };
     } else {
@@ -83,14 +95,18 @@ export default async function BookingsPage({
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                {session.user.role === "ADMIN"
+                {hasAdminPrivileges(session.user) && djProfile && isDjView
+                  ? "My DJ Bookings"
+                  : hasAdminPrivileges(session.user) && !djProfile
                   ? "All Bookings"
                   : session.user.role === "CLIENT"
                   ? "My Bookings"
                   : "My Bookings"}
               </h1>
               <p className="text-gray-300">
-                {session.user.role === "ADMIN"
+                {hasAdminPrivileges(session.user) && djProfile && isDjView
+                  ? "View and manage your DJ booking requests"
+                  : hasAdminPrivileges(session.user) && !djProfile
                   ? "Manage all booking requests across the platform"
                   : session.user.role === "CLIENT"
                   ? "View and track your booking requests"
@@ -99,7 +115,9 @@ export default async function BookingsPage({
             </div>
             <Link
               href={
-                session.user.role === "ADMIN"
+                hasAdminPrivileges(session.user) && djProfile && isDjView
+                  ? "/dashboard/dj"
+                  : hasAdminPrivileges(session.user) && !djProfile
                   ? "/dashboard/admin"
                   : session.user.role === "CLIENT"
                   ? "/dashboard/client"

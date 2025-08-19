@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import {
+  hasAdminPrivileges,
+  canAccessDjFeatures,
+  canAccessClientFeatures,
+} from "@/lib/auth-utils";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -9,18 +14,26 @@ export default async function DashboardPage() {
     redirect("/auth");
   }
 
-  const role = session.user.role;
+  // Check user privileges
+  const isAdmin = hasAdminPrivileges(session.user);
+  const canAccessDj = canAccessDjFeatures(session.user);
+  const canAccessClient = canAccessClientFeatures(session.user);
 
-  // Redirect clients to their dashboard
-  if (role === "CLIENT") {
-    redirect("/dashboard/client");
+  // For admins, show a unified dashboard with all features
+  if (isAdmin) {
+    redirect("/dashboard/admin");
   }
 
-  // Redirect DJs to their dashboard
-  if (role === "DJ") {
+  // For DJs, redirect to DJ dashboard
+  if (canAccessDj && session.user.role === "DJ") {
     redirect("/dashboard/dj");
   }
 
-  // For ADMIN users, redirect to admin dashboard
-  redirect("/dashboard/admin");
+  // For clients, redirect to client dashboard
+  if (canAccessClient && session.user.role === "CLIENT") {
+    redirect("/dashboard/client");
+  }
+
+  // Fallback to client dashboard
+  redirect("/dashboard/client");
 }

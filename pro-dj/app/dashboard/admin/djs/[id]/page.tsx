@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 import DjApprovalActions from "./DjApprovalActions";
 import UserManagementActions from "../../users/[id]/UserManagementActions";
 
@@ -20,7 +21,7 @@ export default async function DjManagementPage({ params }: PageProps) {
     redirect("/auth");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 
@@ -151,7 +152,9 @@ export default async function DjManagementPage({ params }: PageProps) {
                 <div>
                   <span className="text-gray-400">Location:</span>
                   <span className="ml-2 text-white">
-                    {user.location || user.djProfile?.location || "Not specified"}
+                    {user.location ||
+                      user.djProfile?.location ||
+                      "Not specified"}
                   </span>
                 </div>
                 <div>

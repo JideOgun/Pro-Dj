@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 import AdminBookingActions from "./AdminBookingActions";
 
 export default async function AdminBookingsPage() {
@@ -13,7 +14,7 @@ export default async function AdminBookingsPage() {
     redirect("/auth");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 

@@ -44,6 +44,11 @@ commentLikes CommentLike[]
 commentDislikes CommentDislike[]
 mixLikes MixLike[] // New relation for mix likes
 
+// Follow System
+followers Follow[] @relation("UserFollowers")
+following Follow[] @relation("UserFollowing")
+reposts Repost[] // User's reposts
+
 // DJ Profile relation
 djProfile DjProfile?
 
@@ -438,6 +443,7 @@ updatedAt DateTime @updatedAt
 // Comments and Likes
 comments Comment[]
 likes MixLike[] // New relation for mix likes
+reposts Repost[] // Reposts of this mix
 
 @@index([djId, isPublic])
 @@index([genres])
@@ -507,4 +513,34 @@ UPLOADING
 COMPLETED
 FAILED
 CANCELLED
+}
+
+// Follow System
+model Follow {
+id String @id @default(uuid())
+followerId String // User who is following
+followingId String // User being followed
+follower User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+createdAt DateTime @default(now())
+
+@@unique([followerId, followingId]) // Prevent duplicate follows
+@@index([followerId])
+@@index([followingId])
+@@index([createdAt])
+}
+
+// Repost System
+model Repost {
+id String @id @default(uuid())
+userId String // User who reposted
+mixId String // Mix being reposted
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+mix DjMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+createdAt DateTime @default(now())
+
+@@unique([userId, mixId]) // Prevent duplicate reposts
+@@index([userId])
+@@index([mixId])
+@@index([createdAt])
 }

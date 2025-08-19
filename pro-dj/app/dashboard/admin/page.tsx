@@ -3,9 +3,11 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ClientRoleSwitcher from "@/components/ClientRoleSwitcher";
+
 import BookingCalendar from "@/components/BookingCalendar";
 import TimeoutManagement from "@/components/TimeoutManagement";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
+import { getDisplayName } from "@/lib/user-utils";
 import {
   Users,
   Calendar,
@@ -19,9 +21,12 @@ import {
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
+
+  // Get proper display name for admin
+  const displayName = await getDisplayName(session.user.id);
 
   // Get comprehensive stats
   const [
@@ -108,13 +113,12 @@ export default async function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Role Switcher */}
-        <ClientRoleSwitcher />
-
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-gray-300">Manage your Pro-DJ platform</p>
+          <p className="text-gray-300">
+            Welcome back, {displayName}! Manage your Pro-DJ platform
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -191,6 +195,48 @@ export default async function AdminDashboardPage() {
                 View Clients <ArrowRight className="w-4 h-4 inline ml-1" />
               </Link>
             </div>
+          </div>
+        </div>
+
+        {/* Quick Access to DJ & Client Features */}
+        <div className="bg-gray-800 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-violet-400 mb-4">
+            Quick Access
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              href="/dashboard/dj"
+              className="bg-violet-900/30 hover:bg-violet-900/50 border border-violet-700/30 hover:border-violet-700/50 rounded-lg p-4 transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-violet-300 group-hover:text-violet-200">
+                    DJ Dashboard
+                  </h3>
+                  <p className="text-sm text-violet-400/70 group-hover:text-violet-400/90">
+                    Access DJ features, upload mixes, manage bookings
+                  </p>
+                </div>
+                <Music className="w-8 h-8 text-violet-400 group-hover:text-violet-300" />
+              </div>
+            </Link>
+
+            <Link
+              href="/dashboard/client"
+              className="bg-blue-900/30 hover:bg-blue-900/50 border border-blue-700/30 hover:border-blue-700/50 rounded-lg p-4 transition-all duration-200 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-300 group-hover:text-blue-200">
+                    Client Dashboard
+                  </h3>
+                  <p className="text-sm text-blue-400/70 group-hover:text-blue-400/90">
+                    Book DJs, view your events, manage bookings
+                  </p>
+                </div>
+                <User className="w-8 h-8 text-blue-400 group-hover:text-blue-300" />
+              </div>
+            </Link>
           </div>
         </div>
 
@@ -332,7 +378,7 @@ export default async function AdminDashboardPage() {
                 Recent Bookings
               </h2>
               <Link
-                href="/dashboard/bookings"
+                href="/dashboard/bookings?view=admin"
                 className="text-violet-400 hover:text-violet-300 text-sm"
               >
                 View All <ArrowRight className="w-4 h-4 inline ml-1" />

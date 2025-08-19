@@ -3,6 +3,84 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Helper function to generate realistic mock Instagram posts
+function generateMockInstagramPosts(stageName: string, limit: number) {
+  const captions = [
+    `Amazing night at the club! 🎵 #djlife #music #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Wedding vibes ✨ #weddingdj #afrobeats #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Live performance tonight! 🎤 #live #performance #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Studio session 🔥 #studio #music #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Birthday party vibes 🎉 #birthday #party #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Corporate event success! 💼 #corporate #event #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Beach party vibes 🌊 #beach #party #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `New mix dropping soon! 🎧 #newmix #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Behind the scenes 🎬 #bts #djlife #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+    `Soundcheck time 🔊 #soundcheck #${stageName
+      .toLowerCase()
+      .replace(/\s+/g, "")}`,
+  ];
+
+  const colors = [
+    "6366f1",
+    "8b5cf6",
+    "a855f7",
+    "ec4899",
+    "f59e0b",
+    "10b981",
+    "06b6d4",
+    "3b82f6",
+    "ef4444",
+    "f97316",
+  ];
+
+  const posts = [];
+  for (let i = 0; i < limit; i++) {
+    const color = colors[i % colors.length];
+    const caption = captions[i % captions.length];
+    const isVideo = i % 4 === 0;
+    const daysAgo = i * 2; // Spread posts over time
+
+    posts.push({
+      id: `${stageName}_${i + 1}`,
+      caption,
+      mediaUrl: `https://via.placeholder.com/400x400/${color}/ffffff?text=${encodeURIComponent(
+        stageName
+      )}+Post+${i + 1}`,
+      mediaType: isVideo ? "video" : "image",
+      likes: Math.floor(Math.random() * 1000) + 100,
+      comments: Math.floor(Math.random() * 100) + 10,
+      timestamp: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+      permalink: `https://instagram.com/p/${stageName
+        .toLowerCase()
+        .replace(/\s+/g, "")}_${i + 1}`,
+      dj: {
+        stageName,
+        profileImage: null,
+      },
+    });
+  }
+
+  return posts;
+}
+
 // GET: Fetch Instagram posts for a specific DJ or all DJs
 export async function GET(req: Request) {
   try {
@@ -72,54 +150,11 @@ export async function GET(req: Request) {
         );
       }
 
-      // Return mock data for this specific DJ
-      const mockInstagramPosts = [
-        {
-          id: "1",
-          caption: "Amazing night at the club! 🎵 #djlife #music",
-          mediaUrl:
-            "https://via.placeholder.com/400x400/6366f1/ffffff?text=Instagram+Post+1",
-          mediaType: "image",
-          likes: 245,
-          comments: 18,
-          timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          permalink: `https://instagram.com/p/mock1`,
-          dj: {
-            stageName: djProfile.stageName || "DJ",
-            profileImage: null,
-          },
-        },
-        {
-          id: "2",
-          caption: "Wedding vibes ✨ #weddingdj #afrobeats",
-          mediaUrl:
-            "https://via.placeholder.com/400x400/8b5cf6/ffffff?text=Instagram+Post+2",
-          mediaType: "image",
-          likes: 189,
-          comments: 12,
-          timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          permalink: `https://instagram.com/p/mock2`,
-          dj: {
-            stageName: djProfile.stageName || "DJ",
-            profileImage: null,
-          },
-        },
-        {
-          id: "3",
-          caption: "Live performance tonight! 🎤 #live #performance",
-          mediaUrl:
-            "https://via.placeholder.com/400x400/a855f7/ffffff?text=Instagram+Post+3",
-          mediaType: "video",
-          likes: 567,
-          comments: 34,
-          timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-          permalink: `https://instagram.com/p/mock3`,
-          dj: {
-            stageName: djProfile.stageName || "DJ",
-            profileImage: null,
-          },
-        },
-      ].slice(0, limit);
+      // Generate realistic mock data for this specific DJ
+      const mockInstagramPosts = generateMockInstagramPosts(
+        djProfile.stageName,
+        limit
+      );
 
       return NextResponse.json({
         ok: true,
@@ -179,44 +214,15 @@ export async function GET(req: Request) {
 
     // Generate mock posts from all DJs
     const allPosts = [];
-    const djNames = [
-      "DJ AfroBeats",
-      "DJ Vibes",
-      "DJ Master",
-      "DJ Groove",
-      "DJ Pulse",
-    ];
 
-    for (let i = 0; i < 24; i++) {
-      const djIndex = i % djsWithInstagram.length;
-      const dj = djsWithInstagram[djIndex];
-      const socialLinks = dj.socialLinks as any;
+    // Generate posts for each DJ
+    djsWithInstagram.forEach((dj, djIndex) => {
+      const postsPerDj = Math.ceil(24 / djsWithInstagram.length);
+      const djPosts = generateMockInstagramPosts(dj.stageName, postsPerDj);
 
-      allPosts.push({
-        id: `post_${i + 1}`,
-        caption: `Amazing ${
-          i % 3 === 0
-            ? "club night"
-            : i % 3 === 1
-            ? "wedding"
-            : "live performance"
-        }! 🎵 #djlife #music #afrobeats`,
-        mediaUrl: `https://via.placeholder.com/400x400/${Math.floor(
-          Math.random() * 0xffffff
-        )
-          .toString(16)
-          .padStart(6, "0")}/ffffff?text=Post+${i + 1}`,
-        mediaType: i % 4 === 0 ? "video" : "image",
-        likes: Math.floor(Math.random() * 1000) + 100,
-        comments: Math.floor(Math.random() * 100) + 10,
-        timestamp: new Date(Date.now() - i * 86400000).toISOString(), // Spread over days
-        permalink: `https://instagram.com/p/mock${i + 1}`,
-        dj: {
-          stageName: dj.stageName || djNames[djIndex],
-          profileImage: null,
-        },
-      });
-    }
+      // Add DJ posts to the main array
+      allPosts.push(...djPosts);
+    });
 
     // Sort by timestamp (newest first)
     allPosts.sort(

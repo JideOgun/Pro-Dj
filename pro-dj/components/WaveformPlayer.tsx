@@ -15,6 +15,7 @@ import {
   Minimize2,
 } from "lucide-react";
 import LikeButton from "./LikeButton";
+import RepostButton from "./RepostButton";
 import { useSocketContext } from "./SocketProvider";
 
 interface WaveformPlayerProps {
@@ -24,12 +25,16 @@ interface WaveformPlayerProps {
   duration: number | null;
   albumArtUrl?: string | null;
   mixId?: string;
+  djUserId?: string; // Add DJ user ID for repost button
   initialLiked?: boolean;
   initialLikeCount?: number;
   showLikeButton?: boolean;
+  showRepostButton?: boolean;
   className?: string;
   onShare?: () => void;
   onPlayStart?: () => void; // New prop for global audio management
+  compact?: boolean; // Compact mode for feed items
+  mini?: boolean; // Mini mode for sidebar
 }
 
 export default function WaveformPlayer({
@@ -40,11 +45,15 @@ export default function WaveformPlayer({
   albumArtUrl,
   className = "",
   mixId,
+  djUserId,
   initialLiked = false,
   initialLikeCount = 0,
   showLikeButton = false,
+  showRepostButton = false,
   onShare,
   onPlayStart,
+  compact = false,
+  mini = false,
 }: WaveformPlayerProps) {
   const { socket, isConnected, emitMixPlayed } = useSocketContext();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -406,13 +415,19 @@ export default function WaveformPlayer({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50 shadow-lg"
+          className={`bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-lg ${
+            mini ? "p-0.5" : compact ? "p-3" : "p-4"
+          }`}
         >
-          <div className="flex items-center space-x-4">
+          <div
+            className={`flex items-center ${mini ? "space-x-0" : "space-x-4"}`}
+          >
             {/* Album Art */}
             <div className="flex-shrink-0">
               <div
-                className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg`}
+                className={`${
+                  mini ? "w-6 h-6" : compact ? "w-10 h-10" : "w-12 h-12"
+                } rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg`}
               >
                 {albumArtUrl ? (
                   <img
@@ -434,12 +449,21 @@ export default function WaveformPlayer({
 
             {/* Track Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-medium truncate">{title}</h3>
-              <p className="text-gray-400 text-sm truncate">{artist}</p>
+              <div
+                className={`text-white font-medium truncate ${
+                  mini ? "text-xs" : compact ? "text-sm" : "text-base"
+                }`}
+              >
+                {title} • {artist}
+              </div>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center space-x-2">
+            <div
+              className={`flex items-center flex-shrink-0 ${
+                mini ? "space-x-0" : "space-x-2"
+              }`}
+            >
               {/* Like Button */}
               {showLikeButton && mixId && (
                 <div onClick={(e) => e.stopPropagation()}>
@@ -452,52 +476,61 @@ export default function WaveformPlayer({
                 </div>
               )}
 
-              {/* Volume Control */}
-              <div className="flex items-center space-x-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleMute();
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-full hover:bg-gray-700/50"
-                >
-                  {isMuted ? (
-                    <VolumeX className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </motion.button>
-                <div className="relative">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={isMuted ? 0 : volume}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleVolumeChange(e);
-                    }}
-                    onMouseEnter={() => setShowVolumePreview(true)}
-                    onMouseLeave={() => setShowVolumePreview(false)}
-                    className="w-16 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                  />
-                  <AnimatePresence>
-                    {showVolumePreview && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg"
-                      >
-                        {Math.round(volume * 100)}%
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+              {/* Repost Button */}
+              {showRepostButton && mixId && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <RepostButton mixId={mixId} djUserId={djUserId} size="sm" />
                 </div>
-              </div>
+              )}
+
+              {/* Volume Control */}
+              {!mini && (
+                <div className="flex items-center space-x-2">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleMute();
+                    }}
+                    className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-full hover:bg-gray-700/50"
+                  >
+                    {isMuted ? (
+                      <VolumeX className="w-4 h-4" />
+                    ) : (
+                      <Volume2 className="w-4 h-4" />
+                    )}
+                  </motion.button>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleVolumeChange(e);
+                      }}
+                      onMouseEnter={() => setShowVolumePreview(true)}
+                      onMouseLeave={() => setShowVolumePreview(false)}
+                      className="w-16 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <AnimatePresence>
+                      {showVolumePreview && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg"
+                        >
+                          {Math.round(volume * 100)}%
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
 
               {/* Play Button */}
               <motion.button
@@ -508,7 +541,9 @@ export default function WaveformPlayer({
                   togglePlay();
                 }}
                 disabled={isLoading}
-                className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg"
+                className={`${
+                  mini ? "w-4 h-4" : "w-10 h-10"
+                } bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg`}
               >
                 {isLoading ? (
                   <motion.div
@@ -518,12 +553,20 @@ export default function WaveformPlayer({
                       repeat: Infinity,
                       ease: "linear",
                     }}
-                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                    className={`${
+                      mini ? "w-1.5 h-1.5" : "w-4 h-4"
+                    } border-2 border-white border-t-transparent rounded-full`}
                   />
                 ) : isPlaying ? (
-                  <Pause className="w-4 h-4 text-white" />
+                  <Pause
+                    className={`${mini ? "w-1.5 h-1.5" : "w-4 h-4"} text-white`}
+                  />
                 ) : (
-                  <Play className="w-4 h-4 text-white ml-0.5" />
+                  <Play
+                    className={`${
+                      mini ? "w-1.5 h-1.5" : "w-4 h-4"
+                    } text-white ${mini ? "" : "ml-0.5"}`}
+                  />
                 )}
               </motion.button>
             </div>

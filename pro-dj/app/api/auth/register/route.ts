@@ -7,6 +7,7 @@ const registerSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["CLIENT", "DJ"]).default("CLIENT"),
 });
 
 export async function POST(req: Request) {
@@ -44,13 +45,13 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Create user (defaults to CLIENT role)
+    // Create user with selected role
     const user = await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: "CLIENT", // Default role
+        role: validatedData.role,
       },
     });
 

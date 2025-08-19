@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 interface BookingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export default async function BookingDetailPage({
   }
 
   // Only allow ADMIN and DJ users to access booking details
-  if (session.user.role !== "ADMIN" && session.user.role !== "DJ") {
+  if (!hasAdminPrivileges(session.user) && session.user.role !== "DJ") {
     redirect("/dashboard");
   }
 
@@ -43,7 +44,7 @@ export default async function BookingDetailPage({
   }
 
   // Check if DJ can access this booking (only if it's their booking)
-  if (session.user.role === "DJ") {
+  if (session.user.role === "DJ" && !hasAdminPrivileges(session.user)) {
     // Get the DJ's profile to check if this is their booking
     const djProfile = await prisma.djProfile.findUnique({
       where: { userId: session.user.id },

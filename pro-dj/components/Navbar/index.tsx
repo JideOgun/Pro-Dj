@@ -3,17 +3,23 @@
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { Music, User } from "lucide-react";
+import { User } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProDJLogo from "@/components/ProDJLogo";
+import { hasAdminPrivileges, getEffectiveRole } from "@/lib/auth-utils";
 
 export default function Navbar() {
-  const { data: session } = useSession();
-  const role = session?.user?.role ?? "GUEST";
-  const showDashboard = role === "DJ" || role === "ADMIN" || role === "CLIENT";
+  const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
 
-  // Fetch user profile data including profile image
+  // Handle hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch user profile data including profile image and display name
   useEffect(() => {
     if (session?.user?.email) {
       fetch("/api/profile")
@@ -29,6 +35,16 @@ export default function Navbar() {
 
             if (profileImageUrl) {
               setProfileImage(profileImageUrl);
+            }
+
+            // Set display name (prioritize stage name for DJs)
+            const user = data.data;
+            if (user.role === "DJ" && user.djProfile?.stageName) {
+              setDisplayName(user.djProfile.stageName);
+            } else if (user.role === "ADMIN" && user.djProfile?.stageName) {
+              setDisplayName(user.djProfile.stageName);
+            } else {
+              setDisplayName(user.name || user.email.split("@")[0] || "");
             }
           }
         })
@@ -71,6 +87,43 @@ export default function Navbar() {
       window.removeEventListener("profile-updated", handleProfileUpdate);
     };
   }, [session?.user?.email]);
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <nav className="bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between">
+            {/* Left side - Brand */}
+            <div className="flex items-center space-x-8">
+              <Link
+                href="/"
+                className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+              >
+                <ProDJLogo variant="transparent" size="2xl" format="png" />
+                <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                  Pro-DJ
+                </span>
+              </Link>
+            </div>
+            {/* Right side - Loading state */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-gray-700 animate-pulse rounded-lg px-4 py-2 w-32 h-10"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  const effectiveRole = session?.user
+    ? getEffectiveRole(session.user)
+    : "GUEST";
+  const showDashboard =
+    session?.user &&
+    (effectiveRole === "DJ" ||
+      effectiveRole === "ADMIN" ||
+      effectiveRole === "CLIENT");
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -115,6 +168,13 @@ export default function Navbar() {
               className="text-gray-300 hover:text-white transition-colors font-medium"
             >
               Mixes
+            </Link>
+
+            <Link
+              href="/feed"
+              className="text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              Feed
             </Link>
 
             <Link
@@ -186,27 +246,19 @@ export default function Navbar() {
 
                   <div className="text-right">
                     <div className="text-sm text-white font-medium truncate max-w-32 group-hover:text-violet-300 transition-colors">
-                      {session.user.name || session.user.email}
+                      {displayName || session.user.name || session.user.email}
                     </div>
                   </div>
                   <div
                     className={`text-xs px-2 py-1 rounded-full border ${getRoleColor(
-                      role
+                      effectiveRole
                     )} font-medium group-hover:scale-105 transition-transform`}
                   >
-                    {role}
+                    {effectiveRole}
                   </div>
                 </Link>
 
-                {/* Become DJ button for clients */}
-                {session.user.role === "CLIENT" && (
-                  <Link
-                    href="/dj/register"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Become a DJ
-                  </Link>
-                )}
+                {/* Role-specific actions could be added here in the future */}
 
                 {/* Sign out */}
                 <button

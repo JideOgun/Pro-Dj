@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { hasAdminPrivileges } from "@/lib/auth-utils";
 
 export default async function AdminClientsPage() {
   const session = await getServerSession(authOptions);
@@ -12,7 +13,7 @@ export default async function AdminClientsPage() {
     redirect("/auth");
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (!hasAdminPrivileges(session.user)) {
     redirect("/dashboard");
   }
 
