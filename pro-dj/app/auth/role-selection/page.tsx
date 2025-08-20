@@ -25,33 +25,20 @@ export default function RoleSelectionPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/auth/update-role", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
+      // Store the selected role in sessionStorage for terms agreement
+      sessionStorage.setItem(
+        "pendingGoogleRegistration",
+        JSON.stringify({
+          role,
+          email: session.user.email,
+          name: session.user.name,
+        })
+      );
 
-      if (res.ok) {
-        // Update the session with the new role
-        await update({ role });
-
-        toast.success(
-          `Welcome to Pro-DJ as a ${role === "DJ" ? "DJ" : "Client"}!`
-        );
-
-        // Redirect based on role
-        if (role === "DJ") {
-          router.push("/dj/register");
-        } else {
-          router.push("/dashboard");
-        }
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to update role");
-      }
+      // Redirect to terms agreement page
+      router.push("/auth/terms-agreement");
     } catch (error) {
       toast.error("Something went wrong");
-    } finally {
       setIsSubmitting(false);
     }
   };

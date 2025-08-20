@@ -7,6 +7,7 @@ import { User } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProDJLogo from "@/components/ProDJLogo";
 import { hasAdminPrivileges, getEffectiveRole } from "@/lib/auth-utils";
+import HamburgerMenu from "@/components/HamburgerMenu";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -21,7 +22,7 @@ export default function Navbar() {
 
   // Fetch user profile data including profile image and display name
   useEffect(() => {
-    if (session?.user?.email) {
+    if (session?.user?.email && status === "authenticated") {
       fetch("/api/profile")
         .then((res) => res.json())
         .then((data) => {
@@ -51,8 +52,12 @@ export default function Navbar() {
         .catch((error) => {
           console.error("Error fetching profile:", error);
         });
+    } else {
+      // Clear local state when session is cleared or not authenticated
+      setProfileImage(null);
+      setDisplayName("");
     }
-  }, [session?.user?.email]);
+  }, [session?.user?.email, status]);
 
   // Listen for profile updates (when user uploads new profile picture)
   useEffect(() => {
@@ -203,7 +208,9 @@ export default function Navbar() {
 
           {/* Right side - Auth & Actions */}
           <div className="flex items-center space-x-3">
-            {!session?.user ? (
+            {status === "loading" ? (
+              <div className="w-8 h-8 bg-gray-700 rounded-lg animate-pulse"></div>
+            ) : !session?.user ? (
               <Link
                 href="/auth"
                 className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -262,13 +269,8 @@ export default function Navbar() {
 
                 {/* Role-specific actions could be added here in the future */}
 
-                {/* Sign out */}
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Sign out
-                </button>
+                {/* Hamburger Menu */}
+                <HamburgerMenu />
               </div>
             )}
           </div>

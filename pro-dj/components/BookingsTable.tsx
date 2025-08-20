@@ -231,9 +231,6 @@ function BookingsTableContent({
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-24">
                 Event
               </th>
-              <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-20">
-                Package
-              </th>
               {userRole !== "CLIENT" && (
                 <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-32">
                   Client
@@ -482,12 +479,19 @@ function BookingsTableContent({
                 <td className="px-2 py-2">
                   <div className="space-y-1">
                     <span
-                      className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
-                        b.status
-                      )}`}
+                      className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${
+                        userRole === "CLIENT"
+                          ? getClientPaymentStatusColor(b.status, b.refundId)
+                          : getStatusColor(b.status)
+                      }`}
                     >
+                      <span>
+                        {userRole === "CLIENT"
+                          ? getClientPaymentStatusIcon(b.status, b.refundId)
+                          : getStatusIcon(b.status)}
+                      </span>
                       {userRole === "CLIENT"
-                        ? getPaymentStatusText(b.status)
+                        ? getClientPaymentStatusText(b.status, b.refundId)
                         : getStatusText(b.status)}
                     </span>
                     {b.status === "PENDING" && b.createdAt && (
@@ -512,11 +516,14 @@ function BookingsTableContent({
                   <td className="px-2 py-2">
                     <span
                       className={`inline-flex items-center gap-1 px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getDjPaymentStatusColor(
-                        b.isPaid || false
+                        b.isPaid || false,
+                        b.refundId
                       )}`}
                     >
-                      <span>{getDjPaymentStatusIcon(b.isPaid || false)}</span>
-                      {getDjPaymentStatusText(b.isPaid || false)}
+                      <span>
+                        {getDjPaymentStatusIcon(b.isPaid || false, b.refundId)}
+                      </span>
+                      {getDjPaymentStatusText(b.isPaid || false, b.refundId)}
                     </span>
                   </td>
                 )}

@@ -38,9 +38,24 @@ export default async function ClientDashboardPage() {
   const bookings = await prisma.booking.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      status: true,
+      eventType: true,
+      eventDate: true,
+      startTime: true,
+      endTime: true,
+      quotedPriceCents: true,
+      checkoutSessionId: true,
+      isPaid: true,
+      paidAt: true,
+      refundId: true,
+      refundedAt: true,
+      message: true,
+      details: true,
+      createdAt: true,
       user: { select: { email: true, name: true } },
-      dj: { select: { stageName: true, genres: true } },
+      dj: { select: { stageName: true } },
     },
   });
 

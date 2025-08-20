@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause - temporarily show all active DJs
     const whereClause: any = {
-      isActive: true, // Only show active DJs
+      isAcceptingBookings: true, // Only show DJs accepting bookings
     };
 
     // TODO: Add featured filter when DJs are marked as featured

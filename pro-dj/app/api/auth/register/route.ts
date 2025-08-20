@@ -45,13 +45,19 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Create user with selected role
+    // Create user with selected role and terms agreement
     const user = await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
         role: validatedData.role,
+        agreedToTerms: true,
+        agreedToPrivacy: true,
+        termsAgreedAt: new Date(),
+        privacyAgreedAt: new Date(),
+        termsVersion: "1.0",
+        privacyVersion: "1.0",
       },
     });
 

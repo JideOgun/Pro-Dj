@@ -98,60 +98,19 @@ function AuthPageContent() {
 
       router.push(callbackUrl);
     } else {
-      // Handle registration
-      try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            email: normalizedEmail,
-            password: formData.password,
-            role: formData.role,
-          }),
-        });
+      // Store registration data in sessionStorage and redirect to terms agreement
+      sessionStorage.setItem(
+        "pendingRegistration",
+        JSON.stringify({
+          name: formData.name,
+          email: normalizedEmail,
+          password: formData.password,
+          role: formData.role,
+        })
+      );
 
-        const data = await res.json();
-
-        if (res.ok) {
-          toast.success("Account created successfully!");
-          // Auto-login after registration
-          const loginRes = await signIn("credentials", {
-            email: normalizedEmail,
-            password: formData.password,
-            redirect: false,
-          });
-
-          if (loginRes?.error) {
-            setError(
-              "Account created but login failed. Please try logging in."
-            );
-            setIsLoading(false);
-            return;
-          }
-
-          // Redirect based on role
-          if (formData.role === "DJ") {
-            router.push("/dj/register");
-          } else {
-            // Redirect clients to profile settings to complete their profile
-            router.push("/dashboard/profile");
-          }
-        } else {
-          setError(data.error || "Registration failed");
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Registration error:", error);
-        if (error instanceof TypeError && error.message.includes("fetch")) {
-          setError(
-            "Network error. Please check your connection and try again."
-          );
-        } else {
-          setError("Something went wrong. Please try again.");
-        }
-        setIsLoading(false);
-      }
+      // Redirect to terms agreement page
+      router.push("/auth/terms-agreement");
     }
   };
 

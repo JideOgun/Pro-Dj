@@ -6,11 +6,15 @@ import { X, AlertCircle } from "lucide-react";
 interface SuspensionNoticeProps {
   suspensionReason?: string | null;
   suspendedAt?: Date | null;
+  suspendedBy?: string | null;
+  currentUserId?: string | null;
 }
 
 export default function SuspensionNotice({
   suspensionReason,
   suspendedAt,
+  suspendedBy,
+  currentUserId,
 }: SuspensionNoticeProps) {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -25,9 +29,9 @@ export default function SuspensionNotice({
             <h3 className="text-red-200 font-semibold">Account Suspended</h3>
           </div>
           <p className="text-red-300 text-sm mb-2">
-            Your account has been suspended by an administrator. You can still
-            view your account information, but you cannot perform any actions
-            until your account is reactivated.
+            {suspendedBy === currentUserId
+              ? "Your account has been paused by you. You can reactivate it anytime from your account settings."
+              : "Your account has been suspended by an administrator. You can still view your account information, but you cannot perform any actions until your account is reactivated."}
           </p>
           {suspensionReason && (
             <div className="mb-2">

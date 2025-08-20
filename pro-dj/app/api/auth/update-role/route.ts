@@ -21,10 +21,18 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = updateRoleSchema.parse(body);
 
-    // Update user role
+    // Update user role and terms agreement
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { role: validatedData.role },
+      data: {
+        role: validatedData.role,
+        agreedToTerms: true,
+        agreedToPrivacy: true,
+        termsAgreedAt: new Date(),
+        privacyAgreedAt: new Date(),
+        termsVersion: "1.0",
+        privacyVersion: "1.0",
+      },
     });
 
     return NextResponse.json({

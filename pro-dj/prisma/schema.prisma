@@ -38,6 +38,14 @@ website String?
 // Social Media Links
 socialLinks Json? // {instagram, twitter, facebook, linkedin, tiktok}
 
+// Legal Agreements
+agreedToTerms Boolean @default(false)
+agreedToPrivacy Boolean @default(false)
+termsAgreedAt DateTime?
+privacyAgreedAt DateTime?
+termsVersion String? // Version of terms agreed to
+privacyVersion String? // Version of privacy policy agreed to
+
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 commentLikes CommentLike[]
@@ -374,6 +382,33 @@ clientResponse String? // client's response to recovery suggestion
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+}
+
+// Payment monitoring and analytics
+model PaymentMetric {
+id String @id @default(uuid())
+bookingId String
+type String // "PAYMENT_ATTEMPT", "REFUND", "DISPUTE", "WEBHOOK_FAILURE"
+success Boolean
+amount Int // in cents
+metadata Json? // additional data like reason, error details
+timestamp DateTime @default(now())
+
+@@index([type, timestamp])
+@@index([bookingId])
+}
+
+model PaymentAlert {
+id String @id @default(uuid())
+type String // "HIGH_PAYMENT_FAILURE_RATE", "HIGH_REFUND_RATE", etc.
+data Json // alert details
+timestamp DateTime @default(now())
+isResolved Boolean @default(false)
+resolvedAt DateTime?
+resolvedBy String? // admin who resolved it
+
+@@index([type, isResolved])
+@@index([timestamp])
 }
 
 model UserMedia {

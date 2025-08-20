@@ -43,6 +43,31 @@ export const businessConfig = {
   },
 };
 
+// Production security configuration
+export const securityConfig = {
+  // Rate limiting
+  rateLimit: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: "Too many requests from this IP, please try again later.",
+  },
+
+  // Fraud prevention
+  fraudPrevention: {
+    enableRadar: true, // Enable Stripe Radar
+    blockSuspiciousIPs: true,
+    requireBillingAddress: true,
+    requireShippingAddress: false, // Not needed for services
+  },
+
+  // Webhook security
+  webhookSecurity: {
+    verifySignature: true,
+    allowedIPs: [], // Stripe webhook IPs (optional)
+    timeout: 30000, // 30 seconds
+  },
+};
+
 // Professional error handling
 export class StripeError extends Error {
   constructor(
@@ -100,21 +125,146 @@ export const complianceConfig = {
     process.env.TERMS_OF_SERVICE_URL || "https://pro-dj.com/terms",
   privacyPolicyUrl:
     process.env.PRIVACY_POLICY_URL || "https://pro-dj.com/privacy",
+  refundPolicyUrl:
+    process.env.REFUND_POLICY_URL || "https://pro-dj.com/refund-policy",
 
   // Refund policy
   refundPolicy: {
-    allowed: true,
-    timeframe: 7, // days
-    conditions: [
-      "Cancellation must be made 48 hours before event",
-      "Partial refunds may apply",
+    timeLimit: 30, // days
+    partialRefunds: true,
+    automaticRefunds: false, // Manual review required
+    refundReasons: [
+      "requested_by_customer",
+      "duplicate",
+      "fraudulent",
+      "expired_uncaptured_charge",
     ],
   },
 
-  // Tax compliance
-  taxSettings: {
-    automaticTax: true,
-    taxBehavior: "exclusive",
-    taxCode: "txcd_99999999", // Entertainment services
+  // Tax configuration
+  taxConfig: {
+    automaticTax: {
+      enabled: true,
+      liability: "account" as const, // or "self"
+    },
+    taxBehavior: "exclusive" as const,
+    taxCode: "txcd_99999999", // General tax code
+  },
+
+  // Legal requirements
+  legalRequirements: {
+    requireTermsAcceptance: true,
+    requirePrivacyPolicy: true,
+    requireRefundPolicy: true,
+    requireBusinessLicense: true,
+    requireTaxID: true,
   },
 };
+
+// Production monitoring configuration
+export const monitoringConfig = {
+  // Logging
+  logging: {
+    level: process.env.NODE_ENV === "production" ? "info" : "debug",
+    includeSensitiveData: false,
+    logWebhooks: true,
+    logPayments: true,
+    logRefunds: true,
+    logDisputes: true,
+  },
+
+  // Alerts
+  alerts: {
+    paymentFailures: true,
+    webhookFailures: true,
+    refundRequests: true,
+    disputeAlerts: true,
+    highChargebackRate: true,
+  },
+
+  // Metrics
+  metrics: {
+    trackSuccessRate: true,
+    trackConversionRate: true,
+    trackAverageOrderValue: true,
+    trackRefundRate: true,
+    trackChargebackRate: true,
+  },
+};
+
+// Payment method configuration
+export const paymentMethodConfig = {
+  // Supported payment methods
+  supportedMethods: [
+    "card",
+    "link", // Stripe Link
+    "apple_pay",
+    "google_pay",
+  ],
+
+  // Card configuration
+  cardConfig: {
+    requireCVC: true,
+    requirePostalCode: true,
+    allowSaveCard: true,
+    saveCardDefault: false,
+  },
+
+  // Currency configuration
+  currency: "usd",
+  supportedCurrencies: ["usd", "cad", "eur", "gbp"],
+
+  // Payment flow configuration
+  paymentFlow: {
+    mode: "payment" as const, // or "subscription"
+    captureMethod: "automatic" as const,
+    confirmationMethod: "automatic" as const,
+    setupFutureUsage: "off_session" as const,
+  },
+};
+
+// Validation utilities
+export function validateStripeEvent(event: Stripe.Event): boolean {
+  // Validate event structure
+  if (!event.id || !event.type || !event.data) {
+    return false;
+  }
+
+  // Validate event type
+  const validEventTypes = [
+    "checkout.session.completed",
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
+    "refund.created",
+    "charge.dispute.created",
+    "charge.dispute.closed",
+  ];
+
+  return validEventTypes.includes(event.type);
+}
+
+export function validatePaymentAmount(amount: number): boolean {
+  // Minimum payment amount (in cents)
+  const minAmount = 100; // $1.00
+  const maxAmount = 1000000; // $10,000.00
+
+  return amount >= minAmount && amount <= maxAmount;
+}
+
+export function sanitizeStripeData(data: any): any {
+  // Remove sensitive data for logging
+  const sanitized = { ...data };
+
+  if (sanitized.card) {
+    delete sanitized.card.number;
+    delete sanitized.card.cvc;
+  }
+
+  if (sanitized.billing_details) {
+    delete sanitized.billing_details.name;
+    delete sanitized.billing_details.email;
+    delete sanitized.billing_details.phone;
+  }
+
+  return sanitized;
+}

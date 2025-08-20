@@ -32,6 +32,8 @@ export default async function DashboardLayout({
         <SuspensionNotice
           suspensionReason={session.user.suspensionReason}
           suspendedAt={session.user.suspendedAt}
+          suspendedBy={session.user.suspendedBy}
+          currentUserId={session.user.id}
         />
       )}
       {children}
