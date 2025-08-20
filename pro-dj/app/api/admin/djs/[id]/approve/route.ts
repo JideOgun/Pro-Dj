@@ -63,7 +63,7 @@ export async function POST(
     await prisma.djProfile.update({
       where: { userId: id },
       data: {
-        isVerified: true,
+        isApprovedByAdmin: true,
       },
     });
 

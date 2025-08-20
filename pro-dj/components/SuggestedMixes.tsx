@@ -81,8 +81,6 @@ export default function SuggestedMixes({
       liked: boolean;
       likeCount: number;
     }) => {
-      console.log("📡 SuggestedMixes received mix-like-updated:", data);
-
       // Update the mix in our local state
       setSuggestedMixes((prevMixes) =>
         prevMixes.map((mix) =>

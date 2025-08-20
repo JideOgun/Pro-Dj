@@ -124,9 +124,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (session.user.role !== "DJ") {
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can add videos" },
+        { ok: false, error: "Only DJs and Admins can add videos" },
         { status: 403 }
       );
     }

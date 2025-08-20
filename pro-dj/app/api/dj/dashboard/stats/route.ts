@@ -14,9 +14,9 @@ export async function GET(req: Request) {
       );
     }
 
-    if (session.user.role !== "DJ") {
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can access dashboard stats" },
+        { ok: false, error: "Only DJs and Admins can access dashboard stats" },
         { status: 403 }
       );
     }
@@ -109,8 +109,10 @@ export async function GET(req: Request) {
         genres: djProfile.genres,
         experience: djProfile.experience,
         location: djProfile.location,
-        hourlyRate: djProfile.hourlyRate,
-        isVerified: djProfile.isVerified,
+        basePriceCents: djProfile.basePriceCents,
+        eventsOffered: djProfile.eventsOffered,
+        isAcceptingBookings: djProfile.isAcceptingBookings,
+        isApprovedByAdmin: djProfile.isApprovedByAdmin,
         isFeatured: djProfile.isFeatured,
       },
     });

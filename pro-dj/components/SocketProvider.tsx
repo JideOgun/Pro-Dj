@@ -104,7 +104,6 @@ export function SocketProvider({
 
     // Connection events
     newSocket.on("connect", () => {
-      console.log("🔗 Socket connected:", newSocket.id);
       setIsConnected(true);
 
       // Join user-specific room
@@ -112,7 +111,6 @@ export function SocketProvider({
     });
 
     newSocket.on("disconnect", () => {
-      console.log("🔌 Socket disconnected");
       setIsConnected(false);
     });
 
@@ -151,19 +149,8 @@ export function SocketProvider({
     liked: boolean,
     likeCount: number
   ) => {
-    console.log("🔌 SocketProvider emitMixLiked called:", {
-      socket: !!socket,
-      isConnected,
-      mixId,
-      userId,
-      liked,
-      likeCount,
-    });
     if (socket && isConnected) {
-      console.log("📡 Emitting mix-liked event via socket");
       socket.emit("mix-liked", { mixId, userId, liked, likeCount });
-    } else {
-      console.log("❌ Cannot emit mix-liked - socket not connected");
     }
   };
 

@@ -22,9 +22,9 @@ export async function POST(req: Request) {
     }
 
     // Only DJs can upload mixes
-    if (session.user.role !== "DJ") {
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can upload mixes" },
+        { ok: false, error: "Only DJs and Admins can upload mixes" },
         { status: 403 }
       );
     }
@@ -107,4 +107,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

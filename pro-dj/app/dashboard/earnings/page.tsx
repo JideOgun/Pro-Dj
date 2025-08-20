@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import EarningsCharts from "@/components/EarningsCharts";
+import PaymentAnalytics from "@/components/PaymentAnalytics";
 import {
   ArrowLeft,
   TrendingUp,
@@ -19,35 +20,46 @@ export default async function EarningsPage() {
     redirect("/auth");
   }
 
-  if (session.user.role !== "DJ") {
+  if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
-  // Get DJ profile
-  const djProfile = await prisma.djProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  // Get DJ profile (only for DJ users)
+  let djProfile = null;
+  if (session.user.role === "DJ") {
+    djProfile = await prisma.djProfile.findUnique({
+      where: { userId: session.user.id },
+    });
 
-  if (!djProfile) {
-    redirect("/dj/register");
+    if (!djProfile) {
+      redirect("/dj/register");
+    }
   }
+
+  // Build where clause for bookings
+  const bookingWhereClause =
+    session.user.role === "DJ" ? { djId: djProfile!.id } : {}; // For admins, get all bookings
 
   // Get all confirmed bookings for earnings calculations
   const confirmedBookings = await prisma.booking.findMany({
     where: {
-      djId: djProfile.id,
+      ...bookingWhereClause,
       status: "CONFIRMED",
     },
     orderBy: { eventDate: "asc" },
     include: {
       user: { select: { name: true, email: true } },
+      dj: { select: { stageName: true } },
     },
   });
 
   // Get all bookings for trends
   const allBookings = await prisma.booking.findMany({
-    where: { djId: djProfile.id },
+    where: bookingWhereClause,
     orderBy: { createdAt: "asc" },
+    include: {
+      dj: { select: { stageName: true } },
+    },
   });
 
   // Calculate earnings statistics
@@ -138,6 +150,7 @@ export default async function EarningsPage() {
       eventDate: booking.eventDate,
       eventType: booking.eventType,
       clientName: booking.user.name || booking.user.email,
+      djName: booking.dj?.stageName || "Unknown DJ",
       amount: booking.quotedPriceCents ? booking.quotedPriceCents / 100 : 0,
       duration: Math.round(
         (new Date(booking.endTime).getTime() -
@@ -256,6 +269,11 @@ export default async function EarningsPage() {
           </div>
         </div>
 
+        {/* Payment Analytics Section */}
+        <div className="mb-8">
+          <PaymentAnalytics />
+        </div>
+
         {/* Recent Earnings Table */}
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h3 className="text-xl font-semibold mb-4 text-green-400">
@@ -276,6 +294,9 @@ export default async function EarningsPage() {
                   <tr className="text-left border-b border-gray-700">
                     <th className="p-3 text-gray-300">Event Date</th>
                     <th className="p-3 text-gray-300">Event Type</th>
+                    {session.user.role === "ADMIN" && (
+                      <th className="p-3 text-gray-300">DJ</th>
+                    )}
                     <th className="p-3 text-gray-300">Client</th>
                     <th className="p-3 text-gray-300">Duration</th>
                     <th className="p-3 text-gray-300">Amount</th>
@@ -300,6 +321,13 @@ export default async function EarningsPage() {
                         </div>
                       </td>
                       <td className="p-3">{earning.eventType}</td>
+                      {session.user.role === "ADMIN" && (
+                        <td className="p-3">
+                          <div className="font-medium text-blue-300">
+                            {earning.djName}
+                          </div>
+                        </td>
+                      )}
                       <td className="p-3">
                         <div className="font-medium text-violet-300">
                           {earning.clientName}

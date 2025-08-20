@@ -10,7 +10,15 @@ import ReactCrop, { Crop, PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
 // Type assertion to fix TypeScript issue
-const ReactCropComponent = ReactCrop as any;
+const ReactCropComponent = ReactCrop as unknown as React.ComponentType<{
+  crop: Crop;
+  onChange: (crop: Crop) => void;
+  onComplete: (crop: PixelCrop) => void;
+  aspect?: number;
+  circularCrop?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}>;
 
 export default function DjRegisterPage() {
   const { data: session } = useSession();
@@ -44,6 +52,7 @@ export default function DjRegisterPage() {
     location: "",
     travelRadius: 50,
     basePriceCents: 0,
+    eventsOffered: [] as string[],
     profileImage: "",
     portfolio: [] as string[],
     customGenres: "",
@@ -111,6 +120,14 @@ export default function DjRegisterPage() {
     "Igbo",
     "Hausa",
     "Other",
+  ];
+
+  const availableEventTypes = [
+    "Wedding",
+    "Club",
+    "Corporate",
+    "Birthday",
+    "Private Party",
   ];
 
   const majorAmericanCities = [
@@ -397,7 +414,6 @@ export default function DjRegisterPage() {
         // Second try: Parse display_name if direct fields failed
         if (city === "Unknown City" && data.display_name) {
           const displayParts = data.display_name.split(", ");
-          console.log("Display parts:", displayParts);
 
           // Look for the first part that looks like a city
           for (const part of displayParts) {
@@ -416,7 +432,6 @@ export default function DjRegisterPage() {
             ) {
               // Not state abbreviations
               city = cleanPart;
-              console.log("Found city from display_name:", city);
               break;
             }
           }
@@ -425,7 +440,6 @@ export default function DjRegisterPage() {
         // Third try: Use county as last resort if nothing else found
         if (city === "Unknown City" && address.county) {
           city = address.county;
-          console.log("Using county as city:", city);
         }
 
         // Get state
@@ -570,7 +584,6 @@ export default function DjRegisterPage() {
       const result = await response.json();
 
       if (result.ok) {
-        console.log("Profile image upload result:", result.data);
         setFormData((prev) => ({
           ...prev,
           profileImage: result.data.url,
@@ -646,6 +659,10 @@ export default function DjRegisterPage() {
       errorFields.push("Base Rate");
     }
 
+    if (formData.eventsOffered.length === 0) {
+      errorFields.push("Events Offered");
+    }
+
     // Show comprehensive error message if any fields are missing
     if (errorFields.length > 0) {
       const errorMessage = `Please fill in the following required fields: ${errorFields.join(
@@ -658,20 +675,13 @@ export default function DjRegisterPage() {
     setIsSubmitting(true);
 
     try {
-      console.log(
-        "Submitting DJ registration data:",
-        JSON.stringify(formData, null, 2)
-      );
-
       const response = await fetch("/api/dj/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      console.log("Response status:", response.status);
       const data = await response.json();
-      console.log("Response data:", data);
 
       if (response.ok) {
         toast.success(
@@ -1089,21 +1099,82 @@ export default function DjRegisterPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Base Hourly Rate (USD)
               </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.basePriceCents / 100}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    basePriceCents:
-                      Math.round(parseFloat(e.target.value) * 100) || 0,
-                  })
-                }
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                placeholder="0.00"
-              />
+              <div className="relative">
+                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={(formData.basePriceCents / 100).toFixed(2)}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    setFormData({
+                      ...formData,
+                      basePriceCents: Math.round(value * 100),
+                    });
+                  }}
+                  onBlur={(e) => {
+                    // Format to 2 decimal places on blur
+                    const value = parseFloat(e.target.value) || 0;
+                    e.target.value = value.toFixed(2);
+                  }}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Your base hourly rate for events. You can set different rates
+                for specific event types later.
+              </p>
+            </div>
+
+            {/* Events Offered */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Events Offered <span className="text-red-400">*</span>
+              </label>
+              <p className="text-sm text-gray-400 mb-3">
+                Select the types of events you offer. You can set specific
+                pricing for each event type later.
+              </p>
+              <div className="space-y-2">
+                {availableEventTypes.map((eventType) => (
+                  <label
+                    key={eventType}
+                    className="flex items-center space-x-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.eventsOffered.includes(eventType)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            eventsOffered: [
+                              ...formData.eventsOffered,
+                              eventType,
+                            ],
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            eventsOffered: formData.eventsOffered.filter(
+                              (event) => event !== eventType
+                            ),
+                          });
+                        }
+                      }}
+                      className="w-4 h-4 text-violet-600 bg-gray-700 border-gray-600 rounded focus:ring-violet-500 focus:ring-2"
+                    />
+                    <span className="text-white">{eventType}</span>
+                  </label>
+                ))}
+              </div>
+              {formData.eventsOffered.length === 0 && (
+                <p className="text-red-400 text-sm mt-1">
+                  Please select at least one event type
+                </p>
+              )}
             </div>
 
             {/* Availability */}

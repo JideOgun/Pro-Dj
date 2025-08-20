@@ -76,3 +76,92 @@ export const getPaymentStatusIcon = (status: string) => {
       return "❌"; // Red X for NOT PAID
   }
 };
+
+// Payment status utilities for DJ view (based on isPaid field and refund status)
+export const getDjPaymentStatusText = (
+  isPaid: boolean,
+  refundId?: string | null
+) => {
+  if (refundId) return "REFUNDED";
+  return isPaid ? "PAID" : "NOT PAID";
+};
+
+export const getDjPaymentStatusColor = (
+  isPaid: boolean,
+  refundId?: string | null
+) => {
+  if (refundId) return "bg-orange-900/40 text-orange-200 border-orange-700/30";
+  return isPaid
+    ? "bg-green-900/40 text-green-200 border-green-700/30"
+    : "bg-red-900/40 text-red-200 border-red-700/30";
+};
+
+export const getDjPaymentStatusIcon = (
+  isPaid: boolean,
+  refundId?: string | null
+) => {
+  if (refundId) return "🔄";
+  return isPaid ? "✅" : "❌";
+};
+
+// Client payment status utilities (for refunded bookings)
+export const getClientPaymentStatusText = (
+  status: string,
+  refundId?: string | null
+) => {
+  if (refundId) return "PAYMENT REFUNDED";
+  switch (status) {
+    case "PENDING":
+      return "NOT PAID";
+    case "ACCEPTED":
+      return "NOT PAID";
+    case "CONFIRMED":
+      return "PAID";
+    case "DECLINED":
+      return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
+    default:
+      return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
+  }
+};
+
+export const getClientPaymentStatusColor = (
+  status: string,
+  refundId?: string | null
+) => {
+  if (refundId) return "bg-orange-900/40 text-orange-200 border-orange-700/30";
+  switch (status) {
+    case "PENDING":
+      return "bg-red-900/40 text-red-200 border-red-700/30";
+    case "ACCEPTED":
+      return "bg-red-900/40 text-red-200 border-red-700/30";
+    case "CONFIRMED":
+      return "bg-green-900/40 text-green-200 border-green-700/30";
+    case "DECLINED":
+      return refundId
+        ? "bg-orange-900/40 text-orange-200 border-orange-700/30"
+        : "bg-red-900/40 text-red-200 border-red-700/30";
+    default:
+      return refundId
+        ? "bg-orange-900/40 text-orange-200 border-orange-700/30"
+        : "bg-red-900/40 text-red-200 border-red-700/30";
+  }
+};
+
+export const getClientPaymentStatusIcon = (
+  status: string,
+  refundId?: string | null
+) => {
+  if (refundId) return "🔄";
+  switch (status) {
+    case "PENDING":
+      return "❌";
+    case "ACCEPTED":
+      return "❌";
+    case "CONFIRMED":
+      return "✅";
+    case "DECLINED":
+      return refundId ? "🔄" : "❌";
+    default:
+      return refundId ? "🔄" : "❌";
+  }
+};

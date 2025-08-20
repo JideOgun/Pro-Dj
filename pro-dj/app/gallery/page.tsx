@@ -183,14 +183,6 @@ export default function GalleryPage() {
     const currentPosition = currentSlide[djId] || 0;
     const maxScroll = Math.max(0, dj.events.length - visibleEvents);
 
-    console.log(
-      `DJ ${dj.stageName}: events=${
-        dj.events.length
-      }, current=${currentPosition}, maxScroll=${maxScroll}, hasMore=${hasMoreEvents}, canScroll=${
-        currentPosition < maxScroll
-      }`
-    );
-
     return hasMoreEvents && currentPosition < maxScroll;
   };
 

@@ -160,10 +160,8 @@ export default async function BookingDetailPage({
                 </p>
               </div>
               <div>
-                <label className="text-sm text-gray-400">Package</label>
-                <p className="text-lg font-medium">
-                  {booking.packageKey || "Not specified"}
-                </p>
+                <label className="text-sm text-gray-400">Event Type</label>
+                <p className="text-lg font-medium">{booking.eventType}</p>
               </div>
               <div>
                 <label className="text-sm text-gray-400">Message</label>

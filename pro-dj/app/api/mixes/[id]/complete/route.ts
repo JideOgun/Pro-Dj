@@ -19,10 +19,10 @@ export async function POST(
       );
     }
 
-    // Only DJs can complete uploads
-    if (session.user.role !== "DJ") {
+    // Only DJs and Admins can complete uploads
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can complete uploads" },
+        { ok: false, error: "Only DJs and Admins can complete uploads" },
         { status: 403 }
       );
     }

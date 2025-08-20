@@ -14,9 +14,11 @@ import {
   MapPin,
   Award,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import SocialMediaManager from "@/components/SocialMediaManager";
 import Image from "next/image";
+import toast from "react-hot-toast";
 
 interface DashboardStats {
   totalMixes: number;
@@ -36,8 +38,9 @@ interface DJProfile {
   experience: string;
   location: string;
   hourlyRate: number;
-  isVerified: boolean;
+  isApprovedByAdmin: boolean;
   isFeatured: boolean;
+  isAcceptingBookings: boolean;
 }
 
 interface SocialLinks {
@@ -119,7 +122,7 @@ export default function DjDashboard() {
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
         {/* Pending Approval Banner */}
-        {profile && !profile.isVerified && (
+        {profile && !profile.isApprovedByAdmin && (
           <div className="mb-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
             <div className="flex items-center space-x-3">
               <AlertTriangle className="w-6 h-6 text-yellow-400" />
@@ -158,7 +161,7 @@ export default function DjDashboard() {
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-3xl font-bold">{getDisplayName()}</h1>
-                {profile?.isVerified && (
+                {profile?.isApprovedByAdmin && (
                   <CheckCircle
                     className="w-6 h-6 text-blue-500"
                     title="Verified DJ"
@@ -198,6 +201,83 @@ export default function DjDashboard() {
                   <span>${profile.hourlyRate}/hour</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Booking Availability Toggle */}
+          {profile && (
+            <div className="bg-gray-800 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-1">
+                    Booking Availability
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    {profile.isAcceptingBookings
+                      ? "You are currently accepting new booking requests"
+                      : "You are currently not accepting new booking requests"}
+                  </p>
+                  {/* Warning about existing bookings - only show when toggle is OFF */}
+                  {stats.totalBookings > 0 && !profile.isAcceptingBookings && (
+                    <div className="mt-2 flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-yellow-200 text-xs">
+                        <strong>Note:</strong> You still need to fulfill your
+                        existing bookings regardless of this setting. This only
+                        affects new booking requests.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/dj/profile", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          isAcceptingBookings: !profile.isAcceptingBookings,
+                        }),
+                      });
+
+                      if (response.ok) {
+                        // Update the profile state dynamically
+                        setProfile((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                isAcceptingBookings: !prev.isAcceptingBookings,
+                              }
+                            : null
+                        );
+
+                        toast.success(
+                          `Booking availability ${
+                            !profile.isAcceptingBookings
+                              ? "enabled"
+                              : "disabled"
+                          }`
+                        );
+                      } else {
+                        toast.error("Failed to update availability");
+                      }
+                    } catch (error) {
+                      toast.error("Failed to update availability");
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    profile.isAcceptingBookings ? "bg-green-600" : "bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      profile.isAcceptingBookings
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
 
@@ -383,6 +463,13 @@ export default function DjDashboard() {
             >
               <Users className="w-6 h-6 mr-3 text-orange-500" />
               <span>Profile</span>
+            </a>
+            <a
+              href="/dashboard/dj/pricing"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <DollarSign className="w-6 h-6 mr-3 text-green-500" />
+              <span>Pricing & Add-ons</span>
             </a>
           </div>
         </motion.div>

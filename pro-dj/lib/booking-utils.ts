@@ -156,8 +156,8 @@ export async function getAvailableDjs(
 > {
   const allDjs = await prisma.djProfile.findMany({
     where: {
-      isActive: true,
-      isVerified: true, // Only show verified DJs
+      isAcceptingBookings: true,
+      isApprovedByAdmin: true, // Only show admin-approved DJs
       user: {
         status: "ACTIVE", // Only show active users
       },

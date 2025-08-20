@@ -2,8 +2,9 @@
 
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Suspense } from "react";
 
-export default function DebugInfo() {
+function DebugInfoContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
 
@@ -20,5 +21,15 @@ export default function DebugInfo() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DebugInfo() {
+  return (
+    <Suspense
+      fallback={<div className="text-red-300">Loading debug info...</div>}
+    >
+      <DebugInfoContent />
+    </Suspense>
   );
 }

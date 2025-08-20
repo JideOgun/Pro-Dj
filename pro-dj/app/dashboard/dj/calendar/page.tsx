@@ -12,22 +12,29 @@ export default async function DjCalendarPage() {
     redirect("/auth");
   }
 
-  if (session.user.role !== "DJ") {
+  if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
-  // Get DJ profile
-  const djProfile = await prisma.djProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  // Get DJ profile (only for DJ users)
+  let djProfile = null;
+  if (session.user.role === "DJ") {
+    djProfile = await prisma.djProfile.findUnique({
+      where: { userId: session.user.id },
+    });
 
-  if (!djProfile) {
-    redirect("/dj/register");
+    if (!djProfile) {
+      redirect("/dj/register");
+    }
   }
 
-  // Get all bookings for this DJ
+  // Build where clause for bookings
+  const bookingWhereClause =
+    session.user.role === "DJ" ? { djId: djProfile!.id } : {}; // For admins, get all bookings
+
+  // Get all bookings
   const bookings = await prisma.booking.findMany({
-    where: { djId: djProfile.id },
+    where: bookingWhereClause,
     include: {
       user: { select: { name: true, email: true } },
       dj: { select: { stageName: true } },
@@ -43,7 +50,9 @@ export default async function DjCalendarPage() {
             <div>
               <h1 className="text-3xl font-bold mb-2">📅 DJ Calendar</h1>
               <p className="text-gray-300">
-                View and manage all your bookings - {djProfile.stageName}
+                {session.user.role === "ADMIN"
+                  ? "View and manage all DJ bookings"
+                  : `View and manage all your bookings - ${djProfile?.stageName}`}
               </p>
             </div>
             <Link

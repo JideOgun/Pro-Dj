@@ -19,10 +19,10 @@ export async function POST(
       );
     }
 
-    // Only DJs can update progress
-    if (session.user.role !== "DJ") {
+    // Only DJs and Admins can update progress
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can update upload progress" },
+        { ok: false, error: "Only DJs and Admins can update upload progress" },
         { status: 403 }
       );
     }

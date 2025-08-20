@@ -93,7 +93,6 @@ export default function EventGalleryPage() {
   const fetchEventPhotos = async () => {
     try {
       setLoading(true);
-      console.log("Looking for event:", eventName);
 
       // Use the direct event API endpoint
       const response = await fetch(

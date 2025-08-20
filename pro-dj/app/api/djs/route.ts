@@ -17,11 +17,13 @@ export async function GET(req: Request) {
     // Build where clause
     const where: any = {
       user: {
-        role: "DJ",
+        role: {
+          in: ["DJ", "ADMIN"], // Include both DJs and admins who are also DJs
+        },
         status: "ACTIVE",
       },
-      isVerified: true,
-      isActive: true,
+      isApprovedByAdmin: true,
+      isAcceptingBookings: true,
     };
 
     if (search) {
@@ -113,6 +115,7 @@ export async function GET(req: Request) {
         genres: dj.genres || [],
         customGenres: dj.customGenres || "",
         basePriceCents: dj.basePriceCents || 0,
+        eventsOffered: dj.eventsOffered || [],
         bio: dj.bio || "",
         location: dj.user.location || dj.location || "Location not set",
         specialties: dj.specialties || "",

@@ -1,10 +1,11 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 
-export default function CancelPage() {
+function CancelPageContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bid");
 
@@ -40,5 +41,19 @@ export default function CancelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CancelPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
+    >
+      <CancelPageContent />
+    </Suspense>
   );
 }

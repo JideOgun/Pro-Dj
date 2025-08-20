@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 
@@ -23,7 +23,7 @@ interface RecoverySuggestion {
   };
 }
 
-export default function RecoveryPage() {
+function RecoveryPageContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId");
   const [recoveries, setRecoveries] = useState<RecoverySuggestion[]>([]);
@@ -269,5 +269,19 @@ export default function RecoveryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RecoveryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
+    >
+      <RecoveryPageContent />
+    </Suspense>
   );
 }

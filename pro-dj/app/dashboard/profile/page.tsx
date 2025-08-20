@@ -21,6 +21,167 @@ import {
   Music,
 } from "lucide-react";
 
+// Major US Cities for location dropdown
+const majorAmericanCities = [
+  "New York, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "Houston, TX",
+  "Phoenix, AZ",
+  "Philadelphia, PA",
+  "San Antonio, TX",
+  "San Diego, CA",
+  "Dallas, TX",
+  "San Jose, CA",
+  "Austin, TX",
+  "Jacksonville, FL",
+  "Fort Worth, TX",
+  "Columbus, OH",
+  "Charlotte, NC",
+  "San Francisco, CA",
+  "Indianapolis, IN",
+  "Seattle, WA",
+  "Denver, CO",
+  "Washington, DC",
+  "Boston, MA",
+  "El Paso, TX",
+  "Nashville, TN",
+  "Detroit, MI",
+  "Oklahoma City, OK",
+  "Portland, OR",
+  "Las Vegas, NV",
+  "Memphis, TN",
+  "Louisville, KY",
+  "Baltimore, MD",
+  "Milwaukee, WI",
+  "Albuquerque, NM",
+  "Tucson, AZ",
+  "Fresno, CA",
+  "Sacramento, CA",
+  "Mesa, AZ",
+  "Kansas City, MO",
+  "Atlanta, GA",
+  "Long Beach, CA",
+  "Colorado Springs, CO",
+  "Raleigh, NC",
+  "Miami, FL",
+  "Virginia Beach, VA",
+  "Omaha, NE",
+  "Oakland, CA",
+  "Minneapolis, MN",
+  "Tampa, FL",
+  "Tulsa, OK",
+  "Arlington, TX",
+  "New Orleans, LA",
+  "Wichita, KS",
+  "Cleveland, OH",
+  "Bakersfield, CA",
+  "Aurora, CO",
+  "Anaheim, CA",
+  "Honolulu, HI",
+  "Santa Ana, CA",
+  "Corpus Christi, TX",
+  "Riverside, CA",
+  "Lexington, KY",
+  "Stockton, CA",
+  "Henderson, NV",
+  "Saint Paul, MN",
+  "St. Louis, MO",
+  "Fort Wayne, IN",
+  "Jersey City, NJ",
+  "Chandler, AZ",
+  "Madison, WI",
+  "Lubbock, TX",
+  "Scottsdale, AZ",
+  "Reno, NV",
+  "Buffalo, NY",
+  "Gilbert, AZ",
+  "Glendale, AZ",
+  "North Las Vegas, NV",
+  "Winston-Salem, NC",
+  "Chesapeake, VA",
+  "Norfolk, VA",
+  "Fremont, CA",
+  "Garland, TX",
+  "Irving, TX",
+  "Hialeah, FL",
+  "Richmond, VA",
+  "Boise, ID",
+  "Spokane, WA",
+  "Baton Rouge, LA",
+  "Tacoma, WA",
+  "San Bernardino, CA",
+  "Grand Rapids, MI",
+  "Huntsville, AL",
+  "Salt Lake City, UT",
+  "Frisco, TX",
+  "Yonkers, NY",
+  "Amarillo, TX",
+  "Glendale, CA",
+  "McKinney, TX",
+  "Montgomery, AL",
+  "Aurora, IL",
+  "Akron, OH",
+  "Little Rock, AR",
+  "Durham, NC",
+  "Modesto, CA",
+  "Arlington, VA",
+  "Oxnard, CA",
+  "Fontana, CA",
+  "Columbus, GA",
+  "Moreno Valley, CA",
+  "Fayetteville, NC",
+  "Huntington Beach, CA",
+  "Yuma, AZ",
+  "Worcester, MA",
+  "Rochester, NY",
+  "Cape Coral, FL",
+  "Springfield, MO",
+  "Salem, OR",
+  "Corona, CA",
+  "Eugene, OR",
+  "Pasadena, CA",
+  "Joliet, IL",
+  "Pembroke Pines, FL",
+  "Paterson, NJ",
+  "Hampton, VA",
+  "Lancaster, CA",
+  "Alexandria, VA",
+  "Salinas, CA",
+  "Palmdale, CA",
+  "Naperville, IL",
+  "Pomona, CA",
+  "Hayward, CA",
+  "Lakewood, CO",
+  "Escondido, CA",
+  "Sunnyvale, CA",
+  "Torrance, CA",
+  "Sandy Springs, GA",
+  "Olathe, KS",
+  "Pasadena, TX",
+  "Columbia, SC",
+  "Surprise, AZ",
+  "Roseville, CA",
+  "Thornton, CO",
+  "McAllen, TX",
+  "Lake Forest, CA",
+  "Hollywood, FL",
+  "Denton, TX",
+  "Sterling Heights, MI",
+  "Garden Grove, CA",
+  "Cary, NC",
+  "Oceanside, CA",
+  "Elk Grove, CA",
+  "Santa Rosa, CA",
+  "Rancho Cucamonga, CA",
+  "Fort Lauderdale, FL",
+  "Peoria, AZ",
+  "Springfield, MA",
+  "Murfreesboro, TN",
+  "Temecula, CA",
+  "Lancaster, PA",
+];
+
 interface UserProfile {
   id: string;
   email: string;
@@ -81,6 +242,7 @@ export default function ProfilePage() {
   // Phone validation state
   const [phoneError, setPhoneError] = useState("");
   const [isLocating, setIsLocating] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
 
   // Image cropping state
   const [showCropModal, setShowCropModal] = useState(false);
@@ -101,6 +263,21 @@ export default function ProfilePage() {
       loadProfile();
     }
   }, [session]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".location-input-container")) {
+        setShowCityDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const loadProfile = async () => {
     try {
@@ -236,9 +413,6 @@ export default function ProfilePage() {
         const data = await response.json();
 
         // Debug: Log the available address fields
-        console.log("Nominatim response:", data);
-        console.log("Available address fields:", data.address);
-        console.log("Display name:", data.display_name);
 
         // Extract city, state, and country from the address data
         const address = data.address || {};
@@ -263,7 +437,6 @@ export default function ProfilePage() {
         // Second try: Parse display_name if direct fields failed
         if (city === "Unknown City" && data.display_name) {
           const displayParts = data.display_name.split(", ");
-          console.log("Display parts:", displayParts);
 
           // Look for the first part that looks like a city
           for (const part of displayParts) {
@@ -282,7 +455,6 @@ export default function ProfilePage() {
             ) {
               // Not state abbreviations
               city = cleanPart;
-              console.log("Found city from display_name:", city);
               break;
             }
           }
@@ -291,7 +463,6 @@ export default function ProfilePage() {
         // Third try: Use county as last resort if nothing else found
         if (city === "Unknown City" && address.county) {
           city = address.county;
-          console.log("Using county as city:", city);
         }
 
         // Get state
@@ -844,16 +1015,55 @@ export default function ProfilePage() {
                     Location <span className="text-red-400">*</span>
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) =>
-                        handleInputChange("location", e.target.value)
-                      }
-                      required
-                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                      placeholder="Enter your location or use current location"
-                    />
+                    <div className="flex-1 relative location-input-container">
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => {
+                          handleInputChange("location", e.target.value);
+                          setShowCityDropdown(true);
+                        }}
+                        onFocus={() => setShowCityDropdown(true)}
+                        required
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        placeholder="City, State or use current location"
+                      />
+
+                      {/* City Dropdown */}
+                      {showCityDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          <div className="p-2">
+                            <div className="text-xs text-gray-400 mb-2 px-2">
+                              Major US Cities:
+                            </div>
+                            {majorAmericanCities
+                              .filter(
+                                (city) =>
+                                  city
+                                    .toLowerCase()
+                                    .includes(
+                                      formData.location.toLowerCase()
+                                    ) || formData.location === ""
+                              )
+                              .slice(0, 10)
+                              .map((city, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => {
+                                    handleInputChange("location", city);
+                                    setShowCityDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded transition-colors"
+                                >
+                                  {city}
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={getCurrentLocation}
@@ -874,7 +1084,8 @@ export default function ProfilePage() {
                     </button>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    Click "Current" to automatically detect your location
+                    Choose from major US cities or click "Current" to
+                    auto-detect your location
                   </p>
                 </div>
 

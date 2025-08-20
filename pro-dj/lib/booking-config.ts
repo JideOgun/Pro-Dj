@@ -5,62 +5,94 @@ export type BookingType =
   | "Birthday"
   | "Private Party";
 
+export type AddonType =
+  | "lighting"
+  | "setup"
+  | "mc"
+  | "photography"
+  | "videography";
+
+export interface Addon {
+  key: AddonType;
+  label: string;
+  description: string;
+  priceCents: number; // Fixed price addon (not hourly)
+}
+
+export const AVAILABLE_ADDONS: Addon[] = [
+  {
+    key: "lighting",
+    label: "Professional Lighting Setup",
+    description:
+      "Advanced lighting effects, LED panels, and atmosphere lighting",
+    priceCents: 15000, // $150 flat fee
+  },
+  {
+    key: "setup",
+    label: "Premium Setup & Equipment",
+    description: "Professional-grade speakers, subwoofers, and sound system",
+    priceCents: 25000, // $250 flat fee
+  },
+  {
+    key: "mc",
+    label: "MC Services",
+    description:
+      "Professional Master of Ceremonies for announcements and crowd engagement",
+    priceCents: 50000, // $500 flat fee
+  },
+  {
+    key: "photography",
+    label: "Event Photography",
+    description: "Professional event photography coverage",
+    priceCents: 75000, // $750 flat fee
+  },
+  {
+    key: "videography",
+    label: "Event Videography",
+    description: "Professional event videography and highlights reel",
+    priceCents: 100000, // $1000 flat fee
+  },
+];
+
 export const BOOKING_CONFIG = {
   Wedding: {
-    packages: [
-      { key: "silver", label: "Silver (3 hrs + MC)", priceCents: 80000 },
-      { key: "gold", label: "Gold (5 hrs + MC + Lights)", priceCents: 120000 },
-      {
-        key: "platinum",
-        label: "Platinum (All-day, Ceremony+Reception)",
-        priceCents: 180000,
-      },
-    ],
-    extraFields: ["venueName", "guestCount"], // simple identifiers
+    extraFields: ["venueName", "guestCount"],
+    recommendedAddons: ["lighting", "setup", "mc"], // Suggested for weddings
   },
   Club: {
-    packages: [
-      { key: "2hr", label: "2 hours", priceCents: 30000 },
-      { key: "3hr", label: "3 hours", priceCents: 40000 },
-      { key: "4hr", label: "4 hours", priceCents: 50000 },
-    ],
     extraFields: ["clubName"],
+    recommendedAddons: ["setup"], // Clubs often need premium equipment
   },
   Corporate: {
-    packages: [
-      { key: "halfday", label: "Half-day (4 hrs)", priceCents: 90000 },
-      { key: "fullday", label: "Full-day (8 hrs)", priceCents: 150000 },
-    ],
     extraFields: ["companyName"],
+    recommendedAddons: ["setup", "mc"], // Corporate events often need MC
   },
   Birthday: {
-    packages: [
-      {
-        key: "birthday_basic",
-        label: "Basic Birthday Package (2 hours)",
-        priceCents: 20000,
-      },
-      {
-        key: "birthday_premium",
-        label: "Premium Birthday Package (4 hours, lighting)",
-        priceCents: 40000,
-      },
-    ],
     extraFields: ["age"],
+    recommendedAddons: ["lighting"], // Lighting adds to party atmosphere
   },
   "Private Party": {
-    packages: [
-      {
-        key: "private_basic",
-        label: "Basic Private Party (3 hours)",
-        priceCents: 50000,
-      },
-      {
-        key: "private_vip",
-        label: "VIP Private Party (5 hours, lighting + MC)",
-        priceCents: 50000,
-      },
-    ],
     extraFields: [],
+    recommendedAddons: ["lighting", "setup"], // Depends on venue
   },
 } as const;
+
+// Helper function to get addon by key
+export const getAddonByKey = (key: AddonType): Addon | undefined => {
+  return AVAILABLE_ADDONS.find((addon) => addon.key === key);
+};
+
+// Helper function to calculate total price
+export const calculateTotalPrice = (
+  djHourlyRateCents: number,
+  durationHours: number,
+  selectedAddons: AddonType[]
+): number => {
+  const basePrice = djHourlyRateCents * durationHours;
+  const addonPrice = selectedAddons.reduce((total, addonKey) => {
+    const addon = getAddonByKey(addonKey);
+    return total + (addon?.priceCents || 0);
+  }, 0);
+
+  return basePrice + addonPrice;
+};

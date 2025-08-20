@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import Actions from "../app/dashboard/bookings/row-actions";
 import { SocketProvider, useSocketContext } from "./SocketProvider";
 import SuspendedUserGuard from "./SuspendedUserGuard";
@@ -12,6 +11,12 @@ import {
   getPaymentStatusText,
   getStatusIcon,
   getPaymentStatusIcon,
+  getDjPaymentStatusText,
+  getDjPaymentStatusColor,
+  getDjPaymentStatusIcon,
+  getClientPaymentStatusText,
+  getClientPaymentStatusColor,
+  getClientPaymentStatusIcon,
 } from "@/lib/status-utils";
 
 interface Booking {
@@ -21,9 +26,20 @@ interface Booking {
   eventDate: string | Date;
   startTime?: string | Date;
   endTime?: string | Date;
-  packageKey?: string | null;
   quotedPriceCents?: number | null;
   checkoutSessionId?: string | null;
+  isPaid?: boolean;
+  paidAt?: string | Date | null;
+  refundId?: string | null;
+  refundedAt?: string | Date | null;
+  message?: string;
+  details?:
+    | string
+    | number
+    | boolean
+    | Record<string, unknown>
+    | unknown[]
+    | null;
   createdAt: string | Date;
   user?: {
     name?: string | null;
@@ -38,15 +54,16 @@ interface BookingsTableProps {
   initialBookings: Booking[];
   userRole: string;
   userId?: string;
+  view?: string;
 }
 
 function BookingsTableContent({
   initialBookings,
   userRole,
   userId,
+  view,
 }: BookingsTableProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // Get WebSocket context
@@ -64,11 +81,17 @@ function BookingsTableContent({
     const handleBookingStatusChange = (data: {
       bookingId: string;
       status: string;
+      isPaid?: boolean;
     }) => {
       setBookings((prev) =>
         prev.map((booking) =>
           booking.id === data.bookingId
-            ? { ...booking, status: data.status }
+            ? {
+                ...booking,
+                status: data.status,
+                isPaid:
+                  data.isPaid !== undefined ? data.isPaid : booking.isPaid,
+              }
             : booking
         )
       );
@@ -82,15 +105,6 @@ function BookingsTableContent({
       socket.off("booking-status-changed", handleBookingStatusChange);
     };
   }, [socket, isConnected]);
-
-  // Helper function to safely handle dates
-  const formatDate = (date: string | Date) => {
-    try {
-      return new Date(date);
-    } catch {
-      return new Date();
-    }
-  };
 
   // Helper function to format date for display (client-side only)
   const formatDateForDisplay = (date: string | Date) => {
@@ -236,6 +250,12 @@ function BookingsTableContent({
               <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-20">
                 {userRole === "CLIENT" ? "Payment Status" : "Status"}
               </th>
+              {(userRole === "DJ" ||
+                (userRole === "ADMIN" && view === "dj")) && (
+                <th className="px-3 py-3 text-left text-sm font-medium text-gray-300 w-24">
+                  Payment Status
+                </th>
+              )}
               <th className="px-3 py-3 text-right text-sm font-medium text-gray-300 w-32">
                 Actions
               </th>
@@ -264,9 +284,7 @@ function BookingsTableContent({
                     {b.eventType}
                   </span>
                 </td>
-                <td className="px-3 py-3 text-gray-300 text-sm">
-                  {b.packageKey ?? "-"}
-                </td>
+
                 {userRole !== "CLIENT" && (
                   <td className="px-3 py-3">
                     <div className="text-white font-medium text-sm">
@@ -299,20 +317,38 @@ function BookingsTableContent({
                 </td>
                 <td className="px-3 py-3">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getStatusColor(
-                      b.status
-                    )}`}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
+                      userRole === "CLIENT"
+                        ? getClientPaymentStatusColor(b.status, b.refundId)
+                        : getStatusColor(b.status)
+                    }`}
                   >
                     <span>
                       {userRole === "CLIENT"
-                        ? getPaymentStatusIcon(b.status)
+                        ? getClientPaymentStatusIcon(b.status, b.refundId)
                         : getStatusIcon(b.status)}
                     </span>
                     {userRole === "CLIENT"
-                      ? getPaymentStatusText(b.status)
+                      ? getClientPaymentStatusText(b.status, b.refundId)
                       : getStatusText(b.status)}
                   </span>
                 </td>
+                {(userRole === "DJ" ||
+                  (userRole === "ADMIN" && view === "dj")) && (
+                  <td className="px-3 py-3">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getDjPaymentStatusColor(
+                        b.isPaid || false,
+                        b.refundId
+                      )}`}
+                    >
+                      <span>
+                        {getDjPaymentStatusIcon(b.isPaid || false, b.refundId)}
+                      </span>
+                      {getDjPaymentStatusText(b.isPaid || false, b.refundId)}
+                    </span>
+                  </td>
+                )}
                 <td className="px-3 py-3 text-right">
                   <SuspendedUserGuard
                     fallback={
@@ -326,8 +362,20 @@ function BookingsTableContent({
                       status={b.status}
                       checkoutSessionId={b.checkoutSessionId}
                       onStatusChange={updateBookingStatus}
-                      userId={userId}
                       userRole={userRole}
+                      isPaid={b.isPaid}
+                      quotedPriceCents={b.quotedPriceCents}
+                      refundId={b.refundId}
+                      eventDate={b.eventDate}
+                      eventType={b.eventType}
+                      startTime={b.startTime}
+                      endTime={b.endTime}
+                      message={b.message}
+                      details={b.details}
+                      onRefresh={() => {
+                        // Refresh bookings after refund
+                        setBookings(initialBookings);
+                      }}
                     />
                   </SuspendedUserGuard>
                 </td>
@@ -367,6 +415,12 @@ function BookingsTableContent({
               <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-16">
                 {userRole === "CLIENT" ? "Payment Status" : "Status"}
               </th>
+              {(userRole === "DJ" ||
+                (userRole === "ADMIN" && view === "dj")) && (
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-300 w-20">
+                  Payment
+                </th>
+              )}
               <th className="px-2 py-2 text-right text-xs font-medium text-gray-300 w-24">
                 Actions
               </th>
@@ -453,6 +507,19 @@ function BookingsTableContent({
                     )}
                   </div>
                 </td>
+                {(userRole === "DJ" ||
+                  (userRole === "ADMIN" && view === "dj")) && (
+                  <td className="px-2 py-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getDjPaymentStatusColor(
+                        b.isPaid || false
+                      )}`}
+                    >
+                      <span>{getDjPaymentStatusIcon(b.isPaid || false)}</span>
+                      {getDjPaymentStatusText(b.isPaid || false)}
+                    </span>
+                  </td>
+                )}
                 <td className="px-2 py-2 text-right">
                   <SuspendedUserGuard
                     fallback={
@@ -466,8 +533,20 @@ function BookingsTableContent({
                       status={b.status}
                       checkoutSessionId={b.checkoutSessionId}
                       onStatusChange={updateBookingStatus}
-                      userId={userId}
                       userRole={userRole}
+                      isPaid={b.isPaid}
+                      quotedPriceCents={b.quotedPriceCents}
+                      refundId={b.refundId}
+                      eventDate={b.eventDate}
+                      eventType={b.eventType}
+                      startTime={b.startTime}
+                      endTime={b.endTime}
+                      message={b.message}
+                      details={b.details}
+                      onRefresh={() => {
+                        // Refresh bookings after refund
+                        setBookings(initialBookings);
+                      }}
                     />
                   </SuspendedUserGuard>
                 </td>
@@ -505,17 +584,19 @@ function BookingsTableContent({
               </div>
               <div className="text-right">
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(
-                    b.status
-                  )}`}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${
+                    userRole === "CLIENT"
+                      ? getClientPaymentStatusColor(b.status, b.refundId)
+                      : getStatusColor(b.status)
+                  }`}
                 >
                   <span>
                     {userRole === "CLIENT"
-                      ? getPaymentStatusIcon(b.status)
+                      ? getClientPaymentStatusIcon(b.status, b.refundId)
                       : getStatusIcon(b.status)}
                   </span>
                   {userRole === "CLIENT"
-                    ? getPaymentStatusText(b.status)
+                    ? getClientPaymentStatusText(b.status, b.refundId)
                     : getStatusText(b.status)}
                 </span>
                 {b.status === "PENDING" && b.createdAt && (
@@ -540,11 +621,6 @@ function BookingsTableContent({
                 <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-900/30 text-violet-200 border border-violet-700/30">
                   {b.eventType}
                 </span>
-                {b.packageKey && (
-                  <span className="text-sm text-gray-300">
-                    • {b.packageKey}
-                  </span>
-                )}
               </div>
 
               {b.quotedPriceCents && (
@@ -552,6 +628,24 @@ function BookingsTableContent({
                   <span className="text-gray-400">Price: </span>
                   <span className="font-semibold text-green-400">
                     ${(b.quotedPriceCents / 100).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {(userRole === "DJ" ||
+                (userRole === "ADMIN" && view === "dj")) && (
+                <div className="text-sm">
+                  <span className="text-gray-400">Payment: </span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getDjPaymentStatusColor(
+                      b.isPaid || false,
+                      b.refundId
+                    )}`}
+                  >
+                    <span>
+                      {getDjPaymentStatusIcon(b.isPaid || false, b.refundId)}
+                    </span>
+                    {getDjPaymentStatusText(b.isPaid || false, b.refundId)}
                   </span>
                 </div>
               )}
@@ -597,8 +691,20 @@ function BookingsTableContent({
                   status={b.status}
                   checkoutSessionId={b.checkoutSessionId}
                   onStatusChange={updateBookingStatus}
-                  userId={userId}
                   userRole={userRole}
+                  isPaid={b.isPaid}
+                  quotedPriceCents={b.quotedPriceCents}
+                  refundId={b.refundId}
+                  eventDate={b.eventDate}
+                  eventType={b.eventType}
+                  startTime={b.startTime}
+                  endTime={b.endTime}
+                  message={b.message}
+                  details={b.details}
+                  onRefresh={() => {
+                    // Refresh bookings after refund
+                    setBookings(initialBookings);
+                  }}
                 />
               </SuspendedUserGuard>
             </div>

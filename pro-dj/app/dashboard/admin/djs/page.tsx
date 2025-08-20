@@ -51,8 +51,8 @@ export default async function AdminDjsPage() {
     }
   };
 
-  const getVerificationColor = (isVerified: boolean) => {
-    return isVerified
+  const getVerificationColor = (isApprovedByAdmin: boolean) => {
+    return isApprovedByAdmin
       ? "bg-green-900/40 text-green-200 border-green-700/30"
       : "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
   };
@@ -98,7 +98,10 @@ export default async function AdminDjsPage() {
           </div>
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="text-2xl font-bold text-yellow-400">
-              {djs.filter((dj) => dj.djProfile?.isVerified === false).length}
+              {
+                djs.filter((dj) => dj.djProfile?.isApprovedByAdmin === false)
+                  .length
+              }
             </div>
             <div className="text-gray-400 text-sm">Pending Verification</div>
           </div>
@@ -167,10 +170,12 @@ export default async function AdminDjsPage() {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${getVerificationColor(
-                          dj.djProfile?.isVerified || false
+                          dj.djProfile?.isApprovedByAdmin || false
                         )}`}
                       >
-                        {dj.djProfile?.isVerified ? "Verified" : "Pending"}
+                        {dj.djProfile?.isApprovedByAdmin
+                          ? "Verified"
+                          : "Pending"}
                       </span>
                     </td>
                     <td className="px-6 py-4">

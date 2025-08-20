@@ -153,20 +153,17 @@ export async function POST(req: Request) {
     console.log("Request body:", body);
 
     const bookingType = String(body?.bookingType ?? "").trim();
-    const packageKey = String(body?.packageKey ?? "").trim();
     const eventDate = String(body?.eventDate ?? "").trim();
     const startTime = String(body?.startTime ?? "").trim();
     const endTime = String(body?.endTime ?? "").trim();
     const message = String(body?.message ?? "").trim();
     const djId = body?.djId ? String(body.djId).trim() : null;
-    const extra = body?.extra ?? null; // optional future use
+    const extra = body?.extra ?? null; // contains selectedAddons and other details
     const preferredGenres = body?.preferredGenres ?? [];
     const musicStyle = String(body?.musicStyle ?? "").trim();
-    const eventVibe = String(body?.eventVibe ?? "").trim();
 
     console.log("Parsed values:", {
       bookingType,
-      packageKey,
       eventDate,
       startTime,
       endTime,
@@ -174,14 +171,7 @@ export async function POST(req: Request) {
       djId,
     });
 
-    if (
-      !bookingType ||
-      !packageKey ||
-      !eventDate ||
-      !startTime ||
-      !endTime ||
-      !message
-    ) {
+    if (!bookingType || !eventDate || !startTime || !endTime || !message) {
       return NextResponse.json(
         {
           ok: false,
@@ -192,19 +182,53 @@ export async function POST(req: Request) {
       );
     }
 
-    // Look up the package in DB (single source of truth)
-    const pkg = await prisma.pricing.findFirst({
-      where: { type: bookingType, key: packageKey, isActive: true },
-      select: { priceCents: true, label: true },
-    });
-    console.log("Package found:", pkg);
+    // Get DJ's pricing for this event type
+    let quotedPriceCents = 0;
+    if (djId) {
+      const djPricing = await prisma.djEventPricing.findUnique({
+        where: { djId_eventType: { djId, eventType: bookingType } },
+        select: { hourlyRateCents: true },
+      });
 
-    if (!pkg) {
+      if (djPricing) {
+        // Calculate duration in hours
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const durationHours =
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+        // Base price = hourly rate × duration
+        quotedPriceCents = Math.round(
+          djPricing.hourlyRateCents * durationHours
+        );
+
+        // Add add-on prices if any
+        if (extra?.selectedAddons) {
+          const selectedAddons = String(extra.selectedAddons).split(",");
+          const addonPrices = await prisma.djAddon.findMany({
+            where: {
+              djId,
+              addonKey: { in: selectedAddons },
+              isActive: true,
+            },
+            select: { priceCents: true },
+          });
+
+          const totalAddonPrice = addonPrices.reduce(
+            (sum, addon) => sum + addon.priceCents,
+            0
+          );
+          quotedPriceCents += totalAddonPrice;
+        }
+      }
+    }
+
+    // Validate that we have a DJ selected
+    if (!djId) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "🎵 Please select a valid event type and package for your booking.",
+          error: "🎵 Please select a DJ for your booking.",
         },
         { status: 400 }
       );
@@ -310,7 +334,7 @@ export async function POST(req: Request) {
       // First check if DJ is verified
       const djProfile = await prisma.djProfile.findUnique({
         where: { id: djId },
-        select: { isVerified: true, stageName: true },
+        select: { isApprovedByAdmin: true, stageName: true },
       });
 
       if (!djProfile) {
@@ -323,7 +347,7 @@ export async function POST(req: Request) {
         );
       }
 
-      if (!djProfile.isVerified) {
+      if (!djProfile.isApprovedByAdmin) {
         return NextResponse.json(
           {
             ok: false,
@@ -368,19 +392,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Calculate total price based on duration (handling overnight events)
-    const durationHours =
-      (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-    const adjustedDurationHours =
-      endDateTime < startDateTime ? durationHours + 24 : durationHours;
-    const totalPriceCents = Math.round(pkg.priceCents * adjustedDurationHours);
-
     // Combine all details including preferences
     const bookingDetails = {
       ...extra,
       preferredGenres,
       musicStyle,
-      eventVibe,
     };
 
     console.log("Creating booking with data:", {
@@ -391,10 +407,7 @@ export async function POST(req: Request) {
       startTime: startDateTime,
       endTime: endDateTime,
       message,
-      packageKey,
-      basePricePerHourCents: pkg.priceCents,
-      durationHours: adjustedDurationHours,
-      totalPriceCents,
+      quotedPriceCents,
       details: bookingDetails,
     });
 
@@ -407,8 +420,7 @@ export async function POST(req: Request) {
         startTime: startDateTime,
         endTime: endDateTime,
         message,
-        packageKey,
-        quotedPriceCents: totalPriceCents,
+        quotedPriceCents,
         details: bookingDetails,
       },
     });
@@ -422,7 +434,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { ok: true, data: booking, quotedPriceCents: totalPriceCents },
+      { ok: true, data: booking, quotedPriceCents },
       { status: 201 }
     );
   } catch (error: unknown) {

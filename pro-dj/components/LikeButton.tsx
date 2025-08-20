@@ -52,15 +52,7 @@ export default function LikeButton({
 
   // Listen for real-time like updates from other users
   useEffect(() => {
-    console.log("🔍 LikeButton Debug:", {
-      socket: !!socket,
-      isConnected,
-      mixId,
-      userId: session?.user?.id,
-    });
-
     if (!socket || !isConnected) {
-      console.log("❌ Socket not connected or not available");
       return;
     }
 
@@ -70,28 +62,15 @@ export default function LikeButton({
       liked: boolean;
       likeCount: number;
     }) => {
-      console.log("📡 Received mix-like-updated event:", data);
-      console.log("🔍 Checking if this update is for us:", {
-        eventMixId: data.mixId,
-        ourMixId: mixId,
-        eventUserId: data.userId,
-        ourUserId: session?.user?.id,
-      });
-
       if (data.mixId === mixId && data.userId !== session?.user?.id) {
-        console.log("✅ Updating like count from other user:", data.likeCount);
         // Update like count from other users' actions
         setLikeCount(data.likeCount);
-      } else {
-        console.log("❌ Ignoring update - not for this mix or from same user");
       }
     };
 
-    console.log("🎧 Setting up mix-like-updated listener");
     socket.on("mix-like-updated", handleMixLikeUpdate);
 
     return () => {
-      console.log("🧹 Cleaning up mix-like-updated listener");
       socket.off("mix-like-updated", handleMixLikeUpdate);
     };
   }, [socket, isConnected, mixId, session?.user?.id]);
@@ -134,15 +113,7 @@ export default function LikeButton({
 
         // Emit real-time update to other users
         if (isConnected) {
-          console.log("📤 Emitting mix-liked event:", {
-            mixId,
-            userId: session.user.id,
-            liked: data.liked,
-            likeCount: data.likeCount,
-          });
           emitMixLiked(mixId, session.user.id, data.liked, data.likeCount);
-        } else {
-          console.log("❌ Socket not connected, cannot emit mix-liked event");
         }
 
         if (data.liked) {

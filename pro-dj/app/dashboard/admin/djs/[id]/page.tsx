@@ -70,8 +70,8 @@ export default async function DjManagementPage({ params }: PageProps) {
     }
   };
 
-  const getVerificationColor = (isVerified: boolean) => {
-    return isVerified
+  const getVerificationColor = (isApprovedByAdmin: boolean) => {
+    return isApprovedByAdmin
       ? "bg-green-900/40 text-green-200 border-green-700/30"
       : "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
   };
@@ -131,10 +131,10 @@ export default async function DjManagementPage({ params }: PageProps) {
                   <span className="text-gray-400">Verification:</span>
                   <span
                     className={`ml-2 inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getVerificationColor(
-                      user.djProfile?.isVerified || false
+                      user.djProfile?.isApprovedByAdmin || false
                     )}`}
                   >
-                    {user.djProfile?.isVerified ? "Verified" : "Pending"}
+                    {user.djProfile?.isApprovedByAdmin ? "Verified" : "Pending"}
                   </span>
                 </div>
                 <div>

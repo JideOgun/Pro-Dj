@@ -35,9 +35,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (session.user.role !== "DJ") {
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can upload mixes" },
+        { ok: false, error: "Only DJs and Admins can upload mixes" },
         { status: 403 }
       );
     }
@@ -52,7 +52,12 @@ export async function POST(req: Request) {
     const isPublic = formData.get("isPublic") === "true";
 
     // Parse genres from comma-separated string to array
-    const genres = genre ? genre.split(",").map(g => g.trim()).filter(g => g.length > 0) : [];
+    const genres = genre
+      ? genre
+          .split(",")
+          .map((g) => g.trim())
+          .filter((g) => g.length > 0)
+      : [];
 
     console.log("Form data received:");
     console.log("- File:", file?.name, file?.size, file?.type);

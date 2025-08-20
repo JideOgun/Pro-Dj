@@ -113,8 +113,6 @@ export default function MixesPage() {
       liked: boolean;
       likeCount: number;
     }) => {
-      console.log("📡 Main mixes page received mix-like-updated:", data);
-
       // Update the mix in our local state
       setMixes((prevMixes) =>
         prevMixes.map((mix) =>

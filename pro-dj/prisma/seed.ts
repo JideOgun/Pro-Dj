@@ -57,41 +57,21 @@ async function main() {
     role: client.role,
   });
 
-  const mixCount = await prisma.mix.count();
-  if (mixCount === 0) {
-    await prisma.mix.createMany({
-      data: [
-        {
-          title: "Piano Therapy",
-          description: "Amapiano mix",
-          url: "https://youtu.be/SzZinum4DO8?si=PgY6p6EZkt97XJkv",
-          tags: ["Amapiano", "Afrobeats"],
-        },
-        {
-          title: "Loverz and Friendz the Mix",
-          description: "Soulful blend of love songs",
-          url: "https://youtu.be/OwHpjsKT_lc?si=krsHCeBjQlsBv1ab",
-          tags: ["Afrobeats"],
-        },
-      ],
+  const postCount = await prisma.post.count();
+  if (postCount === 0) {
+    await prisma.post.create({
+      data: {
+        title: "Welcome to proDJ",
+        content:
+          "This is the official home of Jay Baba. Mixes, events, and booking info will live here. Stay tuned.",
+        coverImage: "some cloudinary url",
+      },
     });
 
-    const postCount = await prisma.post.count();
-    if (postCount === 0) {
-      await prisma.post.create({
-        data: {
-          title: "Welcome to proDJ",
-          content:
-            "This is the official home of Jay Baba. Mixes, events, and booking info will live here. Stay tuned.",
-          coverImage: "some cloudinary url",
-        },
-      });
-
-      console.log("Seed data created successfully. Admin:", {
-        email: admin.email,
-        name: admin.role,
-      });
-    }
+    console.log("Seed data created successfully. Admin:", {
+      email: admin.email,
+      name: admin.role,
+    });
   }
 
   // Clear old rows so we don't get duplicates while testing
@@ -222,6 +202,13 @@ async function main() {
       location: "Lagos, Nigeria",
       travelRadius: 50,
       basePriceCents: 25000,
+      eventsOffered: [
+        "Wedding",
+        "Club",
+        "Corporate",
+        "Birthday",
+        "Private Party",
+      ],
     },
     {
       email: "jamiedred@test.com",
@@ -234,6 +221,7 @@ async function main() {
       location: "London, UK",
       travelRadius: 100,
       basePriceCents: 35000,
+      eventsOffered: ["Club", "Corporate", "Private Party"],
     },
     {
       email: "djto@test.com",
@@ -246,6 +234,33 @@ async function main() {
       location: "Toronto, Canada",
       travelRadius: 75,
       basePriceCents: 30000,
+      eventsOffered: ["Wedding", "Birthday", "Private Party"],
+    },
+    {
+      email: "jaybaba@test.com",
+      name: "JAY BABA",
+      password: "password",
+      stageName: "JAY BABA",
+      genres: ["Afrobeats", "Hip Hop", "Pop"],
+      bio: "High-energy DJ specializing in Afrobeats and contemporary hits. Perfect for parties and celebrations.",
+      experience: 4,
+      location: "New York, NY",
+      travelRadius: 60,
+      basePriceCents: 28000,
+      eventsOffered: ["Birthday", "Club", "Private Party"],
+    },
+    {
+      email: "djspark@test.com",
+      name: "DJ SPARK",
+      password: "password",
+      stageName: "DJ SPARK",
+      genres: ["EDM", "House", "Pop"],
+      bio: "Energetic DJ with a passion for creating unforgettable dance experiences. Specializes in EDM and house music.",
+      experience: 7,
+      location: "Los Angeles, CA",
+      travelRadius: 80,
+      basePriceCents: 32000,
+      eventsOffered: ["Club", "Corporate", "Private Party"],
     },
   ];
 
@@ -280,8 +295,9 @@ async function main() {
         location: djData.location,
         travelRadius: djData.travelRadius,
         basePriceCents: djData.basePriceCents,
-        isVerified: true, // Mark existing DJs as verified
-        isActive: true, // Mark existing DJs as active
+        eventsOffered: djData.eventsOffered || [],
+        isApprovedByAdmin: true, // Mark existing DJs as approved
+        isAcceptingBookings: true, // Mark existing DJs as accepting bookings
       },
       create: {
         userId: dj.id,
@@ -292,8 +308,9 @@ async function main() {
         location: djData.location,
         travelRadius: djData.travelRadius,
         basePriceCents: djData.basePriceCents,
-        isVerified: true, // Mark new DJs as verified
-        isActive: true, // Mark new DJs as active
+        eventsOffered: djData.eventsOffered || [],
+        isApprovedByAdmin: true, // Mark new DJs as approved
+        isAcceptingBookings: true, // Mark new DJs as accepting bookings
       },
     });
 

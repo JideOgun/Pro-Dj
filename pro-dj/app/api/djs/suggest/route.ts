@@ -42,7 +42,11 @@ export async function POST(req: Request) {
           where: { userId: user.id },
         });
 
-        if (!profile || !profile.isVerified || !profile.isActive) {
+        if (
+          !profile ||
+          !profile.isApprovedByAdmin ||
+          !profile.isAcceptingBookings
+        ) {
           return null;
         }
 

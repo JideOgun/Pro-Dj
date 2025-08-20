@@ -81,7 +81,23 @@ export default async function BookingsPage({
   const bookings = await prisma.booking.findMany({
     where: whereClause,
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      status: true,
+      eventType: true,
+      eventDate: true,
+      startTime: true,
+      endTime: true,
+
+      quotedPriceCents: true,
+      checkoutSessionId: true,
+      isPaid: true,
+      paidAt: true,
+      refundId: true,
+      refundedAt: true,
+      message: true,
+      details: true,
+      createdAt: true,
       user: { select: { email: true, name: true } },
       dj: { select: { stageName: true } },
     },
@@ -196,6 +212,7 @@ export default async function BookingsPage({
           initialBookings={bookings}
           userRole={session.user.role}
           userId={session.user.id}
+          view={searchParams.view}
         />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/email";
 import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/emails";
 import { emitBookingUpdate } from "@/lib/socket-server";
+import { stripe, webhookConfig, handleStripeError } from "@/lib/stripe-config";
 
 export const runtime = "nodejs";
 
@@ -22,9 +23,6 @@ export async function POST(req: Request) {
   }
 
   const buf = await req.arrayBuffer();
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-07-30.basil",
-  });
 
   let event: Stripe.Event;
   try {
@@ -37,7 +35,7 @@ export async function POST(req: Request) {
     event = stripe.webhooks.constructEvent(
       Buffer.from(buf),
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      webhookConfig.endpointSecret
     );
     console.log("✅ Webhook signature verified successfully");
   } catch (err: unknown) {
@@ -73,7 +71,7 @@ export async function POST(req: Request) {
 
         // Emit WebSocket event for real-time updates
         console.log("📡 Emitting WebSocket event for booking:", booking.id);
-        emitBookingUpdate(booking.id, "CONFIRMED");
+        emitBookingUpdate(booking.id, "CONFIRMED", true);
 
         // emails: client + DJ
         const clientEmail =

@@ -81,8 +81,6 @@ endTime DateTime // End time of the event
 message String
 isPaid Boolean @default(false)
 createdAt DateTime @default(now())
-bookingType String?
-packageKey String?
 quotedPriceCents Int?
 details Json?
 status BookingStatus @default(PENDING)
@@ -246,10 +244,11 @@ eventPhotos EventPhoto[] // enhanced event photos with metadata
 
 // Pricing
 basePriceCents Int? // base hourly rate
+eventsOffered String[] // ["Wedding", "Club", "Corporate", "Birthday", "Private Party"]
 
 // Availability
-isActive Boolean @default(true)
-isVerified Boolean @default(false)
+isAcceptingBookings Boolean @default(true)
+isApprovedByAdmin Boolean @default(false)
 isFeatured Boolean @default(false) // For featuring DJs on homepage
 
 // Stats
@@ -264,6 +263,8 @@ reviews Review[]
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 mixes DjMix[]
 youtubeVideos DjYouTubeVideo[]
+djAddons DjAddon[]
+djEventPricing DjEventPricing[]
 
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
@@ -284,6 +285,46 @@ rating Int // 1-5 stars
 comment String?
 
 createdAt DateTime @default(now())
+}
+
+model DjAddon {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+// Addon details
+addonKey String // "lighting", "setup", "mc", "photography", "videography"
+label String // Custom label for this addon
+description String? // Custom description
+priceCents Int // Price in cents
+isActive Boolean @default(true)
+
+// Custom addon fields (for addons not in the standard list)
+isCustom Boolean @default(false)
+customCategory String? // For grouping custom addons
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@unique([djId, addonKey]) // One addon per key per DJ
+@@index([djId, isActive])
+}
+
+model DjEventPricing {
+id String @id @default(uuid())
+djId String
+dj DjProfile @relation(fields: [djId], references: [id])
+
+// Event type pricing
+eventType String // "Wedding", "Club", "Corporate", "Birthday", "Private Party"
+hourlyRateCents Int // Hourly rate for this specific event type in cents
+description String? // Optional description explaining the pricing
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@unique([djId, eventType]) // One rate per event type per DJ
+@@index([djId])
 }
 
 enum BookingStatus {

@@ -25,6 +25,9 @@ const djProfileSchema = z.object({
     })
     .optional(),
   basePriceCents: z.number().min(1, "Base rate must be at least $1"),
+  eventsOffered: z
+    .array(z.string())
+    .min(1, "At least one event type is required"),
   profileImage: z.string().optional(),
   portfolio: z.array(z.string()).optional(),
 });
@@ -97,9 +100,10 @@ export async function POST(req: Request) {
           availability: validatedData.availability,
           socialLinks: validatedData.socialLinks,
           basePriceCents: validatedData.basePriceCents,
+          eventsOffered: validatedData.eventsOffered,
           profileImage: validatedData.profileImage || null,
           portfolio: validatedData.portfolio || [],
-          isVerified: false, // Require admin approval
+          isApprovedByAdmin: false, // Require admin approval
         },
       });
 

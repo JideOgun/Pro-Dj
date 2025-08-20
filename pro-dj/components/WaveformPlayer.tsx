@@ -318,7 +318,6 @@ export default function WaveformPlayer({
       try {
         // Check if we've already created a media source for this audio element
         if (mediaSourceCreatedRef.current) {
-          console.log("Media source already created, skipping setup");
           return;
         }
 

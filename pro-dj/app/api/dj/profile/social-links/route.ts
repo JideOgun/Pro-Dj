@@ -14,9 +14,12 @@ export async function PUT(req: Request) {
       );
     }
 
-    if (session.user.role !== "DJ") {
+    if (session.user.role !== "DJ" && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "Only DJs can update social media links" },
+        {
+          ok: false,
+          error: "Only DJs and Admins can update social media links",
+        },
         { status: 403 }
       );
     }

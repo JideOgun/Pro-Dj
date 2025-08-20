@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { SocketProvider, useSocketContext } from "@/components/SocketProvider";
 import { AlertTriangle, PartyPopper, Check, Calendar } from "lucide-react";
@@ -13,7 +13,7 @@ interface Booking {
   eventDate: string;
   status: string;
   quotedPriceCents: number;
-  packageKey: string | null;
+
   details: Record<string, unknown>;
   createdAt: string;
   isPaid: boolean;
@@ -167,10 +167,8 @@ function SuccessPageContent() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Package:</span>
-                  <span className="ml-2 text-white">
-                    {booking.packageKey || "Custom Package"}
-                  </span>
+                  <span className="text-gray-400">Event Type:</span>
+                  <span className="ml-2 text-white">{booking.eventType}</span>
                 </div>
                 <div>
                   <span className="text-gray-400">Status:</span>
@@ -332,11 +330,19 @@ export default function SuccessPage() {
   const { data: session } = useSession();
 
   return (
-    <SocketProvider
-      userId={session?.user?.id}
-      role={session?.user?.role || "CLIENT"}
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div className="text-white">Loading...</div>
+        </div>
+      }
     >
-      <SuccessPageContent />
-    </SocketProvider>
+      <SocketProvider
+        userId={session?.user?.id}
+        role={session?.user?.role || "CLIENT"}
+      >
+        <SuccessPageContent />
+      </SocketProvider>
+    </Suspense>
   );
 }
