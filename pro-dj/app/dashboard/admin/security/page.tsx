@@ -53,7 +53,7 @@ export default function SecurityManagementPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    
+
     if (session?.user?.role !== "ADMIN") {
       router.push("/dashboard");
       return;
