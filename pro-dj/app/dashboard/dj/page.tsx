@@ -33,7 +33,7 @@ interface DJProfile {
   id: string;
   stageName: string;
   bio: string;
-  profileImage: string | null;
+  userProfileImage: string | null;
   genres: string[];
   experience: string;
   location: string;
@@ -250,6 +250,9 @@ export default function DjDashboard() {
                               }
                             : null
                         );
+
+                        // Refresh dashboard data to ensure consistency
+                        await fetchDashboardData();
 
                         toast.success(
                           `Booking availability ${

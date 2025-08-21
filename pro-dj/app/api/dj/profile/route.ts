@@ -20,12 +20,11 @@ export async function GET() {
         genres: true,
         experience: true,
         location: true,
-        basePriceCents: true,
+
         eventsOffered: true,
         isAcceptingBookings: true,
         isApprovedByAdmin: true,
         isFeatured: true,
-        profileImage: true,
         socialLinks: true,
       },
     });
@@ -65,7 +64,7 @@ export async function PATCH(request: NextRequest) {
       genres,
       experience,
       location,
-      basePriceCents,
+
       eventsOffered,
       socialLinks,
       isAcceptingBookings,
@@ -75,13 +74,6 @@ export async function PATCH(request: NextRequest) {
     if (stageName && stageName.trim().length === 0) {
       return NextResponse.json(
         { error: "Stage name cannot be empty" },
-        { status: 400 }
-      );
-    }
-
-    if (basePriceCents !== undefined && basePriceCents < 0) {
-      return NextResponse.json(
-        { error: "Base price cannot be negative" },
         { status: 400 }
       );
     }
@@ -112,7 +104,7 @@ export async function PATCH(request: NextRequest) {
         ...(genres && { genres }),
         ...(experience !== undefined && { experience }),
         ...(location !== undefined && { location }),
-        ...(basePriceCents !== undefined && { basePriceCents }),
+
         ...(eventsOffered && { eventsOffered }),
         ...(socialLinks && { socialLinks }),
         ...(isAcceptingBookings !== undefined && { isAcceptingBookings }),
@@ -124,12 +116,11 @@ export async function PATCH(request: NextRequest) {
         genres: true,
         experience: true,
         location: true,
-        basePriceCents: true,
+
         eventsOffered: true,
         isAcceptingBookings: true,
         isApprovedByAdmin: true,
         isFeatured: true,
-        profileImage: true,
         socialLinks: true,
       },
     });

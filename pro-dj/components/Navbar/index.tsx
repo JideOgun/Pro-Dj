@@ -182,6 +182,16 @@ export default function Navbar() {
               Feed
             </Link>
 
+            {/* Book a DJ button - only show for clients */}
+            {session?.user && getEffectiveRole(session.user) === "CLIENT" && (
+              <Link
+                href="/book"
+                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                Book a DJ
+              </Link>
+            )}
+
             <Link
               href="/videos"
               className="text-gray-300 hover:text-white transition-colors font-medium"

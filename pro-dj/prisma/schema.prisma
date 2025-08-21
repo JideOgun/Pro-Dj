@@ -46,6 +46,18 @@ privacyAgreedAt DateTime?
 termsVersion String? // Version of terms agreed to
 privacyVersion String? // Version of privacy policy agreed to
 
+// Independent Contractor Agreements (for DJs)
+agreedToContractorTerms Boolean @default(false)
+agreedToServiceProviderTerms Boolean @default(false)
+contractorTermsAgreedAt DateTime?
+serviceProviderTermsAgreedAt DateTime?
+contractorTermsVersion String?
+serviceProviderTermsVersion String?
+
+// Basic tax status (non-sensitive)
+w9Submitted Boolean @default(false) // Whether W-9 form has been submitted
+w9SubmittedAt DateTime?
+
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 commentLikes CommentLike[]
@@ -59,6 +71,9 @@ reposts Repost[] // User's reposts
 
 // DJ Profile relation
 djProfile DjProfile?
+
+// Secure tax information relation (for DJs only)
+securityClearance SecurityClearance?
 
 // Reviews relation
 reviews Review[] @relation("UserReviews")
@@ -246,12 +261,10 @@ availability String? // availability schedule and preferences
 socialLinks Json? // {instagram, tiktok, soundcloud, youtube, twitter, facebook, linkedin, website}
 
 // Media
-profileImage String?
 portfolio String[] // array of image URLs
 eventPhotos EventPhoto[] // enhanced event photos with metadata
 
 // Pricing
-basePriceCents Int? // base hourly rate
 eventsOffered String[] // ["Wedding", "Club", "Corporate", "Birthday", "Private Party"]
 
 // Availability
@@ -619,4 +632,47 @@ createdAt DateTime @default(now())
 @@index([userId])
 @@index([mixId])
 @@index([createdAt])
+}
+
+// Secure model for sensitive tax information
+// This model should have restricted access controls
+model SecurityClearance {
+id String @id @default(uuid())
+userId String @unique
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+// Encrypted sensitive tax information
+encryptedTaxId String? // Encrypted SSN or EIN
+taxIdLastFour String? // Last 4 digits for display purposes
+taxIdType String? // "SSN" or "EIN" for validation
+businessName String? // Legal business name
+businessAddress String? // Business address
+businessPhone String? // Business phone
+
+// Business structure information
+isCorporation Boolean @default(false) // Whether DJ operates as corporation
+isSoleProprietor Boolean @default(true) // Whether DJ operates as sole proprietor
+businessType String? // "SOLE_PROPRIETOR", "LLC", "CORPORATION", "PARTNERSHIP"
+
+// Security and audit fields
+lastAccessedAt DateTime? // When this data was last accessed
+lastAccessedBy String? // Admin ID who last accessed this data
+accessCount Int @default(0) // Number of times this data has been accessed
+ipAddress String? // IP address of last access
+
+// Data verification
+isVerified Boolean @default(false) // Whether the tax ID has been verified
+verifiedAt DateTime? // When verification was completed
+verifiedBy String? // Admin ID who verified the information
+
+// Compliance and retention
+dataRetentionDate DateTime? // When this data should be purged for compliance
+isRetentionSuspended Boolean @default(false) // Suspend retention for active legal matters
+
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([userId])
+@@index([isVerified])
+@@index([dataRetentionDate])
 }

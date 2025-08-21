@@ -6,6 +6,17 @@ import { z } from "zod";
 
 const updateRoleSchema = z.object({
   role: z.enum(["CLIENT", "DJ"]),
+  contractorTerms: z.boolean().optional(),
+  taxInfo: z
+    .object({
+      taxId: z.string(),
+      businessName: z.string().optional(),
+      businessAddress: z.string().optional(),
+      businessPhone: z.string().optional(),
+      isCorporation: z.boolean(),
+      isSoleProprietor: z.boolean(),
+    })
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -21,7 +32,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = updateRoleSchema.parse(body);
 
-    // Update user role and terms agreement
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
@@ -32,6 +42,35 @@ export async function POST(req: Request) {
         privacyAgreedAt: new Date(),
         termsVersion: "1.0",
         privacyVersion: "1.0",
+        ...(validatedData.role === "DJ"
+          ? validatedData.contractorTerms && validatedData.taxInfo
+            ? {
+                // DJ role update with contractor terms (from terms agreement flow)
+                agreedToContractorTerms: true,
+                agreedToServiceProviderTerms: true,
+                contractorTermsAgreedAt: new Date(),
+                serviceProviderTermsAgreedAt: new Date(),
+                contractorTermsVersion: "1.0",
+                serviceProviderTermsVersion: "1.0",
+                taxId: validatedData.taxInfo.taxId,
+                isCorporation: validatedData.taxInfo.isCorporation,
+                isSoleProprietor: validatedData.taxInfo.isSoleProprietor,
+                ...(validatedData.taxInfo.isSoleProprietor
+                  ? {}
+                  : {
+                      businessName: validatedData.taxInfo.businessName,
+                      businessAddress: validatedData.taxInfo.businessAddress,
+                      businessPhone: validatedData.taxInfo.businessPhone,
+                    }),
+                w9Submitted: true,
+                w9SubmittedAt: new Date(),
+              }
+            : {
+                // Regular DJ role update (without contractor terms yet)
+                agreedToContractorTerms: false,
+                agreedToServiceProviderTerms: false,
+              }
+          : {}),
       },
     });
 

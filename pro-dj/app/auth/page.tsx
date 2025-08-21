@@ -98,7 +98,7 @@ function AuthPageContent() {
 
       router.push(callbackUrl);
     } else {
-      // Store registration data in sessionStorage and redirect to terms agreement
+      // Store registration data and redirect to terms agreement
       sessionStorage.setItem(
         "pendingRegistration",
         JSON.stringify({

@@ -65,11 +65,16 @@ function BookPageContent() {
         id: string;
         stageName: string;
         genres: string[];
-        basePriceCents: number;
+
         eventsOffered?: string[];
         bio?: string;
         specialties?: string;
         location?: string;
+        eventPricing?: Array<{
+          eventType: string;
+          hourlyRateCents: number;
+          description: string | null;
+        }>;
       };
     }>
   >([]);
@@ -79,7 +84,7 @@ function BookPageContent() {
       id: string;
       stageName: string;
       genres: string[];
-      basePriceCents: number;
+
       eventsOffered?: string[];
       bio?: string;
       specialties?: string;
@@ -87,6 +92,11 @@ function BookPageContent() {
       isFeatured?: boolean;
       rating?: number;
       reviewCount?: number;
+      eventPricing?: Array<{
+        eventType: string;
+        hourlyRateCents: number;
+        description: string | null;
+      }>;
     }>
   >([]);
 
@@ -149,11 +159,25 @@ function BookPageContent() {
 
   const totalEventDuration = calculateDuration(startTime, endTime);
 
-  // Calculate total price for a specific DJ
-  const calculateDjTotalPrice = (
-    djId: string,
-    djBasePriceCents: number
+  // Get the hourly rate for a DJ for a specific event type
+  const getDjHourlyRate = (
+    dj: {
+      eventPricing?: Array<{
+        eventType: string;
+        hourlyRateCents: number;
+        description: string | null;
+      }>;
+    },
+    eventType: string
   ): number => {
+    const eventPricing = dj.eventPricing?.find(
+      (pricing) => pricing.eventType === eventType
+    );
+    return eventPricing?.hourlyRateCents || 0;
+  };
+
+  // Calculate total price for a specific DJ
+  const calculateDjTotalPrice = (djId: string): number => {
     const selectedDj = selectedDjs.find((dj) => dj.djId === djId);
     if (!selectedDj) return 0;
 
@@ -161,7 +185,8 @@ function BookPageContent() {
       selectedDj.startTime,
       selectedDj.endTime
     );
-    const basePrice = djBasePriceCents * djDuration;
+    const hourlyRate = getDjHourlyRate(selectedDj.dj, bookingType);
+    const basePrice = hourlyRate * djDuration;
     const selectedAddonsForDj = selectedDjAddons[djId] || [];
     const djAddonsForDj = djAddons[djId] || [];
 
@@ -441,6 +466,16 @@ function BookPageContent() {
 
     if (!startTime || !endTime) {
       toast.error("Please set event start and end times first");
+      return;
+    }
+
+    // Check if DJ offers this event type
+    if (
+      bookingType &&
+      dj.eventsOffered &&
+      !dj.eventsOffered.includes(bookingType)
+    ) {
+      toast.error(`${dj.stageName} does not offer ${bookingType} events`);
       return;
     }
 
@@ -1156,10 +1191,11 @@ function BookPageContent() {
                           const isSelected = selectedDjs.some(
                             (sd) => sd.djId === dj.id
                           );
-                          const totalPrice = calculateDjTotalPrice(
-                            dj.id,
-                            dj.basePriceCents
-                          );
+                          const totalPrice = calculateDjTotalPrice(dj.id);
+                          const offersEventType =
+                            !bookingType ||
+                            !dj.eventsOffered ||
+                            dj.eventsOffered.includes(bookingType);
 
                           return (
                             <div
@@ -1167,6 +1203,8 @@ function BookPageContent() {
                               className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                                 isSelected
                                   ? "border-blue-500 bg-blue-900/20"
+                                  : !offersEventType
+                                  ? "border-red-500/50 bg-red-900/10 opacity-60"
                                   : "border-blue-600/50 bg-blue-900/10 hover:border-blue-400"
                               }`}
                               onClick={() =>
@@ -1189,6 +1227,11 @@ function BookPageContent() {
                                         ⭐ {dj.rating.toFixed(1)}
                                       </span>
                                     )}
+                                    {!offersEventType && bookingType && (
+                                      <span className="text-xs bg-red-600 text-red-100 px-2 py-0.5 rounded-full font-medium">
+                                        No {bookingType}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-sm text-gray-400">
                                     {(dj.genres || []).slice(0, 3).join(", ")}
@@ -1196,8 +1239,16 @@ function BookPageContent() {
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     Base Rate: $
-                                    {(dj.basePriceCents / 100).toFixed(2)}/hr
+                                    {(
+                                      getDjHourlyRate(dj, bookingType) / 100
+                                    ).toFixed(2)}
+                                    /hr
                                   </div>
+                                  {!offersEventType && bookingType && (
+                                    <div className="text-xs text-red-400 mt-1">
+                                      Does not offer {bookingType} events
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {isSelected ? (
@@ -1254,10 +1305,11 @@ function BookPageContent() {
                       const isSelected = selectedDjs.some(
                         (sd) => sd.djId === dj.id
                       );
-                      const totalPrice = calculateDjTotalPrice(
-                        dj.id,
-                        dj.basePriceCents
-                      );
+                      const totalPrice = calculateDjTotalPrice(dj.id);
+                      const offersEventType =
+                        !bookingType ||
+                        !dj.eventsOffered ||
+                        dj.eventsOffered.includes(bookingType);
 
                       return (
                         <div
@@ -1265,6 +1317,8 @@ function BookPageContent() {
                           className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                             isSelected
                               ? "border-violet-500 bg-violet-900/20"
+                              : !offersEventType
+                              ? "border-red-500/50 bg-red-900/10 opacity-60"
                               : "border-gray-600 bg-gray-700 hover:border-gray-500"
                           }`}
                           onClick={() =>
@@ -1273,8 +1327,15 @@ function BookPageContent() {
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
-                              <div className="font-medium text-white">
-                                {dj.stageName}
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="font-medium text-white">
+                                  {dj.stageName}
+                                </div>
+                                {!offersEventType && bookingType && (
+                                  <span className="text-xs bg-red-600 text-red-100 px-2 py-0.5 rounded-full font-medium">
+                                    No {bookingType}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-sm text-gray-400">
                                 {(dj.genres || []).slice(0, 3).join(", ")}
@@ -1282,8 +1343,16 @@ function BookPageContent() {
                               </div>
                               <div className="text-xs text-gray-500">
                                 Base Rate: $
-                                {(dj.basePriceCents / 100).toFixed(2)}/hr
+                                {(
+                                  getDjHourlyRate(dj, bookingType) / 100
+                                ).toFixed(2)}
+                                /hr
                               </div>
+                              {!offersEventType && bookingType && (
+                                <div className="text-xs text-red-400 mt-1">
+                                  Does not offer {bookingType} events
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               {isSelected ? (
@@ -1676,8 +1745,11 @@ function BookPageContent() {
                         selectedDj.startTime,
                         selectedDj.endTime
                       );
-                      const basePrice =
-                        selectedDj.dj.basePriceCents * djDuration;
+                      const hourlyRate = getDjHourlyRate(
+                        selectedDj.dj,
+                        bookingType
+                      );
+                      const basePrice = hourlyRate * djDuration;
                       const selectedAddonsForDj =
                         selectedDjAddons[selectedDj.djId] || [];
                       const availableAddonsForDj =
@@ -1710,9 +1782,10 @@ function BookPageContent() {
                               </div>
                               <div className="text-violet-400 font-semibold">
                                 $
-                                {(selectedDj.dj.basePriceCents / 100).toFixed(
-                                  2
-                                )}
+                                {(
+                                  getDjHourlyRate(selectedDj.dj, bookingType) /
+                                  100
+                                ).toFixed(2)}
                                 /hr
                               </div>
                             </div>
@@ -1783,7 +1856,11 @@ function BookPageContent() {
                               sd.startTime,
                               sd.endTime
                             );
-                            const basePrice = sd.dj.basePriceCents * djDuration;
+                            const hourlyRate = getDjHourlyRate(
+                              sd.dj,
+                              bookingType
+                            );
+                            const basePrice = hourlyRate * djDuration;
                             const selectedAddonsForDj =
                               selectedDjAddons[sd.djId] || [];
                             const availableAddonsForDj =

@@ -13,7 +13,7 @@ interface Dj {
   basePriceCents: number | null;
   bio: string | null;
   isFeatured: boolean;
-  profileImage?: string;
+  userProfileImage?: string;
   eventPhotos: Array<{
     id: string;
     url: string;

@@ -192,83 +192,103 @@ export default function UserManagementActions({
           </div>
         }
       >
-        <div className="grid md:grid-cols-3 gap-4">
-          {/* Suspend/Activate User */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-gray-300">Account Status</h3>
-            {user.status === "ACTIVE" ? (
-              <div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Account Status & Role Management */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">Account Status</h3>
+              {user.status === "ACTIVE" ? (
+                <div>
+                  <button
+                    onClick={() =>
+                      user.id !== currentAdminId && setShowSuspendModal(true)
+                    }
+                    disabled={isLoading || user.id === currentAdminId}
+                    className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      user.id === currentAdminId
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                    }`}
+                    title={
+                      user.id === currentAdminId
+                        ? "Cannot suspend yourself"
+                        : ""
+                    }
+                  >
+                    {user.id === currentAdminId
+                      ? "Cannot Suspend Self"
+                      : "Suspend User"}
+                  </button>
+                  {user.id === currentAdminId && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Admins cannot suspend their own accounts
+                    </p>
+                  )}
+                </div>
+              ) : (
                 <button
-                  onClick={() =>
-                    user.id !== currentAdminId && setShowSuspendModal(true)
-                  }
-                  disabled={isLoading || user.id === currentAdminId}
-                  className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    user.id === currentAdminId
-                      ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                  }`}
-                  title={
-                    user.id === currentAdminId ? "Cannot suspend yourself" : ""
-                  }
+                  onClick={handleActivateUser}
+                  disabled={isLoading}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
-                  {user.id === currentAdminId
-                    ? "Cannot Suspend Self"
-                    : "Suspend User"}
+                  Activate User
                 </button>
-                {user.id === currentAdminId && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Admins cannot suspend their own accounts
-                  </p>
-                )}
-              </div>
-            ) : (
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">User Role</h3>
               <button
-                onClick={handleActivateUser}
+                onClick={() => setShowRoleModal(true)}
                 disabled={isLoading}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
-                Activate User
+                Change Role
               </button>
-            )}
+            </div>
           </div>
 
-          {/* Change Role */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-gray-300">User Role</h3>
-            <button
-              onClick={() => setShowRoleModal(true)}
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Change Role
-            </button>
-          </div>
+          {/* Danger Zone */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">Danger Zone</h3>
+              <button
+                onClick={() =>
+                  user.id !== currentAdminId && setShowDeleteModal(true)
+                }
+                disabled={isLoading || user.id === currentAdminId}
+                className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  user.id === currentAdminId
+                    ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                    : "bg-red-800 hover:bg-red-900 disabled:opacity-50"
+                }`}
+                title={
+                  user.id === currentAdminId ? "Cannot delete yourself" : ""
+                }
+              >
+                <Trash2 size={16} />
+                {user.id === currentAdminId
+                  ? "Cannot Delete Self"
+                  : "Delete Account"}
+              </button>
+              {user.id === currentAdminId && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Admins cannot delete their own accounts
+                </p>
+              )}
+            </div>
 
-          {/* Delete Account */}
-          <div className="space-y-2">
-            <h3 className="font-medium text-gray-300">Danger Zone</h3>
-            <button
-              onClick={() =>
-                user.id !== currentAdminId && setShowDeleteModal(true)
-              }
-              disabled={isLoading || user.id === currentAdminId}
-              className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                user.id === currentAdminId
-                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  : "bg-red-800 hover:bg-red-900 disabled:opacity-50"
-              }`}
-              title={user.id === currentAdminId ? "Cannot delete yourself" : ""}
-            >
-              <Trash2 size={16} />
-              {user.id === currentAdminId
-                ? "Cannot Delete Self"
-                : "Delete Account"}
-            </button>
-            {user.id === currentAdminId && (
-              <p className="text-xs text-gray-400 mt-1">
-                Admins cannot delete their own accounts
-              </p>
+            {/* DJ Profile Link (only show for approved DJs) */}
+            {user.role === "DJ" && user.status === "ACTIVE" && (
+              <div>
+                <h3 className="font-medium text-gray-300 mb-2">DJ Profile</h3>
+                <a
+                  href={`/dashboard/admin/djs/${user.id}`}
+                  className="w-full bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-block text-center"
+                >
+                  View DJ Profile
+                </a>
+              </div>
             )}
           </div>
         </div>

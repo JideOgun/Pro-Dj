@@ -72,7 +72,6 @@ export async function GET(req: Request) {
             select: {
               id: true,
               stageName: true,
-              profileImage: true,
               user: {
                 select: {
                   id: true,
@@ -205,11 +204,11 @@ export async function POST(req: Request) {
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             user: {
               select: {
                 id: true,
                 name: true,
+                profileImage: true,
               },
             },
           },

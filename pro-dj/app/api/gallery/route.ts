@@ -56,7 +56,6 @@ export async function GET(req: Request) {
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             userId: true,
             user: {
               select: {
@@ -82,7 +81,6 @@ export async function GET(req: Request) {
       {
         djId: string;
         stageName: string;
-        profileImage: string | null;
         userProfileImage: string | null;
         userId: string;
         events: Map<
@@ -118,7 +116,6 @@ export async function GET(req: Request) {
         djsMap.set(djId, {
           djId,
           stageName: photo.dj.stageName,
-          profileImage: photo.dj.profileImage,
           userProfileImage: photo.dj.user?.profileImage || null,
           userId: photo.dj.userId,
           events: new Map(),

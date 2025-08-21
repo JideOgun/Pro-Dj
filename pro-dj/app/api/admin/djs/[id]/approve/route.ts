@@ -60,11 +60,18 @@ export async function POST(
     });
 
     // Update DJ profile to verified
-    await prisma.djProfile.update({
+    const updatedDjProfile = await prisma.djProfile.update({
       where: { userId: id },
       data: {
         isApprovedByAdmin: true,
       },
+    });
+
+    console.log("DJ Approval completed:", {
+      userId: id,
+      userStatus: updatedUser.status,
+      djProfileApproved: updatedDjProfile.isApprovedByAdmin,
+      stageName: updatedDjProfile.stageName,
     });
 
     // Create notification for the approved DJ

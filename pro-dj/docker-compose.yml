@@ -33,6 +33,7 @@ services:
     container_name: pro-dj-app
     ports:
       - "3000:3000"
+      - "5555:5555"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://pro_dj_user:pro_dj_password@postgres:5432/pro_dj
@@ -52,8 +53,9 @@ services:
       - postgres
       - redis
     volumes:
-      - ./uploads:/app/public/uploads
-      - ./prisma:/app/prisma
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     networks:
       - pro-dj-network
     deploy:

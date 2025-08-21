@@ -228,9 +228,9 @@ export default function SuggestedMixes({
               <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
                 <div className="flex items-center space-x-2">
                   {/* DJ Profile Photo */}
-                  {mix.dj.profileImage ? (
+                  {mix.dj.userProfileImage ? (
                     <img
-                      src={mix.dj.profileImage}
+                      src={mix.dj.userProfileImage}
                       alt={mix.dj.stageName}
                       className="w-4 h-4 rounded-full flex-shrink-0"
                     />

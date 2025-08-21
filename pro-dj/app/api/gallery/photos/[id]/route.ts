@@ -18,7 +18,6 @@ export async function GET(
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             userId: true,
             user: {
               select: {

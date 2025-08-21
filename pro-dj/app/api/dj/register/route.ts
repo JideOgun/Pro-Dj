@@ -24,10 +24,14 @@ const djProfileSchema = z.object({
       website: z.string().url().optional().or(z.literal("")),
     })
     .optional(),
-  basePriceCents: z.number().min(1, "Base rate must be at least $1"),
+
   eventsOffered: z
     .array(z.string())
     .min(1, "At least one event type is required"),
+  eventPricing: z.record(
+    z.string(),
+    z.number().min(1, "Price must be at least $1")
+  ),
   profileImage: z.string().optional(),
   portfolio: z.array(z.string()).optional(),
 });
@@ -99,12 +103,22 @@ export async function POST(req: Request) {
           languages: validatedData.languages || [],
           availability: validatedData.availability,
           socialLinks: validatedData.socialLinks,
-          basePriceCents: validatedData.basePriceCents,
+
           eventsOffered: validatedData.eventsOffered,
-          profileImage: validatedData.profileImage || null,
           portfolio: validatedData.portfolio || [],
           isApprovedByAdmin: false, // Require admin approval
         },
+      });
+
+      // Create event pricing for each event type
+      const eventPricingData = validatedData.eventsOffered.map((eventType) => ({
+        djId: djProfile.id,
+        eventType,
+        hourlyRateCents: validatedData.eventPricing[eventType],
+      }));
+
+      await tx.djEventPricing.createMany({
+        data: eventPricingData,
       });
 
       // Update user profile with DJ information

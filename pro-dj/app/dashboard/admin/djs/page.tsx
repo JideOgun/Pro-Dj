@@ -1,42 +1,78 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { hasAdminPrivileges } from "@/lib/auth-utils";
 
-export default async function AdminDjsPage() {
-  const session = await getServerSession(authOptions);
+interface DJ {
+  id: string;
+  email: string;
+  status: string;
+  createdAt: string;
+  location?: string;
+  djProfile?: {
+    stageName?: string;
+    location?: string;
+    isApprovedByAdmin?: boolean;
+  };
+  bookings: Array<{
+    id: string;
+    status: string;
+    createdAt: string;
+  }>;
+  reviews: Array<{
+    rating: number;
+  }>;
+}
 
-  if (!session?.user) {
-    redirect("/auth");
-  }
+export default function AdminDjsPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [djs, setDjs] = useState<DJ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
-  if (!hasAdminPrivileges(session.user)) {
-    redirect("/dashboard");
-  }
+  // Handle hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Get all DJs with their profiles and stats
-  const djs = await prisma.user.findMany({
-    where: { role: "DJ" },
-    include: {
-      djProfile: true,
-      bookings: {
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-        },
-      },
-      reviews: {
-        select: {
-          rating: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (!session?.user) {
+      router.push("/auth");
+      return;
+    }
+
+    if (!hasAdminPrivileges(session.user)) {
+      router.push("/dashboard");
+      return;
+    }
+
+    fetchDjs();
+  }, [session, router, mounted]);
+
+  const fetchDjs = async () => {
+    try {
+      const response = await fetch("/api/admin/djs", {
+        cache: "no-store", // Prevent caching to get fresh data
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDjs(data.djs || []);
+      } else {
+        console.error("Failed to fetch DJs");
+      }
+    } catch (error) {
+      console.error("Error fetching DJs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -63,6 +99,29 @@ export default async function AdminDjsPage() {
     return total / reviews.length;
   };
 
+  // Don't render until mounted to prevent hydration issues
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading DJs...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -75,12 +134,35 @@ export default async function AdminDjsPage() {
                 Manage DJ profiles, approvals, and performance
               </p>
             </div>
-            <Link
-              href="/dashboard/admin"
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              ← Back to Admin Dashboard
-            </Link>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={fetchDjs}
+                disabled={loading}
+                className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span>{loading ? "Refreshing..." : "Refresh"}</span>
+              </button>
+              <Link
+                href="/dashboard/admin"
+                className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                ← Back to Admin Dashboard
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -127,6 +209,9 @@ export default async function AdminDjsPage() {
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
                     Verification
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
+                    Availability
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
                     Performance
@@ -179,6 +264,19 @@ export default async function AdminDjsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${
+                          dj.djProfile?.isAcceptingBookings
+                            ? "bg-green-900/40 text-green-200 border-green-700/30"
+                            : "bg-red-900/40 text-red-200 border-red-700/30"
+                        }`}
+                      >
+                        {dj.djProfile?.isAcceptingBookings
+                          ? "Active"
+                          : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="text-gray-300">
                           {dj.bookings.length} bookings
@@ -197,8 +295,9 @@ export default async function AdminDjsPage() {
                         {dj.status === "PENDING" ? (
                           <>
                             <button
+                              type="button"
                               onClick={() =>
-                                (window.location.href = `/dashboard/admin/djs/${dj.id}`)
+                                router.push(`/dashboard/admin/djs/${dj.id}`)
                               }
                               className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-medium transition-colors"
                             >

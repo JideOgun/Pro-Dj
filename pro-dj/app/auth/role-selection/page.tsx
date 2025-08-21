@@ -25,18 +25,38 @@ export default function RoleSelectionPage() {
 
     setIsSubmitting(true);
     try {
-      // Store the selected role in sessionStorage for terms agreement
-      sessionStorage.setItem(
-        "pendingGoogleRegistration",
-        JSON.stringify({
+      const res = await fetch("/api/auth/update-role", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           role,
-          email: session.user.email,
-          name: session.user.name,
-        })
-      );
+        }),
+      });
 
-      // Redirect to terms agreement page
-      router.push("/auth/terms-agreement");
+      const data = await res.json();
+
+      if (res.ok) {
+        // Update the session with the new role
+        await update({ role });
+
+        toast.success("Role updated successfully!");
+
+        // Store registration intent and redirect to terms agreement
+        sessionStorage.setItem(
+          "pendingGoogleRegistration",
+          JSON.stringify({
+            name: session.user.name,
+            email: session.user.email,
+            role: role,
+          })
+        );
+        router.push("/auth/terms-agreement");
+      } else {
+        toast.error(data.error || "Failed to update role");
+        setIsSubmitting(false);
+      }
     } catch (error) {
       toast.error("Something went wrong");
       setIsSubmitting(false);

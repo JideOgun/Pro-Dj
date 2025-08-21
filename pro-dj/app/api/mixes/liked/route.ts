@@ -31,7 +31,11 @@ export async function GET(req: Request) {
                 id: true,
                 stageName: true,
                 userId: true,
-                profileImage: true,
+                user: {
+                  select: {
+                    profileImage: true,
+                  },
+                },
               },
             },
           },

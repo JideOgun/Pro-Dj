@@ -59,9 +59,7 @@ export async function GET(req: Request) {
       case "name":
         orderBy.stageName = "asc";
         break;
-      case "price":
-        orderBy.basePriceCents = "asc";
-        break;
+
       case "rating":
         orderBy.rating = "desc";
         break;
@@ -96,6 +94,13 @@ export async function GET(req: Request) {
               rating: true,
             },
           },
+          djEventPricing: {
+            select: {
+              eventType: true,
+              hourlyRateCents: true,
+              description: true,
+            },
+          },
         },
       }),
       prisma.djProfile.count({ where }),
@@ -114,7 +119,7 @@ export async function GET(req: Request) {
         stageName: dj.stageName,
         genres: dj.genres || [],
         customGenres: dj.customGenres || "",
-        basePriceCents: dj.basePriceCents || 0,
+
         eventsOffered: dj.eventsOffered || [],
         bio: dj.bio || "",
         location: dj.user.location || dj.location || "Location not set",
@@ -123,7 +128,8 @@ export async function GET(req: Request) {
         languages: dj.languages || [],
         availability: dj.availability || "",
         socialLinks: dj.socialLinks || {},
-        profileImage: dj.user.profileImage,
+        userProfileImage: dj.user.profileImage,
+        eventPricing: dj.djEventPricing,
         rating: avgRating,
         reviewCount: dj.reviews.length,
         isFeatured: dj.isFeatured,

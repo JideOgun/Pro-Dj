@@ -80,7 +80,11 @@ export async function POST(
         dj: {
           select: {
             stageName: true,
-            profileImage: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
           },
         },
       },

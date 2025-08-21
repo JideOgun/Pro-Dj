@@ -97,7 +97,6 @@ export async function GET(req: Request) {
             select: {
               id: true,
               stageName: true,
-              profileImage: true,
               userId: true,
               user: {
                 select: {
@@ -161,8 +160,8 @@ export async function GET(req: Request) {
         albumArtUrl = null;
       }
 
-      // Use user's profile image as primary, DJ profile image as fallback
-      const djProfileImage = mix.dj.user?.profileImage || mix.dj.profileImage;
+      // Use user's profile image
+      const djProfileImage = mix.dj.user?.profileImage;
 
       return {
         ...mix,
@@ -172,7 +171,6 @@ export async function GET(req: Request) {
         userLiked: userLikes.includes(mix.id),
         dj: {
           ...mix.dj,
-          profileImage: djProfileImage,
           userProfileImage: mix.dj.user?.profileImage,
         },
       };

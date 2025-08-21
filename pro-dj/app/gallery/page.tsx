@@ -443,15 +443,19 @@ export default function GalleryPage() {
                 No Photos Yet
               </h3>
               <p className="text-gray-500 mb-6">
-                Start by uploading some event photos to showcase your work.
+                {canUpload()
+                  ? "Start by uploading some event photos to showcase your work."
+                  : "No photos have been uploaded yet. Check back soon for amazing event galleries!"}
               </p>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center"
-              >
-                <Upload className="w-5 h-5 mr-2" />
-                Upload Photos
-              </button>
+              {canUpload() && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload Photos
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-12">
@@ -464,10 +468,10 @@ export default function GalleryPage() {
                   <div className="p-3 border-b border-gray-800">
                     <div className="flex items-center space-x-3">
                       {/* DJ Profile Picture */}
-                      {dj.profileImage ? (
+                      {dj.userProfileImage ? (
                         <div className="relative w-10 h-10">
                           <Image
-                            src={dj.profileImage}
+                            src={dj.userProfileImage}
                             alt={dj.stageName}
                             fill
                             className="rounded-full object-cover border-2 border-violet-500/30"

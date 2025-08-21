@@ -51,7 +51,7 @@ interface YouTubeVideo {
   dj: {
     id: string;
     stageName: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
     userId: string;
     user: {
       profileImage: string | null;
@@ -62,7 +62,6 @@ interface YouTubeVideo {
 interface DJ {
   djId: string;
   stageName: string;
-  profileImage: string | null;
   userProfileImage: string | null;
   userId: string;
   videos: YouTubeVideo[];
@@ -110,7 +109,6 @@ export default function VideosPage() {
             djsMap.set(djId, {
               djId,
               stageName: dj.stageName,
-              profileImage: dj.profileImage,
               userProfileImage: dj.user.profileImage,
               userId: dj.userId,
               videos: [],
@@ -317,9 +315,19 @@ export default function VideosPage() {
                 No Videos Yet
               </h3>
               <p className="text-gray-500 mb-6">
-                Start by uploading some YouTube videos to showcase your work.
+                {canUpload()
+                  ? "Start by uploading some YouTube videos to showcase your work."
+                  : "No videos have been uploaded yet. Check back soon for amazing DJ performances!"}
               </p>
-              {canUpload() && <YouTubeVideoUpload />}
+              {canUpload() && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="inline-flex items-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload Video
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-12">
@@ -332,10 +340,10 @@ export default function VideosPage() {
                   <div className="p-3 border-b border-gray-800">
                     <div className="flex items-center space-x-3">
                       {/* DJ Profile Picture */}
-                      {dj.profileImage || dj.userProfileImage ? (
+                      {dj.userProfileImage ? (
                         <div className="relative w-10 h-10">
                           <Image
-                            src={dj.profileImage || dj.userProfileImage!}
+                            src={dj.userProfileImage}
                             alt={dj.stageName}
                             fill
                             className="rounded-full object-cover border-2 border-violet-500/30"

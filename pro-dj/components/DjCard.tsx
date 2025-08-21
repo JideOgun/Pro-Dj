@@ -15,7 +15,7 @@ interface DjCardProps {
     basePriceCents: number | null;
     bio: string | null;
     isFeatured: boolean;
-    profileImage?: string;
+    userProfileImage?: string;
     eventPhotos: Array<{
       id: string;
       url: string;
@@ -66,9 +66,9 @@ export default function DjCard({ dj }: DjCardProps) {
 
       {/* Profile Image Section */}
       <div className="relative h-48 overflow-hidden">
-        {dj.profileImage ? (
+        {dj.userProfileImage ? (
           <Image
-            src={dj.profileImage}
+            src={dj.userProfileImage}
             alt={dj.stageName}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"

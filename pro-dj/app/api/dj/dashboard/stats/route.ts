@@ -105,7 +105,7 @@ export async function GET(req: Request) {
         id: djProfile.id,
         stageName: djProfile.stageName,
         bio: djProfile.bio,
-        profileImage: djProfile.user.profileImage || djProfile.profileImage,
+        profileImage: djProfile.user.profileImage,
         genres: djProfile.genres,
         experience: djProfile.experience,
         location: djProfile.location,

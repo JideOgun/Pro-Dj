@@ -20,7 +20,6 @@ export async function GET(
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             userId: true,
             user: {
               select: {
@@ -53,7 +52,6 @@ export async function GET(
         djsMap.set(djId, {
           djId,
           stageName: photo.dj.stageName,
-          profileImage: photo.dj.profileImage,
           userProfileImage: photo.dj.user?.profileImage || null,
           userId: photo.dj.userId,
           photos: [],

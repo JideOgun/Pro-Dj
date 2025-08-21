@@ -30,7 +30,7 @@ interface DjMix {
     id: string;
     stageName: string;
     userId: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
   };
   userLiked: boolean;
   likeCount: number;
@@ -263,9 +263,9 @@ export default function MixDetailPage() {
                 )}
                 <div className="flex items-center space-x-4 text-sm text-gray-400">
                   <div className="flex items-center">
-                    {mix.dj.profileImage ? (
+                    {mix.dj.userProfileImage ? (
                       <img
-                        src={mix.dj.profileImage}
+                        src={mix.dj.userProfileImage}
                         alt={mix.dj.stageName}
                         className="w-5 h-5 rounded-full mr-2 object-cover"
                       />
@@ -332,9 +332,9 @@ export default function MixDetailPage() {
                 <div>
                   <div className="text-sm text-gray-400 mb-2">DJ</div>
                   <div className="flex items-center space-x-3">
-                    {mix.dj.profileImage ? (
+                    {mix.dj.userProfileImage ? (
                       <img
-                        src={mix.dj.profileImage}
+                        src={mix.dj.userProfileImage}
                         alt={mix.dj.stageName}
                         className="w-12 h-12 rounded-full object-cover"
                       />

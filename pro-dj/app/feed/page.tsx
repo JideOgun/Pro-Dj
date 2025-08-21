@@ -33,7 +33,9 @@ interface FeedItem {
       id: string;
       stageName: string;
       userId: string;
-      profileImage: string | null;
+      user?: {
+        profileImage: string | null;
+      };
     };
   };
 }
@@ -49,7 +51,9 @@ interface LikedMix {
     id: string;
     stageName: string;
     userId: string;
-    profileImage: string | null;
+    user?: {
+      profileImage: string | null;
+    };
   };
   likedAt: string;
 }
@@ -328,9 +332,9 @@ export default function FeedPage() {
                         onClick={() => router.push(`/mixes/${item.mix.id}`)}
                       >
                         <div className="flex items-center space-x-2">
-                          {item.mix.dj.profileImage ? (
+                          {item.mix.dj.user?.profileImage ? (
                             <img
-                              src={item.mix.dj.profileImage}
+                              src={item.mix.dj.user.profileImage}
                               alt={item.mix.dj.stageName}
                               className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
                             />
@@ -458,9 +462,9 @@ export default function FeedPage() {
                       >
                         <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
                           <div className="flex items-center space-x-2">
-                            {mix.dj.profileImage ? (
+                            {mix.dj.user?.profileImage ? (
                               <img
-                                src={mix.dj.profileImage}
+                                src={mix.dj.user.profileImage}
                                 alt={mix.dj.stageName}
                                 className="w-4 h-4 rounded-full flex-shrink-0"
                               />

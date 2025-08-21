@@ -44,4 +44,3 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
   // Render children if authenticated
   return <>{children}</>;
 }
-

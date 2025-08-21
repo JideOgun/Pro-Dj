@@ -32,7 +32,7 @@ interface EventPhoto {
   commentCount: number;
   dj: {
     stageName: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
     userId: string;
   };
   createdAt: Date;
@@ -41,7 +41,6 @@ interface EventPhoto {
 interface DJ {
   djId: string;
   stageName: string;
-  profileImage: string | null;
   userProfileImage: string | null;
   userId: string;
   events: Event[];
@@ -114,9 +113,7 @@ export default function EventGalleryPage() {
             ...photo,
             dj: {
               stageName: eventData.djs[0].stageName,
-              profileImage:
-                eventData.djs[0].profileImage ||
-                eventData.djs[0].userProfileImage,
+              userProfileImage: eventData.djs[0].userProfileImage,
               userId: eventData.djs[0].userId,
             },
           })),
@@ -411,10 +408,10 @@ export default function EventGalleryPage() {
                       {/* DJ Info and Comment Count */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          {photo.dj.profileImage ? (
+                          {photo.dj.userProfileImage ? (
                             <div className="relative w-6 h-6 mr-2">
                               <Image
-                                src={photo.dj.profileImage}
+                                src={photo.dj.userProfileImage}
                                 alt={photo.dj.stageName}
                                 fill
                                 className="rounded-full object-cover"
@@ -530,10 +527,10 @@ export default function EventGalleryPage() {
                   {/* DJ Info */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center">
-                      {selectedPhoto.dj.profileImage ? (
+                      {selectedPhoto.dj.userProfileImage ? (
                         <div className="relative w-10 h-10 mr-3">
                           <Image
-                            src={selectedPhoto.dj.profileImage}
+                            src={selectedPhoto.dj.userProfileImage}
                             alt={selectedPhoto.dj.stageName}
                             fill
                             className="rounded-full object-cover"

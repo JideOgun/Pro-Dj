@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Fetch DJ's pricing for a specific event type
+// GET - Fetch DJ pricing for a specific event type
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get("eventType");
@@ -17,9 +18,9 @@ export async function GET(
       );
     }
 
-    // Get DJ profile with event-specific pricing
+    // Get the DJ profile with event pricing
     const djProfile = await prisma.djProfile.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         djEventPricing: {
           where: { eventType },
@@ -31,24 +32,23 @@ export async function GET(
       return NextResponse.json({ error: "DJ not found" }, { status: 404 });
     }
 
-    // Get the event-specific pricing, fallback to base price if not set
+    // Get the event-specific pricing
     const eventPricing = djProfile.djEventPricing[0];
-    const hourlyRateCents =
-      eventPricing?.hourlyRateCents || djProfile.basePriceCents || 0;
+    const hourlyRateCents = eventPricing?.hourlyRateCents || 0;
 
     return NextResponse.json({
       ok: true,
-      pricing: {
-        hourlyRateCents,
+      data: {
+        djId: djProfile.id,
         eventType,
-        isEventSpecific: !!eventPricing,
-        description: eventPricing?.description,
+        hourlyRateCents,
+        hasPricing: !!eventPricing,
       },
     });
   } catch (error) {
     console.error("Error fetching DJ pricing:", error);
     return NextResponse.json(
-      { error: "Failed to fetch DJ pricing" },
+      { error: "Failed to fetch pricing" },
       { status: 500 }
     );
   }

@@ -71,7 +71,7 @@ interface DjMix {
     id: string;
     stageName: string;
     userId: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
   };
 }
 
@@ -532,9 +532,9 @@ export default function MixesPage() {
                       onClick={() => router.push(`/mixes/${mix.id}`)}
                     >
                       <div className="flex items-center space-x-2">
-                        {mix.dj.profileImage ? (
+                        {mix.dj.userProfileImage ? (
                           <img
-                            src={mix.dj.profileImage}
+                            src={mix.dj.userProfileImage}
                             alt={mix.dj.stageName}
                             className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
                           />
@@ -587,23 +587,29 @@ export default function MixesPage() {
               <div className="text-center py-12">
                 <div className="text-gray-400 text-lg mb-2">No mixes found</div>
                 <p className="text-gray-500 mb-4">
-                  Upload your first mix to get started!
+                  {session?.user?.role === "DJ" ||
+                  session?.user?.role === "ADMIN"
+                    ? "Upload your first mix to get started!"
+                    : "No mixes have been uploaded yet. Check back soon for amazing DJ performances!"}
                 </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Mix
-                  </button>
-                  <a
-                    href="/dashboard/dj"
-                    className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors duration-200"
-                  >
-                    Go to Dashboard
-                  </a>
-                </div>
+                {(session?.user?.role === "DJ" ||
+                  session?.user?.role === "ADMIN") && (
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => setShowUploadModal(true)}
+                      className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Mix
+                    </button>
+                    <a
+                      href="/dashboard/dj"
+                      className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors duration-200"
+                    >
+                      Go to Dashboard
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

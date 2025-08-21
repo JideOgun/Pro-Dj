@@ -177,22 +177,12 @@ export default async function AdminUsersPage() {
                       {user.bookings.length} bookings
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/dashboard/admin/users/${user.id}`}
-                          className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-medium transition-colors"
-                        >
-                          Manage
-                        </Link>
-                        {user.role === "DJ" && (
-                          <Link
-                            href={`/dashboard/admin/djs/${user.id}`}
-                            className="bg-violet-600 hover:bg-violet-700 px-3 py-1 rounded text-sm font-medium transition-colors"
-                          >
-                            DJ Profile
-                          </Link>
-                        )}
-                      </div>
+                      <Link
+                        href={`/dashboard/admin/users/${user.id}`}
+                        className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm font-medium transition-colors"
+                      >
+                        Manage
+                      </Link>
                     </td>
                   </tr>
                 ))}

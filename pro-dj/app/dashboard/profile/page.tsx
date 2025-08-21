@@ -182,6 +182,40 @@ const majorAmericanCities = [
   "Lancaster, PA",
 ];
 
+const availableGenres = [
+  "Afrobeats",
+  "Amapiano",
+  "Hip-Hop",
+  "R&B",
+  "Pop",
+  "House",
+  "Techno",
+  "Reggae",
+  "Dancehall",
+  "Latin",
+  "EDM",
+  "Rock",
+  "Jazz",
+  "Blues",
+  "Country",
+  "Gospel",
+  "Classical",
+  "Trap",
+  "Dubstep",
+  "Trance",
+  "Disco",
+  "Funk",
+  "Soul",
+  "Alternative",
+  "Indie",
+  "Electronic",
+  "World Music",
+  "Folk",
+  "Punk",
+  "Metal",
+  "Other",
+];
+
 interface UserProfile {
   id: string;
   email: string;
@@ -233,6 +267,10 @@ export default function ProfilePage() {
       facebook: "",
       linkedin: "",
     },
+    // DJ-specific fields
+    stageName: "",
+    genres: [] as string[],
+    experience: 0,
   });
 
   // Track if form has been initialized with profile data
@@ -306,7 +344,7 @@ export default function ProfilePage() {
               ? formatPhoneNumber(result.data.phone)
               : "",
             location: result.data.location || "",
-            bio: result.data.bio || "",
+            bio: result.data.djProfile?.bio || result.data.bio || "",
             website: result.data.website || "",
             socialLinks: {
               instagram: result.data.socialLinks?.instagram || "",
@@ -314,6 +352,10 @@ export default function ProfilePage() {
               facebook: result.data.socialLinks?.facebook || "",
               linkedin: result.data.socialLinks?.linkedin || "",
             },
+            // DJ-specific fields
+            stageName: result.data.djProfile?.stageName || "",
+            genres: result.data.djProfile?.genres || [],
+            experience: result.data.djProfile?.experience || 0,
           });
           formInitializedRef.current = true;
           setFormInitialized(true);
@@ -498,7 +540,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     if (field.includes(".")) {
       const [parent, child] = field.split(".");
       setFormData((prev) => ({
@@ -559,6 +601,21 @@ export default function ProfilePage() {
       return;
     }
 
+    // Validate DJ profile fields if user is a DJ
+    if (profile?.djProfile) {
+      if (!formData.stageName || formData.stageName.trim() === "") {
+        setMessage("Stage name is required for DJs");
+        setMessageType("error");
+        return;
+      }
+
+      if (formData.experience < 0 || formData.experience > 50) {
+        setMessage("Experience must be between 0 and 50 years");
+        setMessageType("error");
+        return;
+      }
+    }
+
     setSaving(true);
     setMessage("");
 
@@ -566,7 +623,18 @@ export default function ProfilePage() {
       const response = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          // Include DJ profile data if user is a DJ
+          djProfile: profile?.djProfile
+            ? {
+                stageName: formData.stageName,
+                bio: formData.bio, // Use the main bio field
+                genres: formData.genres,
+                experience: formData.experience,
+              }
+            : undefined,
+        }),
       });
 
       const result = await response.json();
@@ -1091,14 +1159,18 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Bio
+                    {profile?.djProfile ? "DJ Bio" : "Bio"}
                   </label>
                   <textarea
                     value={formData.bio}
                     onChange={(e) => handleInputChange("bio", e.target.value)}
                     rows={4}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
-                    placeholder="Tell us about yourself..."
+                    placeholder={
+                      profile?.djProfile
+                        ? "Tell clients about your DJ style, experience, and what makes you unique..."
+                        : "Tell us about yourself..."
+                    }
                   />
                 </div>
 
@@ -1197,91 +1269,90 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* DJ Profile Section */}
+                {/* DJ Profile Form Fields */}
                 {profile?.djProfile && (
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-blue-300 mb-4 flex items-center gap-2">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
                       <Music className="w-5 h-5" />
-                      DJ Profile Information
+                      DJ Profile Settings
                     </h3>
+
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Stage Name
+                          Stage Name <span className="text-red-400">*</span>
                         </label>
-                        <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                          <div className="text-lg font-semibold text-white">
-                            {profile.djProfile.stageName}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            This is how clients will see you
-                          </div>
-                        </div>
+                        <input
+                          type="text"
+                          value={formData.stageName}
+                          onChange={(e) =>
+                            handleInputChange("stageName", e.target.value)
+                          }
+                          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                          placeholder="Your DJ stage name"
+                        />
                       </div>
 
-                      {profile.djProfile.bio && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            DJ Bio
-                          </label>
-                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                            <div className="text-sm text-gray-300">
-                              {profile.djProfile.bio}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {profile.djProfile.genres &&
-                        profile.djProfile.genres.length > 0 && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                              Music Genres
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Music Genres
+                        </label>
+                        <p className="text-sm text-gray-400 mb-3">
+                          Select the genres you specialize in
+                        </p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {availableGenres.map((genre) => (
+                            <label
+                              key={genre}
+                              className="flex items-center space-x-2 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.genres.includes(genre)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      genres: [...formData.genres, genre],
+                                    });
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      genres: formData.genres.filter(
+                                        (g) => g !== genre
+                                      ),
+                                    });
+                                  }
+                                }}
+                                className="w-4 h-4 text-violet-600 bg-gray-700 border-gray-600 rounded focus:ring-violet-500 focus:ring-2"
+                              />
+                              <span className="text-sm text-white">
+                                {genre}
+                              </span>
                             </label>
-                            <div className="flex flex-wrap gap-2">
-                              {profile.djProfile.genres.map((genre, index) => (
-                                <span
-                                  key={index}
-                                  className="bg-blue-600/30 text-blue-200 px-2 py-1 rounded-full text-xs"
-                                >
-                                  {genre}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Experience
-                          </label>
-                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                            <div className="text-sm text-white">
-                              {profile.djProfile.experience} years
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Base Rate
-                          </label>
-                          <div className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
-                            <div className="text-sm text-white">
-                              $
-                              {(profile.djProfile.basePriceCents / 100).toFixed(
-                                2
-                              )}
-                              /hr
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
 
-                      <div className="text-xs text-gray-400 mt-3">
-                        💡 To edit your DJ profile information, visit your DJ
-                        dashboard
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Years of Experience{" "}
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="50"
+                          value={formData.experience}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "experience",
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                          placeholder="0"
+                        />
                       </div>
                     </div>
                   </div>

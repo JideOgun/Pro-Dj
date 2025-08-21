@@ -36,7 +36,7 @@ interface YouTubeVideo {
   dj: {
     id: string;
     stageName: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
     user: {
       id: string;
       name: string;
@@ -240,9 +240,9 @@ export default function VideoDetailPage() {
                 <div>
                   <div className="text-sm text-gray-400 mb-1">DJ</div>
                   <div className="flex items-center">
-                    {video.dj.profileImage ? (
+                    {video.dj.userProfileImage ? (
                       <img
-                        src={video.dj.profileImage}
+                        src={video.dj.userProfileImage}
                         alt={video.dj.stageName}
                         className="w-8 h-8 rounded-full mr-2 object-cover"
                       />

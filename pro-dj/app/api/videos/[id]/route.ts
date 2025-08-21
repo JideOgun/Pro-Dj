@@ -16,11 +16,11 @@ export async function GET(
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             user: {
               select: {
                 id: true,
                 name: true,
+                profileImage: true,
               },
             },
           },
@@ -121,7 +121,6 @@ export async function PUT(
           select: {
             id: true,
             stageName: true,
-            profileImage: true,
             user: {
               select: {
                 id: true,

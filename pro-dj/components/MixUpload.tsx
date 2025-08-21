@@ -116,9 +116,9 @@ export default function MixUpload({
         return;
       }
 
-      // Validate file size (100MB limit)
-      if (file.size > 100 * 1024 * 1024) {
-        toast.error("File size must be less than 100MB");
+      // Validate file size (200MB limit)
+      if (file.size > 200 * 1024 * 1024) {
+        toast.error("File size must be less than 200MB");
         return;
       }
 
@@ -200,68 +200,98 @@ export default function MixUpload({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Mix uploaded successfully!", {
+        // Show success message with mix details
+        toast.success(`"${mixDetails.title}" uploaded successfully! 🎵`, {
           icon: "🎵",
           style: {
             borderRadius: "10px",
             background: "#333",
             color: "#fff",
           },
+          duration: 4000,
         });
 
+        // Call the upload complete callback if provided
         if (onUploadComplete && data.mix) {
           onUploadComplete(data.mix);
         }
 
-        onClose();
+        // Reset form data
+        setSelectedFile(null);
+        setAlbumArt(null);
+        setMixDetails({
+          title: "",
+          description: "",
+          genres: [],
+          tags: "",
+          isPublic: true,
+        });
+
+        // Close the modal after a brief delay to show the success message
+        setTimeout(() => {
+          onClose();
+        }, 1000);
       } else {
+        // Handle different error scenarios with detailed messages
+        let errorMessage = "Upload failed";
+        let errorIcon = "❌";
+
         if (response.status === 409) {
-          toast.error("This mix has already been uploaded", {
-            icon: "⚠️",
-            style: {
-              borderRadius: "10px",
-              background: "#333",
-              color: "#fff",
-            },
-          });
+          errorMessage = "This mix has already been uploaded";
+          errorIcon = "⚠️";
         } else if (response.status === 413) {
-          toast.error("File too large. Please choose a smaller file.", {
-            icon: "📁",
-            style: {
-              borderRadius: "10px",
-              background: "#333",
-              color: "#fff",
-            },
-          });
+          errorMessage = "File too large. Maximum size is 200MB";
+          errorIcon = "📁";
         } else if (response.status === 400) {
-          toast.error(data.error || "Invalid file format", {
-            icon: "❌",
-            style: {
-              borderRadius: "10px",
-              background: "#333",
-              color: "#fff",
-            },
-          });
+          errorMessage =
+            data.error ||
+            "Invalid file format. Please check your file and try again";
+          errorIcon = "❌";
+        } else if (response.status === 401) {
+          errorMessage = "You must be logged in to upload mixes";
+          errorIcon = "🔒";
+        } else if (response.status === 403) {
+          errorMessage = "You don't have permission to upload mixes";
+          errorIcon = "🚫";
+        } else if (response.status === 500) {
+          errorMessage = "Server error. Please try again later";
+          errorIcon = "🔧";
         } else {
-          toast.error(data.error || "Upload failed", {
-            icon: "❌",
-            style: {
-              borderRadius: "10px",
-              background: "#333",
-              color: "#fff",
-            },
-          });
+          errorMessage = data.error || `Upload failed (${response.status})`;
+          errorIcon = "❌";
         }
+
+        toast.error(errorMessage, {
+          icon: errorIcon,
+          style: {
+            borderRadius: "10px",
+            background: "#333",
+            color: "#fff",
+          },
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Upload failed. Please try again.", {
+
+      // Provide more specific error messages based on error type
+      let errorMessage = "Upload failed. Please try again.";
+
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        errorMessage =
+          "Network error. Please check your connection and try again.";
+      } else if (error instanceof Error) {
+        errorMessage = `Upload error: ${error.message}`;
+      }
+
+      toast.error(errorMessage, {
         icon: "❌",
         style: {
           borderRadius: "10px",
           background: "#333",
           color: "#fff",
         },
+        duration: 5000,
       });
     } finally {
       setIsUploading(false);
@@ -414,7 +444,7 @@ export default function MixUpload({
                         Drop your mix file here or click to browse
                       </p>
                       <p className="text-gray-400 text-sm">
-                        Supports MP3, WAV, FLAC (Max 100MB)
+                        Supports MP3, WAV, FLAC (Max 200MB)
                       </p>
                     </motion.div>
                   )}

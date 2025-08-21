@@ -459,7 +459,12 @@ export async function POST(req: Request) {
         dj: {
           select: {
             stageName: true,
-            profileImage: true,
+            userId: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
           },
         },
       },

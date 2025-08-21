@@ -36,7 +36,7 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Activate the user
+    // Activate the user and approve DJ profile if applicable
     const updatedUser = await prisma.user.update({
       where: { id: params.id },
       data: {
@@ -46,6 +46,16 @@ export async function POST(
         suspensionReason: null,
       },
     });
+
+    // If user is a DJ, also approve their DJ profile
+    if (user.role === "DJ") {
+      await prisma.djProfile.updateMany({
+        where: { userId: user.id },
+        data: {
+          isApprovedByAdmin: true,
+        },
+      });
+    }
 
     // Create notification for the activated user
     await prisma.notification.create({

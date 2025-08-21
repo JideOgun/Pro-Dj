@@ -27,27 +27,70 @@ export async function GET(req: Request) {
 
     const followingIds = following.map((f) => f.followingId);
 
-    // If not following anyone, return empty feed
+    // If not following anyone, show reposts from all users
     if (followingIds.length === 0) {
+      const allReposts = await prisma.repost.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              profileImage: true,
+            },
+          },
+          mix: {
+            include: {
+              dj: {
+                select: {
+                  id: true,
+                  stageName: true,
+                  userId: true,
+                  user: {
+                    select: {
+                      profileImage: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip,
+      });
+
+      const total = await prisma.repost.count();
+      const totalPages = Math.ceil(total / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
+      const feed = allReposts.map((repost) => ({
+        type: "repost" as const,
+        id: repost.id,
+        createdAt: repost.createdAt,
+        user: repost.user,
+        mix: repost.mix,
+        priority: 2, // Lower priority for non-followed users
+      }));
+
       return NextResponse.json({
         ok: true,
-        feed: [],
+        feed,
         pagination: {
           page,
           limit,
-          total: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPrevPage: false,
+          total,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
         },
       });
     }
 
-    // Get reposts from followed users (prioritized)
-    const followedReposts = await prisma.repost.findMany({
-      where: {
-        userId: { in: followingIds },
-      },
+    // Get all reposts (no following prerequisite)
+    const allReposts = await prisma.repost.findMany({
       include: {
         user: {
           select: {
@@ -64,50 +107,27 @@ export async function GET(req: Request) {
                 id: true,
                 stageName: true,
                 userId: true,
-                profileImage: true,
+                user: {
+                  select: {
+                    profileImage: true,
+                  },
+                },
               },
             },
           },
         },
       },
       orderBy: { createdAt: "desc" },
-      take: Math.floor(limit / 2), // Reserve half the limit for followed users
+      take: Math.floor(limit * 0.7), // Reserve 70% for reposts
     });
 
-    // Get reposts from all users (if we have space)
-    const remainingLimit = limit - followedReposts.length;
-    const allReposts =
-      remainingLimit > 0
-        ? await prisma.repost.findMany({
-            where: {
-              userId: { notIn: followingIds }, // Exclude already fetched followed users
-            },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  profileImage: true,
-                },
-              },
-              mix: {
-                include: {
-                  dj: {
-                    select: {
-                      id: true,
-                      stageName: true,
-                      userId: true,
-                      profileImage: true,
-                    },
-                  },
-                },
-              },
-            },
-            orderBy: { createdAt: "desc" },
-            take: remainingLimit,
-          })
-        : [];
+    // Separate followed and non-followed reposts for priority sorting
+    const followedReposts = allReposts.filter((repost) =>
+      followingIds.includes(repost.userId)
+    );
+    const nonFollowedReposts = allReposts.filter(
+      (repost) => !followingIds.includes(repost.userId)
+    );
 
     // Get new mixes from followed DJs (excluding mixes the user has already reposted)
     const userRepostedMixIds = await prisma.repost.findMany({
@@ -121,27 +141,35 @@ export async function GET(req: Request) {
 
     const repostedMixIds = userRepostedMixIds.map((r) => r.mixId);
 
-    const newMixes = await prisma.djMix.findMany({
-      where: {
-        dj: {
-          userId: { in: followingIds },
-        },
-        isPublic: true,
-        id: { notIn: repostedMixIds }, // Exclude mixes user has already reposted
-      },
-      include: {
-        dj: {
-          select: {
-            id: true,
-            stageName: true,
-            userId: true,
-            profileImage: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: Math.floor(limit / 2), // Reserve half the limit for new mixes
-    });
+    const remainingLimit = limit - allReposts.length;
+    const newMixes =
+      remainingLimit > 0
+        ? await prisma.djMix.findMany({
+            where: {
+              dj: {
+                userId: { in: followingIds },
+              },
+              isPublic: true,
+              id: { notIn: repostedMixIds }, // Exclude mixes user has already reposted
+            },
+            include: {
+              dj: {
+                select: {
+                  id: true,
+                  stageName: true,
+                  userId: true,
+                  user: {
+                    select: {
+                      profileImage: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+            take: remainingLimit, // Use remaining space for new mixes
+          })
+        : [];
 
     // Combine and sort by creation date
     const feed = [
@@ -153,7 +181,7 @@ export async function GET(req: Request) {
         mix: repost.mix,
         priority: 1, // Higher priority for followed users
       })),
-      ...allReposts.map((repost) => ({
+      ...nonFollowedReposts.map((repost) => ({
         type: "repost" as const,
         id: repost.id,
         createdAt: repost.createdAt,
@@ -169,9 +197,15 @@ export async function GET(req: Request) {
           id: mix.dj.userId,
           name: mix.dj.stageName,
           email: null,
-          profileImage: mix.dj.profileImage,
+          profileImage: mix.dj.user?.profileImage,
         },
-        mix,
+        mix: {
+          ...mix,
+          dj: {
+            ...mix.dj,
+            userProfileImage: mix.dj.user?.profileImage,
+          },
+        },
         priority: 1, // Higher priority for followed users
       })),
     ]
@@ -195,13 +229,8 @@ export async function GET(req: Request) {
       .slice(0, limit); // Ensure we don't exceed the limit
 
     // Get total count for pagination
-    const [followedRepostCount, allRepostCount, mixCount] = await Promise.all([
-      prisma.repost.count({
-        where: { userId: { in: followingIds } },
-      }),
-      prisma.repost.count({
-        where: { userId: { notIn: followingIds } },
-      }),
+    const [totalRepostCount, mixCount] = await Promise.all([
+      prisma.repost.count(),
       prisma.djMix.count({
         where: {
           dj: { userId: { in: followingIds } },
@@ -211,7 +240,7 @@ export async function GET(req: Request) {
       }),
     ]);
 
-    const total = followedRepostCount + allRepostCount + mixCount;
+    const total = totalRepostCount + mixCount;
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;

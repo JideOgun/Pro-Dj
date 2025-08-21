@@ -20,7 +20,17 @@ export async function GET(request: NextRequest) {
 
     const djs = await prisma.djProfile.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        stageName: true,
+        genres: true,
+        location: true,
+        experience: true,
+
+        bio: true,
+        isFeatured: true,
+        rating: true,
+        totalBookings: true,
         user: {
           select: {
             id: true,
@@ -33,6 +43,13 @@ export async function GET(request: NextRequest) {
         eventPhotos: {
           take: 3,
           orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            url: true,
+            title: true,
+            eventName: true,
+            eventType: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -46,10 +63,10 @@ export async function GET(request: NextRequest) {
       genres: dj.genres,
       location: dj.user.location || dj.location || "Location not set",
       experience: dj.experience,
-      basePriceCents: dj.basePriceCents,
+
       bio: dj.bio,
       isFeatured: dj.isFeatured,
-      profileImage: dj.user.profileImage,
+      userProfileImage: dj.user.profileImage,
       eventPhotos: dj.eventPhotos.map((photo) => ({
         id: photo.id,
         url: photo.url,

@@ -200,6 +200,89 @@ export default async function DjManagementPage({ params }: PageProps) {
           <DjApprovalActions user={user} currentAdminId={session.user.id} />
         )}
 
+        {/* Debug Information */}
+        <div className="bg-gray-800 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Debug Information</h2>
+          <div className="grid md:grid-cols-2 gap-6 text-sm">
+            <div>
+              <h3 className="text-lg font-medium mb-2">User Status</h3>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-gray-400">ID:</span>{" "}
+                  <span className="text-white">{user.id}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Email:</span>{" "}
+                  <span className="text-white">{user.email}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Role:</span>{" "}
+                  <span className="text-white">{user.role}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Status:</span>{" "}
+                  <span className="text-white">{user.status}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Created:</span>{" "}
+                  <span className="text-white">
+                    {format(new Date(user.createdAt), "MMM d, yyyy HH:mm")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Updated:</span>{" "}
+                  <span className="text-white">
+                    {format(new Date(user.updatedAt), "MMM d, yyyy HH:mm")}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium mb-2">DJ Profile Status</h3>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-gray-400">Profile ID:</span>{" "}
+                  <span className="text-white">
+                    {user.djProfile?.id || "None"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Stage Name:</span>{" "}
+                  <span className="text-white">
+                    {user.djProfile?.stageName || "None"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Admin Approved:</span>{" "}
+                  <span className="text-white">
+                    {user.djProfile?.isApprovedByAdmin ? "Yes" : "No"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Accepting Bookings:</span>{" "}
+                  <span className="text-white">
+                    {user.djProfile?.isAcceptingBookings ? "Yes" : "No"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Featured:</span>{" "}
+                  <span className="text-white">
+                    {user.djProfile?.isFeatured ? "Yes" : "No"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Bookings:</span>{" "}
+                  <span className="text-white">{user.bookings.length}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Reviews:</span>{" "}
+                  <span className="text-white">{user.reviews.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Performance Stats */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Performance Statistics</h2>

@@ -26,6 +26,14 @@ export async function DELETE(
     const { adminId, adminPassword } = await req.json();
     const userId = (await params).id;
 
+    // Ensure the adminId matches the session user's ID (prevent impersonation)
+    if (adminId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Admin ID mismatch - security violation" },
+        { status: 403 }
+      );
+    }
+
     // Verify the admin is not trying to delete themselves
     if (userId === adminId) {
       return NextResponse.json(
@@ -111,9 +119,9 @@ export async function DELETE(
 
     // Use a transaction to ensure all related data is deleted atomically
     await prisma.$transaction(async (tx) => {
-      // Delete all reviews by this user
+      // Delete all reviews by this user (as a client)
       await tx.review.deleteMany({
-        where: { userId: userId },
+        where: { clientId: userId },
       });
 
       // Delete all reviews for this user's bookings (if they're a DJ)
@@ -127,27 +135,103 @@ export async function DELETE(
         });
       }
 
+      // Delete all comments by this user
+      await tx.comment.deleteMany({
+        where: { userId: userId },
+      });
+
+      // Delete all comment likes/dislikes by this user
+      await tx.commentLike.deleteMany({
+        where: { userId: userId },
+      });
+
+      await tx.commentDislike.deleteMany({
+        where: { userId: userId },
+      });
+
+      // Delete all mix likes by this user
+      await tx.mixLike.deleteMany({
+        where: { userId: userId },
+      });
+
+      // Delete all follows (both as follower and following)
+      await tx.follow.deleteMany({
+        where: {
+          OR: [{ followerId: userId }, { followingId: userId }],
+        },
+      });
+
+      // Delete all reposts by this user
+      await tx.repost.deleteMany({
+        where: { userId: userId },
+      });
+
       // Delete all bookings by this user (client bookings)
       await tx.booking.deleteMany({
         where: { userId: userId },
       });
-
-      // Delete DJ profile if it exists
-      if (userToDelete.djProfile) {
-        await tx.djProfile.delete({
-          where: { userId: userId },
-        });
-      }
 
       // Delete all notifications for this user
       await tx.notification.deleteMany({
         where: { userId: userId },
       });
 
-      // Delete all booking recoveries for this user
+      // Delete all booking recoveries for this user (through original booking)
       await tx.bookingRecovery.deleteMany({
+        where: {
+          originalBooking: {
+            userId: userId,
+          },
+        },
+      });
+
+      // Delete user media files
+      await tx.userMedia.deleteMany({
         where: { userId: userId },
       });
+
+      // Delete security clearance if it exists
+      await tx.securityClearance.deleteMany({
+        where: { userId: userId },
+      });
+
+      // Delete DJ profile if it exists (delete related data first)
+      if (userToDelete.djProfile) {
+        // Delete DJ event pricing
+        await tx.djEventPricing.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ addons
+        await tx.djAddon.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ mixes
+        await tx.djMix.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ YouTube videos
+        await tx.djYouTubeVideo.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ event photos
+        await tx.eventPhoto.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ pricing packages
+        await tx.pricing.deleteMany({
+          where: { djId: userToDelete.djProfile.id },
+        });
+
+        // Delete DJ profile
+        await tx.djProfile.delete({
+          where: { userId: userId },
+        });
+      }
 
       // Finally, delete the user account
       await tx.user.delete({

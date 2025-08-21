@@ -4,204 +4,104 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "defaultPassword";
-  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@example.com";
+  console.log("🌱 Starting database seeding...");
+
+  console.log("🌱 Starting fresh database seeding...");
+
+  // Create admin user (Babajide Ogunbanjo with stage name JAY BABA)
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "jaybaba@prodj.com";
   const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-  const admin = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
-    update: {
-      role: Role.ADMIN,
-      password: hashedPassword, // Update password too
-      status: "ACTIVE", // Ensure admin is active
-    },
-    create: {
+  const admin = await prisma.user.create({
+    data: {
       email: ADMIN_EMAIL,
-      name: "Jay Baba",
+      name: "Babajide Ogunbanjo",
       password: hashedPassword,
       role: Role.ADMIN,
-      status: "ACTIVE", // Ensure admin is active
+      status: "ACTIVE",
+      agreedToTerms: true,
+      agreedToPrivacy: true,
+      termsAgreedAt: new Date(),
+      privacyAgreedAt: new Date(),
+      termsVersion: "1.0",
+      privacyVersion: "1.0",
     },
   });
 
-  console.log("✅ Admin user created/updated:", {
+  // Create admin DJ profile
+  await prisma.djProfile.create({
+    data: {
+      userId: admin.id,
+      stageName: "JAY BABA",
+      genres: ["Afrobeats", "Hip Hop", "Pop", "R&B"],
+      bio: "Professional DJ and founder of Pro-DJ platform. Specializing in Afrobeats, Hip Hop, and contemporary hits. Creating unforgettable experiences for all types of events.",
+      experience: 8,
+      location: "New York, NY",
+      travelRadius: 100,
+
+      eventsOffered: [
+        "Wedding",
+        "Club",
+        "Corporate",
+        "Birthday",
+        "Private Party",
+      ],
+      isApprovedByAdmin: true,
+      isAcceptingBookings: true,
+      isFeatured: true,
+      rating: 4.9,
+      totalBookings: 150,
+    },
+  });
+
+  console.log("✅ Admin user created:", {
     email: admin.email,
     name: admin.name,
+    stageName: "JAY BABA",
     role: admin.role,
-    hasPassword: !!admin.password,
   });
 
-  // Create a test client user
+  // Create test client user
   const CLIENT_PASSWORD = "password";
-  const CLIENT_EMAIL = "adefreshkid@icloud.com";
+  const CLIENT_EMAIL = "imani@test.com";
   const clientHashedPassword = await bcrypt.hash(CLIENT_PASSWORD, 10);
 
-  const client = await prisma.user.upsert({
-    where: { email: CLIENT_EMAIL },
-    update: {
-      role: Role.CLIENT,
-      status: "ACTIVE", // Ensure client is active
-    },
-    create: {
+  const client = await prisma.user.create({
+    data: {
       email: CLIENT_EMAIL,
-      name: "Test Client",
+      name: "Imani Hamilton",
       password: clientHashedPassword,
       role: Role.CLIENT,
-      status: "ACTIVE", // Ensure client is active
+      status: "ACTIVE",
+      agreedToTerms: true,
+      agreedToPrivacy: true,
+      termsAgreedAt: new Date(),
+      privacyAgreedAt: new Date(),
+      termsVersion: "1.0",
+      privacyVersion: "1.0",
     },
   });
 
-  console.log("✅ Client user created/updated:", {
+  console.log("✅ Client user created:", {
     email: client.email,
     name: client.name,
     role: client.role,
   });
 
-  const postCount = await prisma.post.count();
-  if (postCount === 0) {
-    await prisma.post.create({
-      data: {
-        title: "Welcome to proDJ",
-        content:
-          "This is the official home of Jay Baba. Mixes, events, and booking info will live here. Stay tuned.",
-        coverImage: "some cloudinary url",
-      },
-    });
-
-    console.log("Seed data created successfully. Admin:", {
-      email: admin.email,
-      name: admin.role,
-    });
-  }
-
-  // Clear old rows so we don't get duplicates while testing
-  await prisma.pricing.deleteMany();
-
-  await prisma.pricing.createMany({
-    data: [
-      // Wedding packages
-      {
-        type: "Wedding",
-        key: "silver",
-        label: "Silver Package",
-        priceCents: 15000, // $150/hour
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        type: "Wedding",
-        key: "gold",
-        label: "Gold Package",
-        priceCents: 20000, // $200/hour
-        sortOrder: 2,
-        isActive: true,
-      },
-      {
-        type: "Wedding",
-        key: "platinum",
-        label: "Platinum Package",
-        priceCents: 25000, // $250/hour
-        sortOrder: 3,
-        isActive: true,
-      },
-
-      // Club packages
-      {
-        type: "Club",
-        key: "basic",
-        label: "Basic Club Package",
-        priceCents: 10000, // $100/hour
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        type: "Club",
-        key: "premium",
-        label: "Premium Club Package",
-        priceCents: 15000, // $150/hour
-        sortOrder: 2,
-        isActive: true,
-      },
-      {
-        type: "Club",
-        key: "vip",
-        label: "VIP Club Package",
-        priceCents: 20000, // $200/hour
-        sortOrder: 3,
-        isActive: true,
-      },
-
-      // Corporate Event packages
-      {
-        type: "Corporate",
-        key: "basic",
-        label: "Basic Corporate Package",
-        priceCents: 12000, // $120/hour
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        type: "Corporate",
-        key: "premium",
-        label: "Premium Corporate Package",
-        priceCents: 18000, // $180/hour
-        sortOrder: 2,
-        isActive: true,
-      },
-
-      // Private Party Packages
-      {
-        type: "Private Party",
-        key: "basic",
-        label: "Basic Private Party Package",
-        priceCents: 8000, // $80/hour
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        type: "Private Party",
-        key: "premium",
-        label: "Premium Private Party Package",
-        priceCents: 12000, // $120/hour
-        sortOrder: 2,
-        isActive: true,
-      },
-
-      // Birthday Packages
-      {
-        type: "Birthday",
-        key: "basic",
-        label: "Basic Birthday Package",
-        priceCents: 6000, // $60/hour
-        sortOrder: 1,
-        isActive: true,
-      },
-      {
-        type: "Birthday",
-        key: "premium",
-        label: "Premium Birthday Package",
-        priceCents: 10000, // $100/hour
-        sortOrder: 2,
-        isActive: true,
-      },
-    ],
-  });
-
-  console.log("✅ Pricing seeded successfully");
-
-  // Create test DJs
+  // Test DJs data - only the 4 requested
   const testDjs = [
     {
       email: "osean@test.com",
-      name: "OSEAN",
+      name: "Osean",
       password: "password",
       stageName: "OSEAN",
       genres: ["Afrobeats", "Amapiano", "Hip Hop"],
-      bio: "Professional DJ with 5+ years of experience in Afrobeats and Amapiano. Known for high-energy performances and crowd engagement.",
+      bio: "Professional DJ with 5+ years of experience in Afrobeats and Amapiano. Known for high-energy performances and crowd engagement. Perfect for weddings, clubs, and private parties.",
       experience: 5,
       location: "Lagos, Nigeria",
       travelRadius: 50,
-      basePriceCents: 25000,
+
       eventsOffered: [
         "Wedding",
         "Club",
@@ -211,16 +111,29 @@ async function main() {
       ],
     },
     {
+      email: "djsb@test.com",
+      name: "DJ SB",
+      password: "password",
+      stageName: "DJ SB",
+      genres: ["House", "Techno", "EDM", "Pop"],
+      bio: "Versatile DJ with expertise in House, Techno, and EDM. Creates energetic atmospheres perfect for clubs, corporate events, and private parties. Known for seamless transitions and crowd control.",
+      experience: 6,
+      location: "Los Angeles, CA",
+      travelRadius: 80,
+
+      eventsOffered: ["Club", "Corporate", "Private Party"],
+    },
+    {
       email: "jamiedred@test.com",
-      name: "JAMIE DRED",
+      name: "Jamie Dred",
       password: "password",
       stageName: "JAMIE DRED",
       genres: ["House", "Techno", "EDM"],
-      bio: "International DJ specializing in House and Techno music. Has performed at major clubs and festivals worldwide.",
+      bio: "International DJ specializing in House and Techno music. Has performed at major clubs and festivals worldwide. Creates immersive electronic music experiences.",
       experience: 8,
       location: "London, UK",
       travelRadius: 100,
-      basePriceCents: 35000,
+
       eventsOffered: ["Club", "Corporate", "Private Party"],
     },
     {
@@ -228,78 +141,39 @@ async function main() {
       name: "DJ T.O",
       password: "password",
       stageName: "DJ T.O",
-      genres: ["R&B", "Hip Hop", "Reggae"],
-      bio: "Versatile DJ with expertise in R&B, Hip Hop, and Reggae. Perfect for weddings, corporate events, and private parties.",
+      genres: ["R&B", "Hip Hop", "Reggae", "Pop"],
+      bio: "Versatile DJ with expertise in R&B, Hip Hop, and Reggae. Perfect for weddings, corporate events, and private parties. Known for reading the crowd and adapting music selection.",
       experience: 6,
       location: "Toronto, Canada",
       travelRadius: 75,
-      basePriceCents: 30000,
-      eventsOffered: ["Wedding", "Birthday", "Private Party"],
-    },
-    {
-      email: "jaybaba@test.com",
-      name: "JAY BABA",
-      password: "password",
-      stageName: "JAY BABA",
-      genres: ["Afrobeats", "Hip Hop", "Pop"],
-      bio: "High-energy DJ specializing in Afrobeats and contemporary hits. Perfect for parties and celebrations.",
-      experience: 4,
-      location: "New York, NY",
-      travelRadius: 60,
-      basePriceCents: 28000,
-      eventsOffered: ["Birthday", "Club", "Private Party"],
-    },
-    {
-      email: "djspark@test.com",
-      name: "DJ SPARK",
-      password: "password",
-      stageName: "DJ SPARK",
-      genres: ["EDM", "House", "Pop"],
-      bio: "Energetic DJ with a passion for creating unforgettable dance experiences. Specializes in EDM and house music.",
-      experience: 7,
-      location: "Los Angeles, CA",
-      travelRadius: 80,
-      basePriceCents: 32000,
-      eventsOffered: ["Club", "Corporate", "Private Party"],
+
+      eventsOffered: ["Wedding", "Birthday", "Private Party", "Corporate"],
     },
   ];
 
+  // Create test DJs
   for (const djData of testDjs) {
     const hashedPassword = await bcrypt.hash(djData.password, 10);
 
-    const dj = await prisma.user.upsert({
-      where: { email: djData.email },
-      update: {
-        role: Role.DJ,
-        name: djData.name,
-        password: hashedPassword,
-        status: "ACTIVE", // Set existing DJs as active
-      },
-      create: {
+    const dj = await prisma.user.create({
+      data: {
         email: djData.email,
         name: djData.name,
         password: hashedPassword,
         role: Role.DJ,
-        status: "ACTIVE", // Set new DJs as active
+        status: "ACTIVE",
+        agreedToTerms: true,
+        agreedToPrivacy: true,
+        termsAgreedAt: new Date(),
+        privacyAgreedAt: new Date(),
+        termsVersion: "1.0",
+        privacyVersion: "1.0",
       },
     });
 
     // Create DJ profile
-    await prisma.djProfile.upsert({
-      where: { userId: dj.id },
-      update: {
-        stageName: djData.stageName,
-        genres: djData.genres,
-        bio: djData.bio,
-        experience: djData.experience,
-        location: djData.location,
-        travelRadius: djData.travelRadius,
-        basePriceCents: djData.basePriceCents,
-        eventsOffered: djData.eventsOffered || [],
-        isApprovedByAdmin: true, // Mark existing DJs as approved
-        isAcceptingBookings: true, // Mark existing DJs as accepting bookings
-      },
-      create: {
+    await prisma.djProfile.create({
+      data: {
         userId: dj.id,
         stageName: djData.stageName,
         genres: djData.genres,
@@ -307,20 +181,195 @@ async function main() {
         experience: djData.experience,
         location: djData.location,
         travelRadius: djData.travelRadius,
-        basePriceCents: djData.basePriceCents,
-        eventsOffered: djData.eventsOffered || [],
-        isApprovedByAdmin: true, // Mark new DJs as approved
-        isAcceptingBookings: true, // Mark new DJs as accepting bookings
+
+        eventsOffered: djData.eventsOffered,
+        isApprovedByAdmin: true,
+        isAcceptingBookings: true,
+        rating: Math.floor(Math.random() * 20) / 10 + 4.0, // Random rating between 4.0-5.9
+        totalBookings: Math.floor(Math.random() * 50) + 10, // Random bookings between 10-59
       },
     });
 
     console.log(`✅ DJ created: ${djData.stageName} (${djData.email})`);
   }
+
+  // Create event-specific pricing for all test DJs
+  console.log("💰 Creating event-specific pricing for test DJs...");
+
+  // OSEAN pricing
+  const oseanProfile = await prisma.djProfile.findFirst({
+    where: { stageName: "OSEAN" },
+  });
+  if (oseanProfile) {
+    await prisma.djEventPricing.createMany({
+      data: [
+        { djId: oseanProfile.id, eventType: "Wedding", hourlyRateCents: 25000 },
+        { djId: oseanProfile.id, eventType: "Club", hourlyRateCents: 20000 },
+        {
+          djId: oseanProfile.id,
+          eventType: "Corporate",
+          hourlyRateCents: 22000,
+        },
+        {
+          djId: oseanProfile.id,
+          eventType: "Birthday",
+          hourlyRateCents: 18000,
+        },
+        {
+          djId: oseanProfile.id,
+          eventType: "Private Party",
+          hourlyRateCents: 20000,
+        },
+      ],
+    });
+  }
+
+  // DJ SB pricing
+  const djsbProfile = await prisma.djProfile.findFirst({
+    where: { stageName: "DJ SB" },
+  });
+  if (djsbProfile) {
+    await prisma.djEventPricing.createMany({
+      data: [
+        { djId: djsbProfile.id, eventType: "Club", hourlyRateCents: 30000 },
+        {
+          djId: djsbProfile.id,
+          eventType: "Corporate",
+          hourlyRateCents: 35000,
+        },
+        {
+          djId: djsbProfile.id,
+          eventType: "Private Party",
+          hourlyRateCents: 28000,
+        },
+      ],
+    });
+  }
+
+  // JAMIE DRED pricing
+  const jamieProfile = await prisma.djProfile.findFirst({
+    where: { stageName: "JAMIE DRED" },
+  });
+  if (jamieProfile) {
+    await prisma.djEventPricing.createMany({
+      data: [
+        { djId: jamieProfile.id, eventType: "Club", hourlyRateCents: 40000 },
+        {
+          djId: jamieProfile.id,
+          eventType: "Corporate",
+          hourlyRateCents: 45000,
+        },
+        {
+          djId: jamieProfile.id,
+          eventType: "Private Party",
+          hourlyRateCents: 38000,
+        },
+      ],
+    });
+  }
+
+  // DJ T.O pricing
+  const djtoProfile = await prisma.djProfile.findFirst({
+    where: { stageName: "DJ T.O" },
+  });
+  if (djtoProfile) {
+    await prisma.djEventPricing.createMany({
+      data: [
+        { djId: djtoProfile.id, eventType: "Wedding", hourlyRateCents: 28000 },
+        { djId: djtoProfile.id, eventType: "Birthday", hourlyRateCents: 22000 },
+        {
+          djId: djtoProfile.id,
+          eventType: "Private Party",
+          hourlyRateCents: 25000,
+        },
+        {
+          djId: djtoProfile.id,
+          eventType: "Corporate",
+          hourlyRateCents: 32000,
+        },
+      ],
+    });
+  }
+
+  // Create some sample event pricing for the admin DJ
+  const adminDjProfile = await prisma.djProfile.findFirst({
+    where: { stageName: "JAY BABA" },
+  });
+
+  if (adminDjProfile) {
+    await prisma.djEventPricing.createMany({
+      data: [
+        {
+          djId: adminDjProfile.id,
+          eventType: "Wedding",
+          hourlyRateCents: 45000, // $450/hour for weddings
+        },
+        {
+          djId: adminDjProfile.id,
+          eventType: "Club",
+          hourlyRateCents: 35000, // $350/hour for clubs
+        },
+        {
+          djId: adminDjProfile.id,
+          eventType: "Corporate",
+          hourlyRateCents: 40000, // $400/hour for corporate
+        },
+        {
+          djId: adminDjProfile.id,
+          eventType: "Birthday",
+          hourlyRateCents: 30000, // $300/hour for birthdays
+        },
+        {
+          djId: adminDjProfile.id,
+          eventType: "Private Party",
+          hourlyRateCents: 35000, // $350/hour for private parties
+        },
+      ],
+    });
+
+    // Create some sample add-ons for the admin DJ
+    await prisma.djAddon.createMany({
+      data: [
+        {
+          djId: adminDjProfile.id,
+          addonKey: "lighting",
+          label: "Professional Lighting Setup",
+          description:
+            "Advanced lighting system with moving heads, lasers, and fog effects",
+          priceCents: 15000, // $150
+          isActive: true,
+        },
+        {
+          djId: adminDjProfile.id,
+          addonKey: "mc",
+          label: "MC Services",
+          description:
+            "Professional MC services for announcements and crowd engagement",
+          priceCents: 10000, // $100
+          isActive: true,
+        },
+        {
+          djId: adminDjProfile.id,
+          addonKey: "extended_set",
+          label: "Extended Set",
+          description: "Additional hour of performance time",
+          priceCents: 35000, // $350
+          isActive: true,
+        },
+      ],
+    });
+  }
+
+  console.log("🎉 Database seeding completed successfully!");
+  console.log("📊 Summary:");
+  console.log(`   - Admin: ${admin.email} (${admin.name}) - Stage: JAY BABA`);
+  console.log(`   - Client: ${client.email}`);
+  console.log(`   - Test DJs: ${testDjs.map((dj) => dj.stageName).join(", ")}`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Seeding failed:", e);
     process.exit(1);
   })
   .finally(async () => {

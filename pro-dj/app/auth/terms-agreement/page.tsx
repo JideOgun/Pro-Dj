@@ -5,15 +5,44 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import TermsAgreementModal from "@/components/TermsAgreementModal";
+import DjContractorAgreementModal from "@/components/DjContractorAgreementModal";
 import toast from "react-hot-toast";
 
 export default function TermsAgreementPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
+  const [showDjModal, setShowDjModal] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState<any>(null);
+
+  // Prevent navigation away from terms agreement page
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+
+    const handlePopState = (event: PopStateEvent) => {
+      event.preventDefault();
+      toast.error("You must agree to our terms before continuing");
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    // Add event listeners
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopState);
+
+    // Push a state to prevent back navigation
+    window.history.pushState(null, "", window.location.href);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   // Check for pending registration data
   useEffect(() => {
@@ -40,14 +69,18 @@ export default function TermsAgreementPage() {
     }
   }, [status, router]);
 
-  // Show modal if we have pending registration
+  // Show appropriate modal based on user role
   useEffect(() => {
     if (pendingRegistration) {
-      setShowModal(true);
+      if (pendingRegistration.role === "DJ") {
+        setShowDjModal(true);
+      } else {
+        setShowModal(true);
+      }
     }
   }, [pendingRegistration]);
 
-  // Handle agreement completion
+  // Handle regular terms agreement completion
   const handleAgree = async () => {
     if (!pendingRegistration) {
       toast.error("No registration data found");
@@ -89,7 +122,7 @@ export default function TermsAgreementPage() {
           setIsLoading(false);
         }
       } else {
-        // Handle regular registration - create the user account
+        // Handle regular registration - create the user account with terms agreement
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,6 +131,8 @@ export default function TermsAgreementPage() {
             email: pendingRegistration.email,
             password: pendingRegistration.password,
             role: pendingRegistration.role,
+            agreedToTerms: true,
+            agreedToPrivacy: true,
           }),
         });
 
@@ -152,6 +187,105 @@ export default function TermsAgreementPage() {
     sessionStorage.removeItem("pendingGoogleRegistration");
     toast.error("You must agree to our terms to use the platform");
     router.push("/auth");
+  };
+
+  // Handle DJ contractor agreement completion
+  const handleDjAgree = async (taxInfo: any) => {
+    if (!pendingRegistration) {
+      toast.error("No registration data found");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Check if this is Google OAuth registration or regular registration
+      const isGoogleRegistration = !pendingRegistration.password;
+
+      if (isGoogleRegistration) {
+        // Handle Google OAuth registration with contractor terms
+        const res = await fetch("/api/auth/update-role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: pendingRegistration.role,
+            contractorTerms: true,
+            taxInfo: taxInfo,
+          }),
+        });
+
+        if (res.ok) {
+          // Clear stored registration data
+          sessionStorage.removeItem("pendingGoogleRegistration");
+
+          setShowDjModal(false);
+          setIsRedirecting(true);
+          toast.success("DJ account setup completed!");
+
+          // Redirect to DJ registration
+          setTimeout(() => {
+            router.push("/dj/register");
+          }, 1000);
+        } else {
+          const data = await res.json();
+          toast.error(data.error || "Failed to update role");
+          setIsLoading(false);
+        }
+      } else {
+        // Handle regular DJ registration with contractor terms
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: pendingRegistration.name,
+            email: pendingRegistration.email,
+            password: pendingRegistration.password,
+            role: pendingRegistration.role,
+            agreedToTerms: true,
+            agreedToPrivacy: true,
+            contractorTerms: true,
+            taxInfo: taxInfo,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Clear stored registration data
+          sessionStorage.removeItem("pendingRegistration");
+
+          // Auto-login after registration
+          const loginRes = await signIn("credentials", {
+            email: pendingRegistration.email,
+            password: pendingRegistration.password,
+            redirect: false,
+          });
+
+          if (loginRes?.error) {
+            toast.error(
+              "Account created but login failed. Please try logging in."
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          setShowDjModal(false);
+          setIsRedirecting(true);
+          toast.success("DJ account created successfully!");
+
+          // Redirect to DJ registration
+          setTimeout(() => {
+            router.push("/dj/register");
+          }, 1000);
+        } else {
+          toast.error(data.error || "Registration failed");
+          setIsLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   // Show loading state
@@ -212,6 +346,14 @@ export default function TermsAgreementPage() {
       <TermsAgreementModal
         isOpen={showModal}
         onAgree={handleAgree}
+        onDecline={handleDecline}
+        isLoading={isLoading}
+      />
+
+      {/* DJ Contractor Agreement Modal */}
+      <DjContractorAgreementModal
+        isOpen={showDjModal}
+        onAgree={handleDjAgree}
         onDecline={handleDecline}
         isLoading={isLoading}
       />

@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, location, bio, website, socialLinks } = body;
+    const { name, phone, location, bio, website, socialLinks, djProfile } =
+      body;
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -80,7 +81,33 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true, data: updatedUser });
+    // Update DJ profile if provided and user has a DJ profile
+    if (djProfile && updatedUser.djProfile) {
+      await prisma.djProfile.update({
+        where: { id: updatedUser.djProfile.id },
+        data: {
+          stageName: djProfile.stageName || undefined,
+          bio: djProfile.bio || undefined,
+          genres: djProfile.genres || undefined,
+          experience: djProfile.experience || undefined,
+        },
+      });
+    }
+
+    // Fetch the updated user with DJ profile data
+    const finalUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        djProfile: true,
+        userMedia: {
+          where: { type: "PROFILE_PICTURE" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    return NextResponse.json({ ok: true, data: finalUser });
   } catch (error) {
     console.error("Error updating profile:", error);
     return NextResponse.json(

@@ -44,6 +44,15 @@ export default function DjRegisterPage() {
     setMounted(true);
   }, []);
 
+  // Check if user is authenticated and is a DJ
+  useEffect(() => {
+    if (session?.user && session.user.role !== "DJ") {
+      // If user is not a DJ, redirect to appropriate page
+      router.push("/dashboard");
+      return;
+    }
+  }, [session, router]);
+
   const [formData, setFormData] = useState({
     stageName: "",
     bio: "",
@@ -51,8 +60,9 @@ export default function DjRegisterPage() {
     experience: 0,
     location: "",
     travelRadius: 50,
-    basePriceCents: 0,
+
     eventsOffered: [] as string[],
+    eventPricing: {} as Record<string, number>, // eventType -> hourlyRateCents
     profileImage: "",
     portfolio: [] as string[],
     customGenres: "",
@@ -655,12 +665,19 @@ export default function DjRegisterPage() {
       errorFields.push("Experience");
     }
 
-    if (!formData.basePriceCents || formData.basePriceCents <= 0) {
-      errorFields.push("Base Rate");
-    }
-
     if (formData.eventsOffered.length === 0) {
       errorFields.push("Events Offered");
+    }
+
+    // Validate that pricing is set for all selected events
+    const missingPricing = formData.eventsOffered.filter(
+      (eventType) =>
+        !formData.eventPricing[eventType] ||
+        formData.eventPricing[eventType] <= 0
+    );
+
+    if (missingPricing.length > 0) {
+      errorFields.push(`Pricing for: ${missingPricing.join(", ")}`);
     }
 
     // Show comprehensive error message if any fields are missing
@@ -1094,40 +1111,6 @@ export default function DjRegisterPage() {
               />
             </div>
 
-            {/* Base Price */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Base Hourly Rate (USD)
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={(formData.basePriceCents / 100).toFixed(2)}
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value) || 0;
-                    setFormData({
-                      ...formData,
-                      basePriceCents: Math.round(value * 100),
-                    });
-                  }}
-                  onBlur={(e) => {
-                    // Format to 2 decimal places on blur
-                    const value = parseFloat(e.target.value) || 0;
-                    e.target.value = value.toFixed(2);
-                  }}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Your base hourly rate for events. You can set different rates
-                for specific event types later.
-              </p>
-            </div>
-
             {/* Events Offered */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -1176,6 +1159,67 @@ export default function DjRegisterPage() {
                 </p>
               )}
             </div>
+
+            {/* Event Pricing */}
+            {formData.eventsOffered.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Event Pricing <span className="text-red-400">*</span>
+                </label>
+                <p className="text-sm text-gray-400 mb-3">
+                  Set your hourly rate for each event type you offer. You can
+                  adjust these rates later.
+                </p>
+                <div className="space-y-3">
+                  {formData.eventsOffered.map((eventType) => (
+                    <div key={eventType} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="block text-sm text-gray-300 mb-1">
+                          {eventType}
+                        </label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={(
+                              (formData.eventPricing[eventType] || 0) / 100
+                            ).toFixed(2)}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              setFormData({
+                                ...formData,
+                                eventPricing: {
+                                  ...formData.eventPricing,
+                                  [eventType]: Math.round(value * 100),
+                                },
+                              });
+                            }}
+                            onBlur={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              e.target.value = value.toFixed(2);
+                            }}
+                            className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-400 mt-6">/hour</div>
+                    </div>
+                  ))}
+                </div>
+                {formData.eventsOffered.some(
+                  (eventType) =>
+                    !formData.eventPricing[eventType] ||
+                    formData.eventPricing[eventType] <= 0
+                ) && (
+                  <p className="text-red-400 text-sm mt-2">
+                    Please set pricing for all selected event types
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Availability */}
             <div>
@@ -1262,7 +1306,7 @@ export default function DjRegisterPage() {
               </div>
               <div>
                 <div className="w-6 h-6 mb-2 text-lg">💰</div>
-                <p>Set up your pricing packages</p>
+                <p>Set up your event-specific pricing</p>
               </div>
               <div>
                 <div className="w-6 h-6 mb-2 text-lg">🎵</div>

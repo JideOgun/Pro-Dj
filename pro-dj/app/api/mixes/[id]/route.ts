@@ -21,7 +21,6 @@ export async function GET(
             id: true,
             stageName: true,
             userId: true,
-            profileImage: true,
             user: {
               select: {
                 profileImage: true,
@@ -50,8 +49,8 @@ export async function GET(
       userLiked = !!like;
     }
 
-    // Use user's profile image as primary, DJ profile image as fallback
-    const djProfileImage = mix.dj.user?.profileImage || mix.dj.profileImage;
+    // Use user's profile image
+    const djProfileImage = mix.dj.user?.profileImage;
 
     // Generate album art URL if needed
     let albumArtUrl = mix.albumArtUrl;
@@ -91,7 +90,6 @@ export async function GET(
         userLiked,
         dj: {
           ...mix.dj,
-          profileImage: djProfileImage,
           userProfileImage: mix.dj.user?.profileImage,
         },
       },

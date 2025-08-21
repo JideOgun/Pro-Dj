@@ -32,7 +32,7 @@ interface EventPhoto {
   createdAt: Date;
   dj: {
     stageName: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
     userId: string;
   };
 }
@@ -227,9 +227,9 @@ export default function PhotoDetailPage() {
                 <div>
                   <div className="text-sm text-gray-400 mb-1">Photographer</div>
                   <div className="flex items-center">
-                    {photo.dj.profileImage ? (
+                    {photo.dj.userProfileImage ? (
                       <img
-                        src={photo.dj.profileImage}
+                        src={photo.dj.userProfileImage}
                         alt={photo.dj.stageName}
                         className="w-8 h-8 rounded-full mr-2 object-cover"
                       />

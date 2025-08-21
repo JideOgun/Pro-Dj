@@ -146,6 +146,10 @@ export const authOptions: NextAuthOptions = {
           token.status = u.status;
           token.suspensionReason = u.suspensionReason;
           token.suspendedAt = u.suspendedAt;
+          token.agreedToTerms = u.agreedToTerms;
+          token.agreedToPrivacy = u.agreedToPrivacy;
+          token.agreedToContractorTerms = u.agreedToContractorTerms;
+          token.agreedToServiceProviderTerms = u.agreedToServiceProviderTerms;
         }
       }
 
@@ -168,6 +172,12 @@ export const authOptions: NextAuthOptions = {
         session.user.status = token.status as string;
         session.user.suspensionReason = token.suspensionReason as string | null;
         session.user.suspendedAt = token.suspendedAt as Date | null;
+        session.user.agreedToTerms = token.agreedToTerms as boolean;
+        session.user.agreedToPrivacy = token.agreedToPrivacy as boolean;
+        session.user.agreedToContractorTerms =
+          token.agreedToContractorTerms as boolean;
+        session.user.agreedToServiceProviderTerms =
+          token.agreedToServiceProviderTerms as boolean;
       }
       return session;
     },

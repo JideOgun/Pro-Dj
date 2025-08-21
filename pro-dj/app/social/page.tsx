@@ -26,7 +26,7 @@ interface InstagramPost {
   permalink: string;
   dj: {
     stageName: string;
-    profileImage: string | null;
+    userProfileImage: string | null;
   };
 }
 
@@ -173,9 +173,9 @@ export default function SocialPage() {
                 {/* DJ Info */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
-                    {post.dj.profileImage ? (
+                    {post.dj.userProfileImage ? (
                       <img
-                        src={post.dj.profileImage}
+                        src={post.dj.userProfileImage}
                         alt={post.dj.stageName}
                         className="w-6 h-6 rounded-full mr-2 object-cover"
                       />

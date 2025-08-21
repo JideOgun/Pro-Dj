@@ -7,6 +7,10 @@ declare module "next-auth" {
     status: string;
     suspensionReason?: string | null;
     suspendedAt?: Date | null;
+    agreedToTerms?: boolean;
+    agreedToPrivacy?: boolean;
+    agreedToContractorTerms?: boolean;
+    agreedToServiceProviderTerms?: boolean;
   }
 
   interface Session {
@@ -19,6 +23,10 @@ declare module "next-auth" {
       image?: string | null;
       suspensionReason?: string | null;
       suspendedAt?: Date | null;
+      agreedToTerms?: boolean;
+      agreedToPrivacy?: boolean;
+      agreedToContractorTerms?: boolean;
+      agreedToServiceProviderTerms?: boolean;
     };
   }
 }
@@ -30,5 +38,9 @@ declare module "next-auth/jwt" {
     status: string;
     suspensionReason?: string | null;
     suspendedAt?: Date | null;
+    agreedToTerms?: boolean;
+    agreedToPrivacy?: boolean;
+    agreedToContractorTerms?: boolean;
+    agreedToServiceProviderTerms?: boolean;
   }
 }
