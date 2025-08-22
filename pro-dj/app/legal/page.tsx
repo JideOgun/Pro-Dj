@@ -234,12 +234,6 @@ export default function LegalIndexPage() {
             </div>
 
             <div className="bg-gray-700 rounded-lg p-4 text-center">
-              <h3 className="font-medium text-violet-300 mb-2">EIN/Tax ID</h3>
-              <p className="text-gray-300 text-sm">12-3456789</p>
-              <p className="text-green-400 text-xs mt-1">Verified</p>
-            </div>
-
-            <div className="bg-gray-700 rounded-lg p-4 text-center">
               <h3 className="font-medium text-violet-300 mb-2">Insurance</h3>
               <p className="text-gray-300 text-sm">$2M Coverage</p>
               <p className="text-green-400 text-xs mt-1">Active</p>

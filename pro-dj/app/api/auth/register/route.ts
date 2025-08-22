@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { EmailService } from "@/lib/email";
 import {
   encryptTaxId,
   getTaxIdLastFour,
@@ -160,6 +161,20 @@ export async function POST(req: Request) {
         );
         // Don't fail registration due to tax info storage issues
       }
+    }
+
+    // Send welcome email
+    try {
+      if (user.email && user.name) {
+        if (validatedData.role === "DJ") {
+          await EmailService.sendDjWelcomeEmail(user.email, user.name);
+        } else {
+          await EmailService.sendWelcomeEmail(user.email, user.name);
+        }
+      }
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail registration due to email issues
     }
 
     return NextResponse.json(

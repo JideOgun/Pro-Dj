@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminOrDj } from "@/lib/auth-guard";
 import Stripe from "stripe";
 import { sendMail } from "@/lib/email";
-import { acceptEmailHtml } from "@/lib/emails";
+import { acceptEmailHtml } from "@/lib/email-templates";
 import { isDjAvailable } from "@/lib/booking-utils";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

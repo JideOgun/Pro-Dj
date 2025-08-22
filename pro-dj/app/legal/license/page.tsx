@@ -24,10 +24,6 @@ export default function BusinessLicensePage() {
                   <p className="text-gray-400 text-sm">Legal Entity</p>
                   <p className="text-white">Pro-DJ LLC</p>
                 </div>
-                <div>
-                  <p className="text-gray-400 text-sm">EIN/Tax ID</p>
-                  <p className="text-white">12-3456789</p>
-                </div>
               </div>
               <div className="space-y-3">
                 <div>

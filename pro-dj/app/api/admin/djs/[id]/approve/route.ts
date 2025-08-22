@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { EmailService } from "@/lib/email";
 
 export async function POST(
   req: NextRequest,
@@ -73,6 +74,19 @@ export async function POST(
       djProfileApproved: updatedDjProfile.isApprovedByAdmin,
       stageName: updatedDjProfile.stageName,
     });
+
+    // Send approval email to DJ
+    try {
+      if (user.email && user.djProfile?.stageName) {
+        await EmailService.sendDjApprovedEmail(
+          user.email,
+          user.djProfile.stageName
+        );
+      }
+    } catch (emailError) {
+      console.error("Failed to send DJ approval email:", emailError);
+      // Don't fail approval due to email issues
+    }
 
     // Create notification for the approved DJ
     await prisma.notification.create({

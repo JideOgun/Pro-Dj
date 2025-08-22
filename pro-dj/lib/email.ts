@@ -1,21 +1,41 @@
-//import { Resend } from "resend";
+import { Resend } from "resend";
 import nodemailer from "nodemailer";
+import {
+  EMAIL_CONFIG,
+  getEmailProvider,
+  EMAIL_PROVIDER,
+  isValidEmail,
+  sanitizeEmail,
+} from "./email-config";
 
 let transporterPromise: Promise<nodemailer.Transporter> | null = null;
 
+// Initialize Resend
+const resend = EMAIL_CONFIG.RESEND.API_KEY
+  ? new Resend(EMAIL_CONFIG.RESEND.API_KEY)
+  : null;
+
 async function getTransporter() {
-  if (process.env.SMTP_HOST) {
+  const provider = getEmailProvider();
+
+  if (provider === EMAIL_PROVIDER.SMTP) {
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT ?? "587"),
-      secure: false,
+      host: EMAIL_CONFIG.SMTP.HOST,
+      port: EMAIL_CONFIG.SMTP.PORT,
+      secure: EMAIL_CONFIG.SMTP.SECURE,
       auth: {
-        user: process.env.SMTP_USER!,
-        pass: process.env.SMTP_PASS!,
+        user: EMAIL_CONFIG.SMTP.USER,
+        pass: EMAIL_CONFIG.SMTP.PASS,
       },
     });
   }
-  // Ethereal in dev: creates a throwaway account for testing
+
+  if (provider === EMAIL_PROVIDER.RESEND) {
+    // For Resend, we'll use their API directly
+    return null;
+  }
+
+  // Ethereal for development/testing
   if (!transporterPromise) {
     transporterPromise = new Promise(async (resolve) => {
       const testAcc = await nodemailer.createTestAccount();
@@ -28,87 +48,288 @@ async function getTransporter() {
           pass: testAcc.pass,
         },
       });
-      console.log("Ethereal account created:", testAcc.user, testAcc.pass);
+      console.log("📧 Ethereal account created:", testAcc.user, testAcc.pass);
       resolve(tr);
     });
   }
   return transporterPromise;
 }
 
+export async function sendMail(
+  to: string,
+  subject: string,
+  html: string,
+  options?: {
+    from?: string;
+    replyTo?: string;
+    attachments?: Array<{
+      filename: string;
+      content: string | Buffer;
+      contentType?: string;
+    }>;
+  }
+) {
+  // Validate and sanitize email
+  if (!to || !isValidEmail(to)) {
+    console.warn("📧 Invalid email address:", to);
+    return { ok: false, error: "Invalid email address" };
+  }
 
-export async function sendMail(to: string, subject: string, html: string) {
-  if (!to) return { ok: false, skipped: true };
-  const transporter = await getTransporter();
-  if (!transporter) return { ok: false, skipped: true };
+  const sanitizedTo = sanitizeEmail(to);
+  const provider = getEmailProvider();
 
-  const info = await transporter.sendMail({
-    from: "Jideogun93@gmail.com>",
-    to,
-    subject,
-    html,
-  });
-  const preview = nodemailer.getTestMessageUrl?.(info);
-  if (preview) console.log("[mail] Preview:", preview);
-  return { ok: true, previewUrl: preview };
+  try {
+    if (provider === EMAIL_PROVIDER.RESEND && resend) {
+      // Use Resend
+      const result = await resend.emails.send({
+        from:
+          options?.from ||
+          `"${EMAIL_CONFIG.APP.FROM_NAME}" <${EMAIL_CONFIG.RESEND.FROM_EMAIL}>`,
+        to: sanitizedTo,
+        subject,
+        html,
+        replyTo: options?.replyTo,
+        attachments: options?.attachments,
+      });
+
+      if (result.error) {
+        console.error("📧 Resend error:", result.error);
+        return { ok: false, error: result.error };
+      }
+
+      console.log("📧 Email sent via Resend:", result.data?.id);
+      return { ok: true, id: result.data?.id, provider: "resend" };
+    }
+
+    // Use SMTP or Ethereal
+    const transporter = await getTransporter();
+    if (!transporter) {
+      return { ok: false, error: "No email provider configured" };
+    }
+
+    const info = await transporter.sendMail({
+      from:
+        options?.from ||
+        `"${EMAIL_CONFIG.APP.FROM_NAME}" <${
+          EMAIL_CONFIG.SMTP.USER || EMAIL_CONFIG.APP.FROM_EMAIL
+        }>`,
+      to: sanitizedTo,
+      subject,
+      html,
+      replyTo: options?.replyTo,
+      attachments: options?.attachments,
+      headers: {
+        "X-Entity-Ref-ID": "pro-dj-logo",
+        "List-Unsubscribe": `<mailto:${EMAIL_CONFIG.APP.SUPPORT_EMAIL}?subject=unsubscribe>`,
+      },
+    });
+
+    const preview = nodemailer.getTestMessageUrl?.(info);
+    if (preview) {
+      console.log("📧 Email preview:", preview);
+    }
+
+    console.log("📧 Email sent via SMTP:", info.messageId);
+    return {
+      ok: true,
+      messageId: info.messageId,
+      previewUrl: preview,
+      provider: provider === EMAIL_PROVIDER.ETHEREAL ? "ethereal" : "smtp",
+    };
+  } catch (error) {
+    console.error("📧 Email sending failed:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
-export function acceptEmailHtml(opts: {
-    name?: string | null;
-    eventType: string;
-    eventDateISO: string; // yyyy-mm-dd
-    payLink: string;
-  }) {
-    const { name, eventType, eventDateISO, payLink } = opts;
-    return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial">
-      <h2>Booking Accepted</h2>
-      <p>Hey ${name ?? "there"},</p>
-      <p>Your <b>${eventType}</b> request for <b>${eventDateISO}</b> was accepted.</p>
-      <p>Please complete payment to confirm your booking:</p>
-      <p><a href="${payLink}">Pay now</a></p>
-      <p>— Jay Baba</p>
-    </div>`;
+// Email service with template support
+export class EmailService {
+  static async sendWelcomeEmail(userEmail: string, userName: string) {
+    const { welcomeEmailTemplate } = await import("./email-templates");
+    const html = welcomeEmailTemplate(userName);
+    return sendMail(userEmail, EMAIL_CONFIG.TEMPLATES.WELCOME.subject, html);
   }
-  
-  export function clientConfirmedHtml(opts: {
-    eventType: string;
-    eventDateISO: string;
-  }) {
-    const { eventType, eventDateISO } = opts;
-    return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial">
-      <h2>Payment Received — You’re Booked!</h2>
-      <p>Your <b>${eventType}</b> on <b>${eventDateISO}</b> is confirmed.</p>
-      <p>Thanks! See you there.</p>
-      <p>— Jay Baba</p>
-    </div>`;
-  }
-  
-  export function djConfirmedHtml(opts: {
-    eventType: string;
-    eventDateISO: string;
-    clientEmail?: string | null;
-  }) {
-    const { eventType, eventDateISO, clientEmail } = opts;
-    return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial">
-      <h2>New Confirmed Booking</h2>
-      <p>${eventType} on <b>${eventDateISO}</b> is paid and confirmed.</p>
-      ${clientEmail ? `<p>Client: ${clientEmail}</p>` : ""}
-    </div>`;
-  }
-  
 
-// const resendKey = process.env.RESEND_API_KEY;
-// export const resend = resendKey ? new Resend(resendKey) : null;
+  static async sendDjWelcomeEmail(userEmail: string, stageName: string) {
+    const { djWelcomeEmailTemplate } = await import("./email-templates");
+    const html = djWelcomeEmailTemplate(stageName);
+    return sendMail(userEmail, EMAIL_CONFIG.TEMPLATES.DJ_WELCOME.subject, html);
+  }
 
-// export async function sendMail(to: string, subject: string, html: string) {
-//   if (!resend || !to) return { ok: false, skipped: true };
-//   const res = await resend.emails.send({
-//     from: "Jideogun93@gmail.com", // set this to a verified sender/domain
-//     to,
-//     subject,
-//     html,
-//   });
-//   return { ok: !res.error, id: res.data?.id, error: res.error };
-// }
+  static async sendBookingRequestEmail(
+    djEmail: string,
+    djName: string,
+    clientName: string,
+    eventType: string,
+    eventDate: string,
+    eventTime: string,
+    venue: string,
+    guestCount: number
+  ) {
+    const { bookingRequestEmailTemplate } = await import("./email-templates");
+    const html = bookingRequestEmailTemplate(
+      djName,
+      clientName,
+      eventType,
+      eventDate,
+      eventTime,
+      venue,
+      guestCount
+    );
+    return sendMail(
+      djEmail,
+      EMAIL_CONFIG.TEMPLATES.BOOKING_REQUEST.subject,
+      html
+    );
+  }
+
+  static async sendBookingAcceptedEmail(
+    clientEmail: string,
+    clientName: string,
+    djName: string,
+    eventType: string,
+    eventDate: string,
+    payLink: string
+  ) {
+    const { bookingAcceptedEmailTemplate } = await import("./email-templates");
+    const html = bookingAcceptedEmailTemplate(
+      clientName,
+      djName,
+      eventType,
+      eventDate,
+      payLink
+    );
+    return sendMail(
+      clientEmail,
+      EMAIL_CONFIG.TEMPLATES.BOOKING_ACCEPTED.subject,
+      html
+    );
+  }
+
+  static async sendBookingConfirmedEmail(
+    clientEmail: string,
+    clientName: string,
+    djName: string,
+    eventType: string,
+    eventDate: string,
+    eventTime: string,
+    venue: string
+  ) {
+    const { bookingConfirmedEmailTemplate } = await import("./email-templates");
+    const html = bookingConfirmedEmailTemplate(
+      clientName,
+      djName,
+      eventType,
+      eventDate,
+      eventTime,
+      venue
+    );
+    return sendMail(
+      clientEmail,
+      EMAIL_CONFIG.TEMPLATES.BOOKING_CONFIRMED.subject,
+      html
+    );
+  }
+
+  static async sendPaymentReceivedEmail(
+    userEmail: string,
+    userName: string,
+    amount: string,
+    eventType: string,
+    eventDate: string
+  ) {
+    const { paymentReceivedEmailTemplate } = await import("./email-templates");
+    const html = paymentReceivedEmailTemplate(
+      userName,
+      amount,
+      eventType,
+      eventDate
+    );
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.PAYMENT_RECEIVED.subject,
+      html
+    );
+  }
+
+  static async sendDjApprovedEmail(userEmail: string, stageName: string) {
+    const { djApprovedEmailTemplate } = await import("./email-templates");
+    const html = djApprovedEmailTemplate(stageName);
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.DJ_APPROVED.subject,
+      html
+    );
+  }
+
+  static async sendDjRejectedEmail(
+    userEmail: string,
+    stageName: string,
+    reason: string,
+    nextSteps: string
+  ) {
+    const { djRejectedEmailTemplate } = await import("./email-templates");
+    const html = djRejectedEmailTemplate(stageName, reason, nextSteps);
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.DJ_REJECTED.subject,
+      html
+    );
+  }
+
+  static async sendPasswordResetEmail(
+    userEmail: string,
+    userName: string,
+    resetLink: string
+  ) {
+    const { passwordResetEmailTemplate } = await import("./email-templates");
+    const html = passwordResetEmailTemplate(userName, resetLink);
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.PASSWORD_RESET.subject,
+      html
+    );
+  }
+
+  static async sendSecurityAlertEmail(
+    userEmail: string,
+    userName: string,
+    alertType: string,
+    details: string,
+    actionRequired: boolean = false
+  ) {
+    const { securityAlertEmailTemplate } = await import("./email-templates");
+    const html = securityAlertEmailTemplate(
+      userName,
+      alertType,
+      details,
+      actionRequired
+    );
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.SECURITY_ALERT.subject,
+      html
+    );
+  }
+
+  static async sendLoginAlertEmail(
+    userEmail: string,
+    userName: string,
+    loginTime: string,
+    location: string,
+    device: string
+  ) {
+    const { loginAlertEmailTemplate } = await import("./email-templates");
+    const html = loginAlertEmailTemplate(userName, loginTime, location, device);
+    return sendMail(
+      userEmail,
+      EMAIL_CONFIG.TEMPLATES.LOGIN_ALERT.subject,
+      html
+    );
+  }
+}
+
+// Legacy functions are now in email-templates.ts for backward compatibility

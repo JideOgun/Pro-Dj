@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { EmailService } from "@/lib/email";
 
 export async function POST(
   req: NextRequest,
@@ -64,6 +65,23 @@ export async function POST(
     await prisma.djProfile.delete({
       where: { userId: id },
     });
+
+    // Send rejection email to DJ
+    try {
+      if (user.email && user.djProfile?.stageName) {
+        const nextSteps =
+          "You can still use the platform as a client. If you believe this was an error, please contact support.";
+        await EmailService.sendDjRejectedEmail(
+          user.email,
+          user.djProfile.stageName,
+          reason,
+          nextSteps
+        );
+      }
+    } catch (emailError) {
+      console.error("Failed to send DJ rejection email:", emailError);
+      // Don't fail rejection due to email issues
+    }
 
     // Create notification for the rejected DJ
     await prisma.notification.create({

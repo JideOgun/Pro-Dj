@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/email";
-import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/emails";
+import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/email-templates";
 import { emitBookingUpdate } from "@/lib/socket-server";
 import { stripe, webhookConfig, handleStripeError } from "@/lib/stripe-config";
 
