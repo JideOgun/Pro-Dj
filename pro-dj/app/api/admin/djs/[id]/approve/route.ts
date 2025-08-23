@@ -94,7 +94,9 @@ export async function POST(
         userId: user.id,
         type: "DJ_APPROVED",
         title: "DJ Profile Approved",
-        message: `Congratulations! Your DJ profile has been approved. You can now receive booking requests.`,
+        message: `Congratulations, ${
+          user.djProfile?.stageName || "DJ"
+        }! Your DJ profile has been approved. You can now receive booking requests.`,
         isRead: false,
       },
     });

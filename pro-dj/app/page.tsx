@@ -194,7 +194,7 @@ export default function Home() {
               // Non-logged in user actions
               <>
                 <Link
-                  href="/auth/signin"
+                  href="/auth"
                   className="group bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-5 px-10 rounded-2xl text-xl shadow-2xl hover:shadow-violet-500/25 transform hover:scale-105 transition-all duration-300 flex items-center"
                 >
                   Get Started
@@ -231,6 +231,23 @@ export default function Home() {
             featured={true}
             showViewAll={true}
           />
+
+          {/* Call to Action for Non-logged in users */}
+          {!session?.user && (
+            <div className="text-center mt-12">
+              <p className="text-lg text-gray-300 mb-6">
+                Ready to book your perfect DJ? Create an account to get started!
+              </p>
+              <Link
+                href="/auth"
+                className="group inline-flex items-center bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-2xl text-lg shadow-2xl hover:shadow-violet-500/25 transform hover:scale-105 transition-all duration-300"
+              >
+                <Music className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+                Sign Up to Book
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Enhanced Features Section */}
@@ -295,14 +312,27 @@ export default function Home() {
               Explore amazing moments from our DJ performances across various
               events and celebrations
             </p>
-            <Link
-              href="/gallery"
-              className="group inline-flex items-center bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-5 px-10 rounded-2xl text-xl shadow-2xl hover:shadow-violet-500/25 transform hover:scale-105 transition-all duration-300"
-            >
-              <Camera className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-              View Gallery
-              <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/gallery"
+                className="group inline-flex items-center bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold py-5 px-10 rounded-2xl text-xl shadow-2xl hover:shadow-violet-500/25 transform hover:scale-105 transition-all duration-300"
+              >
+                <Camera className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                View Gallery
+                <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
+              </Link>
+
+              {!session?.user && (
+                <Link
+                  href="/auth"
+                  className="group inline-flex items-center bg-gray-800/60 backdrop-blur-md border border-gray-600/40 hover:border-violet-500/60 text-white font-semibold py-5 px-10 rounded-2xl text-xl shadow-2xl hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                >
+                  <Users className="w-6 h-6 mr-3" />
+                  Join to Upload
+                  <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
+            </div>
           </div>
         </section>
 
@@ -323,7 +353,7 @@ export default function Home() {
                   professional booking system.
                 </p>
                 <Link
-                  href="/dj/register"
+                  href="/auth"
                   className="group inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-2xl text-lg shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
                 >
                   Become a DJ

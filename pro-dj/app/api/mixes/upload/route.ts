@@ -12,6 +12,67 @@ import {
 } from "@/lib/aws";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { requireActiveSubscription } from "@/lib/subscription-guards";
+
+// Check if user can upload based on actual mix count and subscription status
+async function canUploadMix(
+  userId: string
+): Promise<{ canUpload: boolean; message: string }> {
+  try {
+    // Check if user has active subscription
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId },
+    });
+
+    const isActive =
+      subscription &&
+      (subscription.status === "ACTIVE" || subscription.status === "TRIAL");
+
+    // If user has active subscription, they can upload unlimited
+    if (isActive) {
+      return { canUpload: true, message: "Active subscription" };
+    }
+
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (user?.role === "ADMIN") {
+      return { canUpload: true, message: "Admin access" };
+    }
+
+    // Count actual mixes for the user
+    const mixCount = await prisma.djMix.count({
+      where: {
+        dj: {
+          userId: userId,
+        },
+      },
+    });
+
+    console.log(`User ${userId} has ${mixCount} mixes, max free uploads: 2`);
+
+    // Allow upload if under the limit
+    if (mixCount < 2) {
+      return {
+        canUpload: true,
+        message: `${2 - mixCount} free upload${
+          2 - mixCount === 1 ? "" : "s"
+        } remaining`,
+      };
+    }
+
+    return {
+      canUpload: false,
+      message: "No free uploads remaining - subscription required",
+    };
+  } catch (error) {
+    console.error("Error checking upload permission:", error);
+    return { canUpload: false, message: "Error checking upload permission" };
+  }
+}
 
 // Simple function to extract duration from audio file
 const extractDuration = async (buffer: Buffer): Promise<number | null> => {
@@ -40,6 +101,18 @@ export async function POST(req: Request) {
         { ok: false, error: "Only DJs and Admins can upload mixes" },
         { status: 403 }
       );
+    }
+
+    // Check upload permission for DJ users
+    if (session.user.role === "DJ") {
+      const uploadCheck = await canUploadMix(session.user.id);
+      if (!uploadCheck.canUpload) {
+        return NextResponse.json(
+          { ok: false, error: uploadCheck.message },
+          { status: 403 }
+        );
+      }
+      console.log("Upload permission granted:", uploadCheck.message);
     }
 
     const formData = await req.formData();

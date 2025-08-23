@@ -74,7 +74,9 @@ export async function PATCH(
         userId: booking.userId,
         type: "BOOKING_STATUS_CHANGED",
         title: "Booking Status Updated",
-        message: `Your booking for ${booking.eventType} has been updated to ${status}. Reason: ${reason}`,
+        message: `${booking.user.name || "Client"}, your booking for ${
+          booking.eventType
+        } has been updated to ${status}. Reason: ${reason}`,
         isRead: false,
       },
     });
@@ -86,7 +88,11 @@ export async function PATCH(
           userId: booking.dj.userId,
           type: "BOOKING_STATUS_CHANGED",
           title: "Booking Status Updated",
-          message: `A booking you're assigned to (${booking.eventType}) has been updated to ${status}. Reason: ${reason}`,
+          message: `${
+            booking.dj.stageName || "DJ"
+          }, a booking you're assigned to (${
+            booking.eventType
+          }) has been updated to ${status}. Reason: ${reason}`,
           isRead: false,
         },
       });

@@ -6,72 +6,62 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
-    const search = searchParams.get("search");
-    const genre = searchParams.get("genre");
-    const location = searchParams.get("location");
-    const sortBy = searchParams.get("sortBy") || "featured"; // "featured", "name", "price", "rating"
+    const search = searchParams.get("search") || "";
+    const location = searchParams.get("location") || "";
+    const genres = searchParams.get("genres")?.split(",").filter(Boolean) || [];
+    const eventTypes =
+      searchParams.get("eventTypes")?.split(",").filter(Boolean) || [];
+    const minPrice = parseInt(searchParams.get("minPrice") || "0");
+    const maxPrice = parseInt(searchParams.get("maxPrice") || "1000");
     const featured = searchParams.get("featured") === "true";
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = {
+    // Build where clause - load all DJs regardless of status
+    const where: Record<string, unknown> = {
       user: {
         role: {
           in: ["DJ", "ADMIN"], // Include both DJs and admins who are also DJs
         },
-        status: "ACTIVE",
       },
-      isApprovedByAdmin: true,
-      isAcceptingBookings: true,
     };
 
+    // Search functionality
     if (search) {
       where.OR = [
         { stageName: { contains: search, mode: "insensitive" } },
         { bio: { contains: search, mode: "insensitive" } },
-        { specialties: { contains: search, mode: "insensitive" } },
-        { user: { location: { contains: search, mode: "insensitive" } } },
+        { location: { contains: search, mode: "insensitive" } },
+        { user: { name: { contains: search, mode: "insensitive" } } },
       ];
     }
 
-    if (genre) {
-      where.OR = [
-        { genres: { has: genre } },
-        { customGenres: { contains: genre, mode: "insensitive" } },
-      ];
-    }
-
+    // Location filter
     if (location) {
-      where.OR = [
-        { location: { contains: location, mode: "insensitive" } },
-        { user: { location: { contains: location, mode: "insensitive" } } },
-      ];
+      where.location = { contains: location, mode: "insensitive" };
     }
 
-    if (featured) {
-      where.isFeatured = true;
+    // Genre filter
+    if (genres.length > 0) {
+      where.genres = { hasSome: genres };
     }
 
-    // Build order by clause
-    let orderBy: any = {};
-    switch (sortBy) {
-      case "name":
-        orderBy.stageName = "asc";
-        break;
-
-      case "rating":
-        orderBy.rating = "desc";
-        break;
-      case "featured":
-      default:
-        orderBy = [
-          { isFeatured: "desc" },
-          { rating: "desc" },
-          { stageName: "asc" },
-        ];
-        break;
+    // Event types filter
+    if (eventTypes.length > 0) {
+      where.eventsOffered = { hasSome: eventTypes };
     }
+
+    // Price filter - TODO: Implement when we have base pricing in DjProfile
+    // For now, we'll filter by DjEventPricing in the response
+    // if (minPrice > 0 || maxPrice < 1000) {
+    //   where.basePriceCents = {
+    //     gte: minPrice * 100, // Convert to cents
+    //     lte: maxPrice * 100, // Convert to cents
+    //   };
+    // }
+
+    // Build order by clause - just by name for simplicity
+    const orderBy = [{ stageName: "asc" as const }];
 
     // Fetch DJs with pagination
     const [djs, total] = await Promise.all([
@@ -89,16 +79,19 @@ export async function GET(req: Request) {
               profileImage: true,
             },
           },
-          reviews: {
+          mixes: {
             select: {
-              rating: true,
+              id: true,
             },
           },
-          djEventPricing: {
+          eventPhotos: {
             select: {
-              eventType: true,
-              hourlyRateCents: true,
-              description: true,
+              id: true,
+            },
+          },
+          youtubeVideos: {
+            select: {
+              id: true,
             },
           },
         },
@@ -106,52 +99,35 @@ export async function GET(req: Request) {
       prisma.djProfile.count({ where }),
     ]);
 
-    // Calculate average ratings
-    const djsWithRatings = djs.map((dj) => {
-      const avgRating =
-        dj.reviews.length > 0
-          ? dj.reviews.reduce((sum, review) => sum + review.rating, 0) /
-            dj.reviews.length
-          : 0;
-
+    // Format DJ data for frontend
+    const formattedDjs = djs.map((dj) => {
       return {
         id: dj.id,
+        userId: dj.userId,
         stageName: dj.stageName,
-        genres: dj.genres || [],
-        customGenres: dj.customGenres || "",
-
-        eventsOffered: dj.eventsOffered || [],
         bio: dj.bio || "",
-        location: dj.user.location || dj.location || "Location not set",
-        specialties: dj.specialties || "",
-        equipment: dj.equipment || "",
-        languages: dj.languages || [],
-        availability: dj.availability || "",
-        socialLinks: dj.socialLinks || {},
-        userProfileImage: dj.user.profileImage,
-        eventPricing: dj.djEventPricing,
-        rating: avgRating,
-        reviewCount: dj.reviews.length,
+        profileImage: dj.user.profileImage,
+        genres: dj.genres || [],
+        experience: dj.experience || 0,
+        location: dj.location || dj.user.location || "",
+        basePriceCents: 0, // TODO: Get from DjEventPricing when needed
+        eventsOffered: dj.eventsOffered || [],
+        isApprovedByAdmin: dj.isApprovedByAdmin,
         isFeatured: dj.isFeatured,
+        isAcceptingBookings: dj.isAcceptingBookings,
+        totalMixes: dj.mixes.length,
+        totalEvents: dj.eventPhotos.length,
+        averageRating: 0, // TODO: Add rating calculation if needed
       };
     });
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
 
     return NextResponse.json({
-      ok: true,
-      djs: djsWithRatings,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage,
-        hasPrevPage,
-      },
+      djs: formattedDjs,
+      totalPages,
+      totalDjs: total,
     });
   } catch (error) {
     console.error("Error fetching DJs:", error);

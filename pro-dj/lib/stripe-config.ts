@@ -1,19 +1,22 @@
 import Stripe from "stripe";
 
 // Professional Stripe configuration
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-07-30.basil",
-  typescript: true,
-  appInfo: {
-    name: "Pro-DJ Booking Platform",
-    version: "1.0.0",
-    url: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
-  },
-});
+export const stripe = new Stripe(
+  process.env.STRIPE_SECRET_KEY?.replace(/"/g, "")!,
+  {
+    apiVersion: "2025-07-30.basil",
+    typescript: true,
+    appInfo: {
+      name: "Pro-DJ Booking Platform",
+      version: "1.0.0",
+      url: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
+    },
+  }
+);
 
 // Webhook configuration
 export const webhookConfig = {
-  endpointSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+  endpointSecret: process.env.STRIPE_WEBHOOK_SECRET?.replace(/"/g, "")!,
   tolerance: 300, // 5 minutes tolerance for webhook timing
 };
 

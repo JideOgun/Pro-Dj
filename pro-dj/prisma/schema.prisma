@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
 provider = "prisma-client-js"
 output = "../app/generated/prisma"
@@ -22,108 +16,78 @@ name String?
 password String?
 googleId String?
 role Role @default(CLIENT)
+createdAt DateTime @default(now())
 status UserStatus @default(ACTIVE)
 suspendedAt DateTime?
-suspendedBy String? // Admin ID who suspended the user
+suspendedBy String?
 suspensionReason String?
-
-// Profile Information
-profileImage String? // URL to profile picture
-phone String?
-location String?
+updatedAt DateTime @updatedAt
 bio String?
 dateOfBirth DateTime?
+location String?
+phone String?
+profileImage String?
+socialLinks Json?
 website String?
-
-// Social Media Links
-socialLinks Json? // {instagram, twitter, facebook, linkedin, tiktok}
-
-// Legal Agreements
-agreedToTerms Boolean @default(false)
 agreedToPrivacy Boolean @default(false)
-termsAgreedAt DateTime?
+agreedToTerms Boolean @default(false)
 privacyAgreedAt DateTime?
-termsVersion String? // Version of terms agreed to
-privacyVersion String? // Version of privacy policy agreed to
-
-// Independent Contractor Agreements (for DJs)
+privacyVersion String?
+termsAgreedAt DateTime?
+termsVersion String?
 agreedToContractorTerms Boolean @default(false)
 agreedToServiceProviderTerms Boolean @default(false)
 contractorTermsAgreedAt DateTime?
-serviceProviderTermsAgreedAt DateTime?
 contractorTermsVersion String?
+serviceProviderTermsAgreedAt DateTime?
 serviceProviderTermsVersion String?
-
-// Basic tax status (non-sensitive)
-w9Submitted Boolean @default(false) // Whether W-9 form has been submitted
+w9Submitted Boolean @default(false)
 w9SubmittedAt DateTime?
-
+freeUploadsUsed Int @default(0)
+maxFreeUploads Int @default(1)
 bookings Booking[]
 comments Comment[] @relation("UserComments")
-commentLikes CommentLike[]
 commentDislikes CommentDislike[]
-mixLikes MixLike[] // New relation for mix likes
-
-// Follow System
+commentLikes CommentLike[]
+djProfile DjProfile?
 followers Follow[] @relation("UserFollowers")
 following Follow[] @relation("UserFollowing")
-reposts Repost[] // User's reposts
-
-// DJ Profile relation
-djProfile DjProfile?
-
-// Secure tax information relation (for DJs only)
-securityClearance SecurityClearance?
-
-// Reviews relation
-reviews Review[] @relation("UserReviews")
-
-// Notifications relation
+mixLikes MixLike[]
 notifications Notification[] @relation("UserNotifications")
-
-// User Media
+reposts Repost[]
+reviews Review[] @relation("UserReviews")
+securityClearance SecurityClearance?
+subscription Subscription?
 userMedia UserMedia[]
-
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
 }
 
 model Booking {
 id String @id @default(uuid())
 userId String
-user User @relation(fields: [userId], references: [id])
-
-// DJ assignment
-djId String?
-dj DjProfile? @relation(fields: [djId], references: [id])
-
 eventType String
 eventDate DateTime
-startTime DateTime // Start time of the event
-endTime DateTime // End time of the event
 message String
 isPaid Boolean @default(false)
 createdAt DateTime @default(now())
-quotedPriceCents Int?
 details Json?
-status BookingStatus @default(PENDING)
-checkoutSessionId String? // Stripe session used to payment
+quotedPriceCents Int?
+checkoutSessionId String?
 paidAt DateTime?
-
-// Cancellation and refund fields
+status BookingStatus @default(PENDING)
+djId String?
+endTime DateTime
+startTime DateTime
 cancellationReason String?
 cancelledAt DateTime?
-cancelledBy String? // ID of admin who cancelled
-refundId String? // Stripe refund ID
+cancelledBy String?
+refundAmount Int?
+refundId String?
 refundedAt DateTime?
-refundAmount Int? // Amount refunded in cents
-totalAmount Int? // Total booking amount in cents
-
-// Review relation
-review Review?
-
-// Recovery relation
+totalAmount Int?
+dj DjProfile? @relation(fields: [djId], references: [id])
+user User @relation(fields: [userId], references: [id])
 recovery BookingRecovery[] @relation("OriginalBooking")
+review Review?
 
 @@index([status])
 @@index([djId])
@@ -142,41 +106,31 @@ model Comment {
 id String @id @default(uuid())
 content String
 createdAt DateTime @default(now())
+userId String
+mixId String?
+postId String?
+commentType String
+deletedAt DateTime?
+dislikeCount Int @default(0)
+flaggedReason String?
+isDeleted Boolean @default(false)
+isEdited Boolean @default(false)
+isFlagged Boolean @default(false)
+likeCount Int @default(0)
+parentId String?
+photoId String?
+threadDepth Int @default(0)
 updatedAt DateTime @updatedAt
-
-// Comment threading
-parentId String? // For reply comments
+videoId String?
+mix DjMix? @relation(fields: [mixId], references: [id])
 parent Comment? @relation("CommentReplies", fields: [parentId], references: [id])
 replies Comment[] @relation("CommentReplies")
-threadDepth Int @default(0) // How deep in the thread (0 = top level)
-
-// Comment type and relations
-commentType String // "mix", "video", "post", "photo"
-mixId String?
-mix DjMix? @relation(fields: [mixId], references: [id])
-videoId String?
-video DjYouTubeVideo? @relation(fields: [videoId], references: [id])
-postId String?
-post Post? @relation(fields: [postId], references: [id])
-photoId String?
 photo EventPhoto? @relation(fields: [photoId], references: [id])
-
-// User relation
-userId String
+post Post? @relation(fields: [postId], references: [id])
 user User @relation("UserComments", fields: [userId], references: [id])
-
-// Moderation and engagement
-isEdited Boolean @default(false)
-isDeleted Boolean @default(false)
-deletedAt DateTime?
-likeCount Int @default(0)
-dislikeCount Int @default(0)
-isFlagged Boolean @default(false)
-flaggedReason String?
-
-// Likes/Dislikes tracking
-likes CommentLike[]
+video DjYouTubeVideo? @relation(fields: [videoId], references: [id])
 dislikes CommentDislike[]
+likes CommentLike[]
 
 @@index([commentType, mixId])
 @@index([commentType, videoId])
@@ -190,10 +144,10 @@ dislikes CommentDislike[]
 model CommentLike {
 id String @id @default(uuid())
 commentId String
-comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 userId String
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 createdAt DateTime @default(now())
+comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
 @@unique([commentId, userId])
 @@index([commentId])
@@ -203,10 +157,10 @@ createdAt DateTime @default(now())
 model CommentDislike {
 id String @id @default(uuid())
 commentId String
-comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 userId String
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 createdAt DateTime @default(now())
+comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
 @@unique([commentId, userId])
 @@index([commentId])
@@ -215,167 +169,115 @@ createdAt DateTime @default(now())
 
 model Pricing {
 id String @id @default(uuid())
-type String // "Wedding" | "Club" | ...
-key String // "silver" | "gold" | "2hr" | ...
-label String // UI label shown in the dropdown
-priceCents Int // Base price per hour in cents
+type String
+key String
+label String
+priceCents Int
 isActive Boolean @default(true)
 sortOrder Int @default(0)
-
-// DJ assignment
 djId String?
 dj DjProfile? @relation(fields: [djId], references: [id])
 
-@@unique([type, key, djId]) // one package per type+key+dj (null djId = platform default)
+@@unique([type, key, djId])
 @@index([type, sortOrder])
 @@index([djId])
-}
-
-enum Role {
-ADMIN
-DJ
-CLIENT
 }
 
 model DjProfile {
 id String @id @default(uuid())
 userId String @unique
-user User @relation(fields: [userId], references: [id])
-
-// DJ-specific fields
 stageName String @unique
 bio String?
-genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"]
-customGenres String? // additional genres not in the main list
-experience Int // years of experience
+genres String[]
+experience Int
 location String?
-travelRadius Int? // miles willing to travel
-
-// Specialties & Skills
-specialties String? // unique skills and specialties
-equipment String? // equipment and setup details
-languages String[] // languages spoken
-availability String? // availability schedule and preferences
-
-// Social Media & Links
-socialLinks Json? // {instagram, tiktok, soundcloud, youtube, twitter, facebook, linkedin, website}
-
-// Media
-portfolio String[] // array of image URLs
-eventPhotos EventPhoto[] // enhanced event photos with metadata
-
-// Pricing
-eventsOffered String[] // ["Wedding", "Club", "Corporate", "Birthday", "Private Party"]
-
-// Availability
-isAcceptingBookings Boolean @default(true)
-isApprovedByAdmin Boolean @default(false)
-isFeatured Boolean @default(false) // For featuring DJs on homepage
-
-// Stats
+travelRadius Int?
+portfolio String[]
 totalBookings Int @default(0)
 rating Float @default(0)
 reviewCount Int @default(0)
-
-// Relations
-bookings Booking[]
-pricing Pricing[]
-reviews Review[]
-recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
-mixes DjMix[]
-youtubeVideos DjYouTubeVideo[]
-djAddons DjAddon[]
-djEventPricing DjEventPricing[]
-
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+availability String?
+customGenres String?
+equipment String?
+languages String[]
+socialLinks Json?
+specialties String?
+isFeatured Boolean @default(false)
+eventsOffered String[]
+isAcceptingBookings Boolean @default(true)
+isApprovedByAdmin Boolean @default(false)
+stripeCustomerId String? // Stripe customer ID for subscription management
+bookings Booking[]
+recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
+djAddons DjAddon[]
+djEventPricing DjEventPricing[]
+mixes DjMix[]
+user User @relation(fields: [userId], references: [id])
+youtubeVideos DjYouTubeVideo[]
+eventPhotos EventPhoto[]
+pricing Pricing[]
+reviews Review[]
 }
 
 model Review {
 id String @id @default(uuid())
 bookingId String @unique
-booking Booking @relation(fields: [bookingId], references: [id])
-
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
 clientId String
-client User @relation("UserReviews", fields: [clientId], references: [id])
-
-rating Int // 1-5 stars
+rating Int
 comment String?
-
 createdAt DateTime @default(now())
+booking Booking @relation(fields: [bookingId], references: [id])
+client User @relation("UserReviews", fields: [clientId], references: [id])
+dj DjProfile @relation(fields: [djId], references: [id])
 }
 
 model DjAddon {
 id String @id @default(uuid())
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
-// Addon details
-addonKey String // "lighting", "setup", "mc", "photography", "videography"
-label String // Custom label for this addon
-description String? // Custom description
-priceCents Int // Price in cents
+addonKey String
+label String
+description String?
+priceCents Int
 isActive Boolean @default(true)
-
-// Custom addon fields (for addons not in the standard list)
 isCustom Boolean @default(false)
-customCategory String? // For grouping custom addons
-
+customCategory String?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+dj DjProfile @relation(fields: [djId], references: [id])
 
-@@unique([djId, addonKey]) // One addon per key per DJ
+@@unique([djId, addonKey])
 @@index([djId, isActive])
 }
 
 model DjEventPricing {
 id String @id @default(uuid())
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
-// Event type pricing
-eventType String // "Wedding", "Club", "Corporate", "Birthday", "Private Party"
-hourlyRateCents Int // Hourly rate for this specific event type in cents
-description String? // Optional description explaining the pricing
-
+eventType String
+hourlyRateCents Int
+description String?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+dj DjProfile @relation(fields: [djId], references: [id])
 
-@@unique([djId, eventType]) // One rate per event type per DJ
+@@unique([djId, eventType])
 @@index([djId])
-}
-
-enum BookingStatus {
-PENDING
-ACCEPTED // waiting on payment
-DECLINED
-CONFIRMED // paid
-CANCELLED
-}
-
-enum UserStatus {
-ACTIVE
-SUSPENDED
-PENDING
 }
 
 model Notification {
 id String @id @default(uuid())
 userId String
-user User @relation("UserNotifications", fields: [userId], references: [id])
-
-type String // "BOOKING_DECLINED", "DJ_CANCELLED", "RECOVERY_SUGGESTION", etc.
+type String
 title String
 message String
-data Json? // additional data like suggested DJs, recovery options
+data Json?
 isRead Boolean @default(false)
-actionUrl String? // URL to take action (e.g., book new DJ)
-
+actionUrl String?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+user User @relation("UserNotifications", fields: [userId], references: [id])
 
 @@index([userId, isRead])
 @@index([createdAt])
@@ -384,27 +286,23 @@ updatedAt DateTime @updatedAt
 model BookingRecovery {
 id String @id @default(uuid())
 originalBookingId String
-originalBooking Booking @relation("OriginalBooking", fields: [originalBookingId], references: [id])
-
-recoveryType String // "EXTEND_DJ", "NEW_DJ", "REFUND"
+recoveryType String
 suggestedDjId String?
-suggestedDj DjProfile? @relation("SuggestedDj", fields: [suggestedDjId], references: [id])
-
-status String // "PENDING", "ACCEPTED", "DECLINED"
-clientResponse String? // client's response to recovery suggestion
-
+status String
+clientResponse String?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+originalBooking Booking @relation("OriginalBooking", fields: [originalBookingId], references: [id])
+suggestedDj DjProfile? @relation("SuggestedDj", fields: [suggestedDjId], references: [id])
 }
 
-// Payment monitoring and analytics
 model PaymentMetric {
 id String @id @default(uuid())
 bookingId String
-type String // "PAYMENT_ATTEMPT", "REFUND", "DISPUTE", "WEBHOOK_FAILURE"
+type String
 success Boolean
-amount Int // in cents
-metadata Json? // additional data like reason, error details
+amount Int
+metadata Json?
 timestamp DateTime @default(now())
 
 @@index([type, timestamp])
@@ -413,12 +311,12 @@ timestamp DateTime @default(now())
 
 model PaymentAlert {
 id String @id @default(uuid())
-type String // "HIGH_PAYMENT_FAILURE_RATE", "HIGH_REFUND_RATE", etc.
-data Json // alert details
+type String
+data Json
 timestamp DateTime @default(now())
 isResolved Boolean @default(false)
 resolvedAt DateTime?
-resolvedBy String? // admin who resolved it
+resolvedBy String?
 
 @@index([type, isResolved])
 @@index([timestamp])
@@ -427,19 +325,17 @@ resolvedBy String? // admin who resolved it
 model UserMedia {
 id String @id @default(uuid())
 userId String
-user User @relation(fields: [userId], references: [id])
-
-type String // "PROFILE_PICTURE", "EVENT_PHOTO", "PORTFOLIO", "DOCUMENT"
+type String
 url String
 filename String
 originalName String
 mimeType String
-size Int // file size in bytes
-altText String? // for accessibility
+size Int
+altText String?
 description String?
-
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+user User @relation(fields: [userId], references: [id])
 
 @@index([userId, type])
 }
@@ -447,33 +343,25 @@ updatedAt DateTime @updatedAt
 model EventPhoto {
 id String @id @default(uuid())
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
 title String
 description String?
 url String
 filename String
 originalName String
 mimeType String
-size Int // file size in bytes
-altText String? // for accessibility
-
-// Event Details
+size Int
+altText String?
 eventName String?
 eventDate DateTime?
 eventType String?
 venue String?
 location String?
-
-// Tags and Categories
-tags String[] // ["wedding", "club", "birthday", "corporate"]
-isFeatured Boolean @default(false) // for portfolio highlights
-
+tags String[]
+isFeatured Boolean @default(false)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
-
-// Comments
 comments Comment[]
+dj DjProfile @relation(fields: [djId], references: [id])
 
 @@index([djId, isFeatured])
 @@index([eventType])
@@ -482,57 +370,40 @@ comments Comment[]
 model DjMix {
 id String @id @default(uuid())
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
-// Mix Information
 title String
 description String?
-genres String[] // ["Afrobeats", "Amapiano", "Hip-Hop"] - Multiple genres
-tags String[] // ["afrobeats", "amapiano", "hip-hop", "house"]
+tags String[]
 isPublic Boolean @default(false)
 isFeatured Boolean @default(false)
-
-// File Information
 fileName String
 originalName String
-fileSize Int // file size in bytes
-duration Int? // duration in seconds
-bitrate Int? // bitrate in kbps
-sampleRate Int? // sample rate in Hz
-
-// Storage Information
-s3Key String // S3 object key
-cloudFrontUrl String? // CDN URL for fast delivery
-localUrl String? // Local URL for development/testing
-
-// Album Art
-albumArtS3Key String? // S3 key for album art image
-albumArtUrl String? // URL to album art image
-
-// Upload Information
+fileSize Int
+duration Int?
+bitrate Int?
+sampleRate Int?
+s3Key String
+cloudFrontUrl String?
+localUrl String?
 uploadStatus UploadStatus @default(PENDING)
-uploadProgress Int @default(0) // 0-100
+uploadProgress Int @default(0)
 uploadedAt DateTime?
 uploadError String?
-
-// Playback Statistics
 playCount Int @default(0)
 downloadCount Int @default(0)
-likeCount Int @default(0) // New field for like count
 lastPlayedAt DateTime?
-
-// Metadata
 mimeType String
-format String? // "mp3", "wav", "ogg"
-quality String? // "high", "medium", "low"
-
+format String?
+quality String?
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
-
-// Comments and Likes
+albumArtS3Key String?
+albumArtUrl String?
+likeCount Int @default(0)
+genres String[]
 comments Comment[]
-likes MixLike[] // New relation for mix likes
-reposts Repost[] // Reposts of this mix
+dj DjProfile @relation(fields: [djId], references: [id])
+likes MixLike[]
+reposts Repost[]
 
 @@index([djId, isPublic])
 @@index([genres])
@@ -544,11 +415,11 @@ model MixLike {
 id String @id @default(uuid())
 mixId String
 userId String
+createdAt DateTime @default(now())
 mix DjMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
 user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-createdAt DateTime @default(now())
 
-@@unique([mixId, userId]) // Prevent duplicate likes
+@@unique([mixId, userId])
 @@index([mixId])
 @@index([userId])
 }
@@ -556,44 +427,201 @@ createdAt DateTime @default(now())
 model DjYouTubeVideo {
 id String @id @default(uuid())
 djId String
-dj DjProfile @relation(fields: [djId], references: [id])
-
-// Video Information
 title String
 description String?
-youtubeUrl String // Full YouTube URL
-youtubeId String // Extracted YouTube video ID
-thumbnailUrl String? // YouTube thumbnail URL
-duration String? // Video duration (e.g., "3:45")
-
-// Video Details
-eventType String? // "wedding", "club", "birthday", "corporate", "live performance"
-eventDate DateTime? // When the event/video was recorded
-venue String? // Venue where video was recorded
+youtubeUrl String
+youtubeId String
+thumbnailUrl String?
+duration String?
+eventType String?
+eventDate DateTime?
+venue String?
 location String?
-
-// Tags and Categories
-tags String[] // ["afrobeats", "amapiano", "live", "wedding", "club"]
-isFeatured Boolean @default(false) // For portfolio highlights
+tags String[]
+isFeatured Boolean @default(false)
 isPublic Boolean @default(true)
-
-// Statistics (optional, can be updated manually)
 viewCount Int @default(0)
 likeCount Int @default(0)
-
-// Ordering
-sortOrder Int @default(0) // For manual ordering
-
+sortOrder Int @default(0)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
-
-// Comments
 comments Comment[]
+dj DjProfile @relation(fields: [djId], references: [id])
 
 @@index([djId, isPublic])
 @@index([eventType])
 @@index([isFeatured])
 @@index([sortOrder])
+}
+
+model Follow {
+id String @id @default(uuid())
+followerId String
+followingId String
+createdAt DateTime @default(now())
+follower User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+@@unique([followerId, followingId])
+@@index([followerId])
+@@index([followingId])
+@@index([createdAt])
+}
+
+model Repost {
+id String @id @default(uuid())
+userId String
+mixId String
+createdAt DateTime @default(now())
+mix DjMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+@@unique([userId, mixId])
+@@index([userId])
+@@index([mixId])
+@@index([createdAt])
+}
+
+model SecurityClearance {
+id String @id @default(uuid())
+userId String @unique
+encryptedTaxId String?
+taxIdLastFour String?
+taxIdType String?
+businessName String?
+businessAddress String?
+businessPhone String?
+isCorporation Boolean @default(false)
+isSoleProprietor Boolean @default(true)
+businessType String?
+lastAccessedAt DateTime?
+lastAccessedBy String?
+accessCount Int @default(0)
+ipAddress String?
+isVerified Boolean @default(false)
+verifiedAt DateTime?
+verifiedBy String?
+dataRetentionDate DateTime?
+isRetentionSuspended Boolean @default(false)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+@@index([userId])
+@@index([isVerified])
+@@index([dataRetentionDate])
+}
+
+model Subscription {
+id String @id @default(uuid())
+userId String @unique
+stripeSubscriptionId String @unique
+stripeCustomerId String
+stripePriceId String
+planType SubscriptionTier
+status SubscriptionStatus @default(ACTIVE)
+currentPeriodStart DateTime
+currentPeriodEnd DateTime
+amountCents Int
+currency String @default("usd")
+interval String @default("month")
+intervalCount Int @default(1)
+trialStart DateTime?
+trialEnd DateTime?
+isInTrial Boolean @default(false)
+cancelAtPeriodEnd Boolean @default(false)
+cancelledAt DateTime?
+cancelReason String?
+lastPaymentDate DateTime?
+nextPaymentDate DateTime?
+paymentMethodId String?
+platformFeePercentage Int @default(10)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+usage SubscriptionUsage[]
+
+@@index([userId])
+@@index([stripeSubscriptionId])
+@@index([stripeCustomerId])
+@@index([status])
+@@index([currentPeriodEnd])
+}
+
+model SubscriptionPlan {
+id String @id @default(uuid())
+name String @unique
+displayName String
+description String?
+priceCents Int
+currency String @default("usd")
+interval String @default("month")
+intervalCount Int @default(1)
+features Json?
+isActive Boolean @default(true)
+isDefault Boolean @default(false)
+stripePriceId String?
+stripeProductId String?
+trialDays Int @default(30)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([name])
+@@index([isActive])
+@@index([stripePriceId])
+}
+
+model SubscriptionUsage {
+id String @id @default(uuid())
+subscriptionId String
+bookingsCount Int @default(0)
+revenueGenerated Int @default(0)
+platformFeesCollected Int @default(0)
+periodStart DateTime
+periodEnd DateTime
+isCurrentPeriod Boolean @default(false)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+@@index([subscriptionId])
+@@index([periodStart])
+@@index([periodEnd])
+@@index([isCurrentPeriod])
+}
+
+enum Role {
+ADMIN
+CLIENT
+DJ
+}
+
+enum BookingStatus {
+PENDING
+ACCEPTED
+DECLINED
+CONFIRMED
+CANCELLED
+}
+
+enum UserStatus {
+ACTIVE
+SUSPENDED
+PENDING
+}
+
+enum SubscriptionStatus {
+ACTIVE
+CANCELLED
+PAST_DUE
+UNPAID
+TRIAL
+}
+
+enum SubscriptionTier {
+DJ_BASIC
+DJ_PRO
+DJ_PREMIUM
 }
 
 enum UploadStatus {
@@ -602,77 +630,4 @@ UPLOADING
 COMPLETED
 FAILED
 CANCELLED
-}
-
-// Follow System
-model Follow {
-id String @id @default(uuid())
-followerId String // User who is following
-followingId String // User being followed
-follower User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
-following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
-createdAt DateTime @default(now())
-
-@@unique([followerId, followingId]) // Prevent duplicate follows
-@@index([followerId])
-@@index([followingId])
-@@index([createdAt])
-}
-
-// Repost System
-model Repost {
-id String @id @default(uuid())
-userId String // User who reposted
-mixId String // Mix being reposted
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-mix DjMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
-createdAt DateTime @default(now())
-
-@@unique([userId, mixId]) // Prevent duplicate reposts
-@@index([userId])
-@@index([mixId])
-@@index([createdAt])
-}
-
-// Secure model for sensitive tax information
-// This model should have restricted access controls
-model SecurityClearance {
-id String @id @default(uuid())
-userId String @unique
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-// Encrypted sensitive tax information
-encryptedTaxId String? // Encrypted SSN or EIN
-taxIdLastFour String? // Last 4 digits for display purposes
-taxIdType String? // "SSN" or "EIN" for validation
-businessName String? // Legal business name
-businessAddress String? // Business address
-businessPhone String? // Business phone
-
-// Business structure information
-isCorporation Boolean @default(false) // Whether DJ operates as corporation
-isSoleProprietor Boolean @default(true) // Whether DJ operates as sole proprietor
-businessType String? // "SOLE_PROPRIETOR", "LLC", "CORPORATION", "PARTNERSHIP"
-
-// Security and audit fields
-lastAccessedAt DateTime? // When this data was last accessed
-lastAccessedBy String? // Admin ID who last accessed this data
-accessCount Int @default(0) // Number of times this data has been accessed
-ipAddress String? // IP address of last access
-
-// Data verification
-isVerified Boolean @default(false) // Whether the tax ID has been verified
-verifiedAt DateTime? // When verification was completed
-verifiedBy String? // Admin ID who verified the information
-
-// Compliance and retention
-dataRetentionDate DateTime? // When this data should be purged for compliance
-isRetentionSuspended Boolean @default(false) // Suspend retention for active legal matters
-
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-@@index([userId])
-@@index([isVerified])
-@@index([dataRetentionDate])
 }

@@ -209,7 +209,9 @@ export default function TermsAgreementPage() {
           body: JSON.stringify({
             role: pendingRegistration.role,
             contractorTerms: true,
-            taxInfo: taxInfo,
+            businessType: taxInfo.isSoleProprietor
+              ? "SOLE_PROPRIETOR"
+              : "CORPORATION",
           }),
         });
 
@@ -243,7 +245,9 @@ export default function TermsAgreementPage() {
             agreedToTerms: true,
             agreedToPrivacy: true,
             contractorTerms: true,
-            taxInfo: taxInfo,
+            businessType: taxInfo.isSoleProprietor
+              ? "SOLE_PROPRIETOR"
+              : "CORPORATION",
           }),
         });
 

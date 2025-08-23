@@ -53,7 +53,13 @@ export default function HamburgerMenu() {
   }, [pathname]);
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    try {
+      await signOut({ callbackUrl: "http://localhost:3000" });
+    } catch (error) {
+      console.error("Sign out error:", error);
+      // Fallback navigation
+      router.push("/");
+    }
   };
 
   const handleOpenMenu = () => {

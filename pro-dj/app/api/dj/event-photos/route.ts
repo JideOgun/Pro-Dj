@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { processAndSaveImage, UPLOAD_TYPES } from "@/lib/upload";
+import { checkSubscriptionStatus } from "@/lib/subscription-guards";
 
 // GET - Get DJ's event photos
 export async function GET(request: NextRequest) {
@@ -129,6 +130,47 @@ export async function POST(request: NextRequest) {
     const tags = formData.get("tags") as string;
     const isFeatured = formData.get("isFeatured") === "true";
 
+    // Check if this is a new event (freemium restriction)
+    if (user.role !== "ADMIN" && eventName) {
+      // Check if this event already exists for this DJ
+      const existingEvent = await prisma.eventPhoto.findFirst({
+        where: {
+          djId: user.djProfile.id,
+          eventName: eventName,
+        },
+      });
+
+      // If this is a new event, check freemium limits
+      if (!existingEvent) {
+        // Count how many unique events this DJ has
+        const uniqueEvents = await prisma.eventPhoto.findMany({
+          where: { djId: user.djProfile.id },
+          select: { eventName: true },
+          distinct: ["eventName"],
+        });
+
+        // Check if user has an active subscription
+        const subscription = await prisma.subscription.findUnique({
+          where: { userId: user.id },
+        });
+
+        const hasActiveSubscription =
+          subscription &&
+          (subscription.status === "ACTIVE" || subscription.status === "TRIAL");
+
+        // If they have events and don't have subscription, block new event creation
+        if (uniqueEvents.length > 0 && !hasActiveSubscription) {
+          return NextResponse.json(
+            {
+              error:
+                "Free tier allows only 1 event. Upgrade to create additional events with photos.",
+            },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     if (!file) {
       console.log("No file provided");
       return NextResponse.json(
@@ -217,6 +259,8 @@ export async function POST(request: NextRequest) {
         isFeatured,
       },
     });
+
+    console.log("Event photo created successfully:", eventPhoto.id);
 
     return NextResponse.json({
       ok: true,

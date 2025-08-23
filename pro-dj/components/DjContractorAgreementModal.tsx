@@ -22,10 +22,6 @@ interface DjContractorAgreementModalProps {
 }
 
 interface TaxInfo {
-  taxId: string;
-  businessName: string;
-  businessAddress: string;
-  businessPhone: string;
   isCorporation: boolean;
   isSoleProprietor: boolean;
 }
@@ -47,12 +43,8 @@ export default function DjContractorAgreementModal({
   const [showServiceProviderTerms, setShowServiceProviderTerms] =
     useState(false);
 
-  // Tax information form
+  // Business type selection
   const [taxInfo, setTaxInfo] = useState<TaxInfo>({
-    taxId: "",
-    businessName: "",
-    businessAddress: "",
-    businessPhone: "",
     isCorporation: false,
     isSoleProprietor: false, // No auto-selection
   });
@@ -62,16 +54,7 @@ export default function DjContractorAgreementModal({
     hasReadServiceProviderTerms &&
     hasAgreedToContractorTerms &&
     hasAgreedToServiceProviderTerms &&
-    (taxInfo.isSoleProprietor || taxInfo.isCorporation) &&
-    taxInfo.taxId.trim() &&
-    // Validate SSN/EIN format (must be exactly 9 digits)
-    taxInfo.taxId.replace(/\D/g, "").length === 9 &&
-    (taxInfo.isSoleProprietor ||
-      (taxInfo.businessName.trim() &&
-        taxInfo.businessAddress.trim() &&
-        taxInfo.businessPhone.trim() &&
-        // Validate phone format (must be exactly 10 digits)
-        taxInfo.businessPhone.replace(/\D/g, "").length === 10));
+    (taxInfo.isSoleProprietor || taxInfo.isCorporation);
 
   const handleAgree = () => {
     if (canProceed) {
@@ -366,19 +349,18 @@ export default function DjContractorAgreementModal({
             </div>
           </div>
 
-          {/* Tax Information Section */}
+          {/* Business Type Selection */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-violet-400" />
               <h3 className="text-lg font-medium text-white">
-                Tax Information (Required)
+                Business Type Selection
               </h3>
             </div>
 
             <div className="bg-gray-700/30 rounded-lg border border-gray-600/30 overflow-hidden">
               <div className="p-4 border-b border-gray-600/30">
                 <div className="text-gray-300 text-sm space-y-4">
-                  {/* Business Type Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-3">
                       How do you operate? *
@@ -427,222 +409,14 @@ export default function DjContractorAgreementModal({
                       </p>
                     )}
                   </div>
-
-                  {/* Tax ID */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      {taxInfo.isSoleProprietor
-                        ? "Social Security Number (SSN)"
-                        : taxInfo.isCorporation
-                        ? "Employer Identification Number (EIN)"
-                        : "Tax ID (SSN or EIN)"}{" "}
-                      *
-                    </label>
-                    <input
-                      type="text"
-                      value={taxInfo.taxId}
-                      onChange={(e) => {
-                        let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
-
-                        if (taxInfo.isSoleProprietor) {
-                          // Format SSN: XXX-XX-XXXX
-                          if (value.length <= 3) {
-                            value = value;
-                          } else if (value.length <= 5) {
-                            value = value.slice(0, 3) + "-" + value.slice(3);
-                          } else {
-                            value =
-                              value.slice(0, 3) +
-                              "-" +
-                              value.slice(3, 5) +
-                              "-" +
-                              value.slice(5, 9);
-                          }
-                        } else if (taxInfo.isCorporation) {
-                          // Format EIN: XX-XXXXXXX
-                          if (value.length <= 2) {
-                            value = value;
-                          } else {
-                            value = value.slice(0, 2) + "-" + value.slice(2, 9);
-                          }
-                        } else {
-                          // Generic formatting based on length
-                          if (value.length <= 3) {
-                            value = value;
-                          } else if (value.length <= 5) {
-                            value = value.slice(0, 3) + "-" + value.slice(3);
-                          } else if (value.length <= 9) {
-                            value =
-                              value.slice(0, 3) +
-                              "-" +
-                              value.slice(3, 5) +
-                              "-" +
-                              value.slice(5);
-                          } else {
-                            value = value.slice(0, 2) + "-" + value.slice(2, 9);
-                          }
-                        }
-
-                        setTaxInfo({ ...taxInfo, taxId: value });
-                      }}
-                      onBlur={(e) => {
-                        let value = e.target.value.replace(/\D/g, "");
-
-                        if (taxInfo.isSoleProprietor && value.length !== 9) {
-                          e.target.classList.add("border-red-500");
-                        } else if (
-                          taxInfo.isCorporation &&
-                          value.length !== 9
-                        ) {
-                          e.target.classList.add("border-red-500");
-                        } else {
-                          e.target.classList.remove("border-red-500");
-                        }
-                      }}
-                      maxLength={
-                        taxInfo.isSoleProprietor
-                          ? 11
-                          : taxInfo.isCorporation
-                          ? 10
-                          : 11
-                      }
-                      placeholder={
-                        taxInfo.isSoleProprietor
-                          ? "123-45-6789"
-                          : taxInfo.isCorporation
-                          ? "12-3456789"
-                          : "123-45-6789 or 12-3456789"
-                      }
-                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                    />
-                    {taxInfo.taxId && (
-                      <div className="mt-1">
-                        {taxInfo.isSoleProprietor &&
-                          taxInfo.taxId.replace(/\D/g, "").length !== 9 && (
-                            <p className="text-red-400 text-xs">
-                              SSN must be exactly 9 digits
-                            </p>
-                          )}
-                        {taxInfo.isCorporation &&
-                          taxInfo.taxId.replace(/\D/g, "").length !== 9 && (
-                            <p className="text-red-400 text-xs">
-                              EIN must be exactly 9 digits
-                            </p>
-                          )}
-                        {!taxInfo.isSoleProprietor &&
-                          !taxInfo.isCorporation &&
-                          taxInfo.taxId && (
-                            <p className="text-yellow-400 text-xs">
-                              Please select your business type above
-                            </p>
-                          )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Conditional Business Information */}
-                  {taxInfo.isCorporation && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Legal Business Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={taxInfo.businessName}
-                          onChange={(e) =>
-                            setTaxInfo({
-                              ...taxInfo,
-                              businessName: e.target.value,
-                            })
-                          }
-                          placeholder="Your legal business name"
-                          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Business Address *
-                        </label>
-                        <textarea
-                          value={taxInfo.businessAddress}
-                          onChange={(e) =>
-                            setTaxInfo({
-                              ...taxInfo,
-                              businessAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Complete business address"
-                          rows={3}
-                          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Business Phone *
-                        </label>
-                        <input
-                          type="tel"
-                          value={taxInfo.businessPhone}
-                          onChange={(e) => {
-                            let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
-
-                            // Format phone number: (XXX) XXX-XXXX
-                            if (value.length <= 3) {
-                              value = value;
-                            } else if (value.length <= 6) {
-                              value =
-                                "(" + value.slice(0, 3) + ") " + value.slice(3);
-                            } else {
-                              value =
-                                "(" +
-                                value.slice(0, 3) +
-                                ") " +
-                                value.slice(3, 6) +
-                                "-" +
-                                value.slice(6, 10);
-                            }
-
-                            setTaxInfo({
-                              ...taxInfo,
-                              businessPhone: value,
-                            });
-                          }}
-                          onBlur={(e) => {
-                            let value = e.target.value.replace(/\D/g, "");
-
-                            if (value.length !== 10) {
-                              e.target.classList.add("border-red-500");
-                            } else {
-                              e.target.classList.remove("border-red-500");
-                            }
-                          }}
-                          maxLength={14}
-                          placeholder="(555) 123-4567"
-                          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                        />
-                        {taxInfo.businessPhone &&
-                          taxInfo.businessPhone.replace(/\D/g, "").length !==
-                            10 && (
-                            <p className="text-red-400 text-xs mt-1">
-                              Phone number must be exactly 10 digits
-                            </p>
-                          )}
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
 
               <div className="p-4">
                 <p className="text-gray-300 text-sm">
-                  {taxInfo.isSoleProprietor
-                    ? "For sole proprietors, we only need your SSN for tax reporting. We'll use your personal information from your profile."
-                    : taxInfo.isCorporation
-                    ? "This information is required for tax reporting purposes. We will issue 1099 forms for payments exceeding $600 annually."
-                    : "Please select how you operate and provide the required tax information for 1099 reporting."}
+                  This selection will be used when you're ready to start
+                  receiving payments. You'll be prompted to provide your tax
+                  information (SSN or EIN) at that time.
                 </p>
               </div>
             </div>
@@ -710,23 +484,9 @@ export default function DjContractorAgreementModal({
                   hasAgreedToContractorTerms,
                   hasAgreedToServiceProviderTerms,
                   taxInfo.isSoleProprietor || taxInfo.isCorporation,
-                  taxInfo.taxId.trim(),
-                  // Only count business fields if corporation
-                  ...(taxInfo.isCorporation
-                    ? [
-                        taxInfo.businessName.trim(),
-                        taxInfo.businessAddress.trim(),
-                        taxInfo.businessPhone.trim(),
-                      ]
-                    : []),
                 ].filter(Boolean).length
               }
-              /
-              {taxInfo.isSoleProprietor || taxInfo.isCorporation
-                ? taxInfo.isSoleProprietor
-                  ? 6
-                  : 9
-                : 5}
+              /5
             </span>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
@@ -740,21 +500,8 @@ export default function DjContractorAgreementModal({
                     hasAgreedToContractorTerms,
                     hasAgreedToServiceProviderTerms,
                     taxInfo.isSoleProprietor || taxInfo.isCorporation,
-                    taxInfo.taxId.trim(),
-                    // Only count business fields if corporation
-                    ...(taxInfo.isCorporation
-                      ? [
-                          taxInfo.businessName.trim(),
-                          taxInfo.businessAddress.trim(),
-                          taxInfo.businessPhone.trim(),
-                        ]
-                      : []),
                   ].filter(Boolean).length /
-                    (taxInfo.isSoleProprietor || taxInfo.isCorporation
-                      ? taxInfo.isSoleProprietor
-                        ? 6
-                        : 9
-                      : 5)) *
+                    5) *
                   100
                 }%`,
               }}

@@ -19,16 +19,7 @@ const registerSchema = z.object({
   agreedToTerms: z.boolean().optional(),
   agreedToPrivacy: z.boolean().optional(),
   contractorTerms: z.boolean().optional(),
-  taxInfo: z
-    .object({
-      taxId: z.string(),
-      businessName: z.string().optional(),
-      businessAddress: z.string().optional(),
-      businessPhone: z.string().optional(),
-      isCorporation: z.boolean(),
-      isSoleProprietor: z.boolean(),
-    })
-    .optional(),
+  businessType: z.enum(["SOLE_PROPRIETOR", "CORPORATION"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -82,7 +73,7 @@ export async function POST(req: Request) {
 
     // Add DJ-specific fields if applicable
     if (validatedData.role === "DJ") {
-      if (validatedData.contractorTerms && validatedData.taxInfo) {
+      if (validatedData.contractorTerms && validatedData.businessType) {
         // DJ registration with contractor terms (from terms agreement flow)
         Object.assign(userData, {
           agreedToContractorTerms: true,
@@ -91,8 +82,9 @@ export async function POST(req: Request) {
           serviceProviderTermsAgreedAt: new Date(),
           contractorTermsVersion: "1.0",
           serviceProviderTermsVersion: "1.0",
-          w9Submitted: true,
-          w9SubmittedAt: new Date(),
+          businessType: validatedData.businessType,
+          isCorporation: validatedData.businessType === "CORPORATION",
+          isSoleProprietor: validatedData.businessType === "SOLE_PROPRIETOR",
         });
       } else {
         // Regular DJ registration (without contractor terms yet)
@@ -107,61 +99,6 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: userData as Parameters<typeof prisma.user.create>[0]["data"],
     });
-
-    // Create secure tax information if provided
-    if (
-      validatedData.role === "DJ" &&
-      validatedData.contractorTerms &&
-      validatedData.taxInfo
-    ) {
-      try {
-        // Validate tax ID format
-        const taxIdType = determineTaxIdType(validatedData.taxInfo.taxId);
-        if (
-          taxIdType === "UNKNOWN" ||
-          !validateTaxId(validatedData.taxInfo.taxId, taxIdType)
-        ) {
-          // Log warning but don't fail registration
-          console.warn(
-            `Invalid tax ID format for user ${user.id}: ${taxIdType}`
-          );
-        } else {
-          // Encrypt and store tax information securely
-          const { encrypted, iv, tag } = encryptTaxId(
-            validatedData.taxInfo.taxId
-          );
-          const encryptedTaxId = `${encrypted}:${iv}:${tag}`;
-          const taxIdLastFour = getTaxIdLastFour(validatedData.taxInfo.taxId);
-
-          await prisma.securityClearance.create({
-            data: {
-              userId: user.id,
-              encryptedTaxId,
-              taxIdLastFour,
-              taxIdType,
-              businessName: validatedData.taxInfo.businessName,
-              businessAddress: validatedData.taxInfo.businessAddress,
-              businessPhone: validatedData.taxInfo.businessPhone,
-              isCorporation: validatedData.taxInfo.isCorporation,
-              isSoleProprietor: validatedData.taxInfo.isSoleProprietor,
-              businessType: validatedData.taxInfo.isSoleProprietor
-                ? "SOLE_PROPRIETOR"
-                : validatedData.taxInfo.isCorporation
-                ? "CORPORATION"
-                : "LLC",
-              dataRetentionDate: calculateDataRetentionDate(new Date()),
-              accessCount: 0,
-            },
-          });
-        }
-      } catch (error) {
-        console.error(
-          `Error storing tax information for user ${user.id}:`,
-          error
-        );
-        // Don't fail registration due to tax info storage issues
-      }
-    }
 
     // Send welcome email
     try {

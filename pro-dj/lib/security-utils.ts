@@ -1,4 +1,10 @@
-import crypto from "crypto";
+// Import crypto functions from polyfill to avoid webpack bundling issues
+import {
+  randomBytes,
+  pbkdf2Sync,
+  createCipheriv,
+  createDecipheriv,
+} from "./crypto-polyfill";
 
 // Security utilities for handling sensitive tax information
 // These functions should only be used by authorized admin functions
@@ -17,8 +23,10 @@ export function encryptTaxId(taxId: string): {
 } {
   if (!taxId) throw new Error("Tax ID is required for encryption");
 
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_KEY);
+  const iv = randomBytes(16);
+  // Create a key from the encryption key using PBKDF2
+  const key = pbkdf2Sync(ENCRYPTION_KEY, "salt", 100000, 32, "sha256");
+  const cipher = createCipheriv(ALGORITHM, key, iv);
   cipher.setAAD(Buffer.from("tax-id", "utf8"));
 
   let encrypted = cipher.update(taxId, "utf8", "hex");
@@ -45,7 +53,9 @@ export function decryptTaxId(
     throw new Error("Invalid encryption data provided");
   }
 
-  const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+  // Create a key from the encryption key using PBKDF2
+  const key = pbkdf2Sync(ENCRYPTION_KEY, "salt", 100000, 32, "sha256");
+  const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(iv, "hex"));
   decipher.setAAD(Buffer.from("tax-id", "utf8"));
   decipher.setAuthTag(Buffer.from(tag, "hex"));
 

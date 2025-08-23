@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import WaveformPlayer from "@/components/WaveformPlayer";
 import { motion } from "framer-motion";
 import MixUpload from "@/components/MixUpload";
@@ -18,6 +18,8 @@ import FollowButton from "@/components/FollowButton";
 import { useSocketContext } from "@/components/SocketProvider";
 import { Upload, Plus, ChevronDown, Filter, Search } from "lucide-react";
 import toast from "react-hot-toast";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
+import { FreeUploadCounter } from "@/components/FreeUploadCounter";
 
 // Predefined list of genres for filtering
 const GENRES = [
@@ -75,9 +77,10 @@ interface DjMix {
   };
 }
 
-export default function MixesPage() {
+function MixesPageContent() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { socket, isConnected } = useSocketContext();
   const [mixes, setMixes] = useState<DjMix[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +105,24 @@ export default function MixesPage() {
   useEffect(() => {
     fetchMixes();
   }, [page, sortBy, selectedGenre, searchQuery]);
+
+  // Handle success/cancel messages from Stripe checkout
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+
+    if (success === "true") {
+      toast.success(
+        "Subscription created successfully! Welcome to Pro-DJ Premium!"
+      );
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (canceled === "true") {
+      toast.error("Subscription was canceled. You can try again anytime.");
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams]);
 
   // Listen for real-time mix like updates
   useEffect(() => {
@@ -162,6 +183,7 @@ export default function MixesPage() {
 
   const fetchMixes = async () => {
     try {
+      const djId = searchParams.get("djId");
       const genreParam =
         selectedGenre !== "All Genres"
           ? `&genre=${encodeURIComponent(selectedGenre)}`
@@ -169,8 +191,9 @@ export default function MixesPage() {
       const searchParam = searchQuery
         ? `&search=${encodeURIComponent(searchQuery)}`
         : "";
+      const djIdParam = djId ? `&djId=${djId}` : "";
       const response = await fetch(
-        `/api/mixes?page=${page}&limit=10&sortBy=${sortBy}${genreParam}${searchParam}`
+        `/api/mixes?page=${page}&limit=10&sortBy=${sortBy}${genreParam}${searchParam}${djIdParam}`
       );
       const data = await response.json();
 
@@ -446,15 +469,19 @@ export default function MixesPage() {
                 )}
               </div>
 
-              {/* Upload Button */}
-              {session?.user?.role === "DJ" && (
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Mix
-                </button>
+              {/* Upload Button and Free Upload Counter */}
+              {(session?.user?.role === "DJ" ||
+                session?.user?.role === "ADMIN") && (
+                <div className="flex items-center gap-3">
+                  <FreeUploadCounter />
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Mix
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -662,5 +689,13 @@ export default function MixesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MixesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MixesPageContent />
+    </Suspense>
   );
 }

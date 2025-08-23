@@ -1,22 +1,24 @@
-# Use Node.js 18 Alpine as base image
-FROM node:18-alpine
+# Use a base image that includes both Node.js and PostgreSQL
+FROM postgres:15-alpine
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies including ffmpeg
+# Install Node.js and npm
 RUN apk add --no-cache \
+    nodejs \
+    npm \
     ffmpeg \
     python3 \
     make \
     g++ \
     && rm -rf /var/cache/apk/*
 
+# Set working directory
+WORKDIR /app
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -24,14 +26,21 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application
-RUN npm run build
+# Copy startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
-# Expose port
-EXPOSE 3000
+# Expose ports
+EXPOSE 3000 5432
+
+# Set environment variables for PostgreSQL
+ENV POSTGRES_DB=pro_dj
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pro_dj
 
 # Set Node.js options for better memory management
-ENV NODE_OPTIONS="--max-old-space-size=4096 --expose-gc"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["/app/start.sh"]

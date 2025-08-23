@@ -40,8 +40,6 @@ export const metadata: Metadata = {
     ],
   },
   manifest: "/manifest.json",
-  themeColor: "#8b5cf6",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -50,6 +48,13 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#8b5cf6",
 };
 
 export default function RootLayout({

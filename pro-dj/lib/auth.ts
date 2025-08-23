@@ -7,6 +7,8 @@ import { Role } from "@/app/generated/prisma";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -118,12 +120,9 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Redirect new Google users to role selection
-      if (
-        url.startsWith(baseUrl) &&
-        url.includes("callbackUrl=/auth/role-selection")
-      ) {
-        return `${baseUrl}/auth/role-selection`;
+      // Simple redirect logic
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
       }
       return url;
     },
@@ -185,4 +184,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/auth",
   },
+  useSecureCookies: false,
 };

@@ -84,6 +84,12 @@ export async function GET(req: Request) {
               profileImage: true,
               role: true,
             },
+            include: {
+              userMedia: {
+                take: 1,
+                orderBy: { createdAt: "desc" },
+              },
+            },
           },
           replies: {
             where: { isDeleted: false },
@@ -94,6 +100,12 @@ export async function GET(req: Request) {
                   name: true,
                   profileImage: true,
                   role: true,
+                },
+                include: {
+                  userMedia: {
+                    take: 1,
+                    orderBy: { createdAt: "desc" },
+                  },
                 },
               },
               likes: true,

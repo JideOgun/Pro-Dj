@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Music,
@@ -17,8 +18,12 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import SocialMediaManager from "@/components/SocialMediaManager";
+import SubscriptionDashboard from "@/components/SubscriptionDashboard";
+import PaymentSetupModal from "@/components/PaymentSetupModal";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { useSubscription } from "@/hooks/useSubscription";
+import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 interface DashboardStats {
   totalMixes: number;
@@ -33,11 +38,12 @@ interface DJProfile {
   id: string;
   stageName: string;
   bio: string;
-  userProfileImage: string | null;
+  profileImage: string | null;
   genres: string[];
   experience: string;
   location: string;
-  hourlyRate: number;
+  basePriceCents: number;
+  eventsOffered: string[];
   isApprovedByAdmin: boolean;
   isFeatured: boolean;
   isAcceptingBookings: boolean;
@@ -56,6 +62,8 @@ interface SocialLinks {
 
 export default function DjDashboard() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const { refreshSubscriptionStatus } = useSubscription();
   const [stats, setStats] = useState<DashboardStats>({
     totalMixes: 0,
     totalBookings: 0,
@@ -67,12 +75,45 @@ export default function DjDashboard() {
   const [profile, setProfile] = useState<DJProfile | null>(null);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [loading, setLoading] = useState(true);
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+  const [paymentSetupLoading, setPaymentSetupLoading] = useState(false);
+  const [hasCompletedPaymentSetup, setHasCompletedPaymentSetup] =
+    useState(false);
+  const [businessType, setBusinessType] = useState<
+    "SOLE_PROPRIETOR" | "CORPORATION"
+  >("SOLE_PROPRIETOR");
 
   useEffect(() => {
     if (session?.user) {
       fetchDashboardData();
     }
   }, [session]);
+
+  // Handle success/cancel messages from Stripe checkout
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+
+    if (success === "true") {
+      toast.success(
+        "Subscription created successfully! Welcome to Pro-DJ Premium!"
+      );
+      // Refresh subscription status after successful checkout
+      setTimeout(() => {
+        refreshSubscriptionStatus();
+      }, 1000);
+      // Clear the success parameter from URL to prevent repeated toasts
+      const url = new URL(window.location.href);
+      url.searchParams.delete("success");
+      window.history.replaceState({}, "", url.toString());
+    } else if (canceled === "true") {
+      toast.error("Subscription was canceled. You can try again anytime.");
+      // Clear the canceled parameter from URL to prevent repeated toasts
+      const url = new URL(window.location.href);
+      url.searchParams.delete("canceled");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams, refreshSubscriptionStatus]);
 
   const fetchDashboardData = async () => {
     try {
@@ -92,10 +133,53 @@ export default function DjDashboard() {
         const socialData = await socialResponse.json();
         setSocialLinks(socialData.socialLinks || {});
       }
+
+      // Check payment setup status
+      await checkPaymentSetupStatus();
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkPaymentSetupStatus = async () => {
+    try {
+      const response = await fetch("/api/dj/payment-setup");
+      if (response.ok) {
+        const data = await response.json();
+        setHasCompletedPaymentSetup(data.hasCompletedSetup);
+        if (data.businessType) {
+          setBusinessType(data.businessType);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking payment setup status:", error);
+    }
+  };
+
+  const handlePaymentSetupComplete = async (taxInfo: any) => {
+    setPaymentSetupLoading(true);
+    try {
+      const response = await fetch("/api/dj/payment-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taxInfo),
+      });
+
+      if (response.ok) {
+        toast.success("Payment setup completed successfully!");
+        setShowPaymentSetup(false);
+        setHasCompletedPaymentSetup(true);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to complete payment setup");
+      }
+    } catch (error) {
+      console.error("Payment setup error:", error);
+      toast.error("Failed to complete payment setup");
+    } finally {
+      setPaymentSetupLoading(false);
     }
   };
 
@@ -131,11 +215,37 @@ export default function DjDashboard() {
                   Pending Approval
                 </h3>
                 <p className="text-yellow-200 text-sm">
-                  Your DJ profile is currently under review. You can upload
-                  mixes and manage your profile, but you won't receive booking
-                  requests until an admin approves your account.
+                  {getDisplayName()}, your DJ profile is currently under review.
+                  You can upload mixes and manage your profile, but you won't
+                  receive booking requests until an admin approves your account.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Setup Banner */}
+        {profile && profile.isApprovedByAdmin && !hasCompletedPaymentSetup && (
+          <div className="mb-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <DollarSign className="w-6 h-6 text-blue-400" />
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-300">
+                    Payment Setup Required
+                  </h3>
+                  <p className="text-blue-200 text-sm">
+                    {getDisplayName()}, to start receiving payments and accept
+                    bookings, you need to complete your tax information setup.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPaymentSetup(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Complete Setup
+              </button>
             </div>
           </div>
         )}
@@ -164,18 +274,19 @@ export default function DjDashboard() {
                 {profile?.isApprovedByAdmin && (
                   <CheckCircle
                     className="w-6 h-6 text-blue-500"
-                    title="Verified DJ"
+                    aria-label="Verified DJ"
                   />
                 )}
                 {profile?.isFeatured && (
                   <Award
                     className="w-6 h-6 text-yellow-500"
-                    title="Featured DJ"
+                    aria-label="Featured DJ"
                   />
                 )}
               </div>
               <p className="text-gray-400">
-                Welcome back! Here's your performance overview.
+                Welcome back, {getDisplayName()}! Here's your performance
+                overview.
               </p>
             </div>
           </div>
@@ -195,10 +306,10 @@ export default function DjDashboard() {
                   <span>{profile.experience} experience</span>
                 </div>
               )}
-              {profile.hourlyRate && (
+              {profile.basePriceCents && (
                 <div className="flex items-center space-x-2 text-sm text-gray-300">
                   <DollarSign className="w-4 h-4" />
-                  <span>${profile.hourlyRate}/hour</span>
+                  <span>${Math.round(profile.basePriceCents / 100)}/hour</span>
                 </div>
               )}
             </div>
@@ -404,11 +515,21 @@ export default function DjDashboard() {
           </motion.div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Subscription Dashboard */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
+          className="mb-8"
+        >
+          <SubscriptionDashboard />
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
           className="bg-gray-800/50 rounded-xl p-6 mb-8"
         >
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
@@ -446,13 +567,15 @@ export default function DjDashboard() {
               </svg>
               <span>Social Media</span>
             </a>
-            <a
-              href="/dashboard/bookings?view=dj"
-              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              <Calendar className="w-6 h-6 mr-3 text-blue-500" />
-              <span>View Bookings</span>
-            </a>
+            <SubscriptionGuard feature="bookings">
+              <a
+                href="/dashboard/bookings?view=dj"
+                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                <Calendar className="w-6 h-6 mr-3 text-blue-500" />
+                <span>View Bookings</span>
+              </a>
+            </SubscriptionGuard>
             <a
               href="/dashboard/earnings"
               className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
@@ -478,18 +601,29 @@ export default function DjDashboard() {
         </motion.div>
 
         {/* Social Media Management */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <SocialMediaManager
-            djId={session?.user?.id || ""}
-            initialSocialLinks={socialLinks}
-            onUpdate={handleSocialLinksUpdate}
-          />
-        </motion.div>
+        <SubscriptionGuard feature="advanced_profile">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+          >
+            <SocialMediaManager
+              djId={session?.user?.id || ""}
+              initialSocialLinks={socialLinks}
+              onUpdate={handleSocialLinksUpdate}
+            />
+          </motion.div>
+        </SubscriptionGuard>
       </div>
+
+      {/* Payment Setup Modal */}
+      <PaymentSetupModal
+        isOpen={showPaymentSetup}
+        onComplete={handlePaymentSetupComplete}
+        onCancel={() => setShowPaymentSetup(false)}
+        isLoading={paymentSetupLoading}
+        businessType={businessType}
+      />
     </div>
   );
 }

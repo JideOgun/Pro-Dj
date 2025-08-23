@@ -89,7 +89,9 @@ export async function POST(
         userId: user.id,
         type: "DJ_REJECTED",
         title: "DJ Profile Rejected",
-        message: `Your DJ profile has been rejected. Reason: ${reason}. You can still use the platform as a client.`,
+        message: `${
+          user.djProfile?.stageName || "DJ"
+        }, your DJ profile has been rejected. Reason: ${reason}. You can still use the platform as a client.`,
         isRead: false,
       },
     });

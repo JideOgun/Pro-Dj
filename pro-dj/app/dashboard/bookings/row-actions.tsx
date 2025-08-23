@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import toast from "react-hot-toast";
 import { useSocketContext } from "../../../components/SocketProvider";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   X,
   Copy,
@@ -13,6 +14,7 @@ import {
   RefreshCw,
   DollarSign,
   Calendar,
+  Crown,
 } from "lucide-react";
 
 interface PaymentLinkModalProps {
@@ -312,6 +314,8 @@ export default function Actions({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
   const [showRefundModal, setShowRefundModal] = useState(false);
+  const { hasActiveSubscription, loading, refreshSubscriptionStatus } =
+    useSubscription();
 
   // Calculate booking amount in dollars
   const bookingAmount = quotedPriceCents ? quotedPriceCents / 100 : 0;
@@ -370,24 +374,66 @@ export default function Actions({
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-1 justify-end">
-        {/* Only show accept/decline for DJs and admins */}
+        {/* Show accept/decline for DJs and admins with active subscriptions */}
         {status === "PENDING" &&
           (userRole === "DJ" || userRole === "ADMIN") && (
             <>
-              <button
-                onClick={() => run("accept")}
-                className="px-2 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-              >
-                <Check size={12} />
-                Accept
-              </button>
-              <button
-                onClick={() => run("decline")}
-                className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-              >
-                <XCircle size={12} />
-                Decline
-              </button>
+              {!loading && hasActiveSubscription ? (
+                <>
+                  <button
+                    onClick={() => run("accept")}
+                    className="px-2 py-1 rounded bg-violet-600 hover:bg-violet-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Check size={12} />
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => run("decline")}
+                    className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                  >
+                    <XCircle size={12} />
+                    Decline
+                  </button>
+                </>
+              ) : !loading && !hasActiveSubscription && userRole === "DJ" ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      // Create subscription checkout session
+                      const response = await fetch(
+                        "/api/subscriptions/create",
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            planType: "DJ_BASIC", // Default to basic plan
+                            returnUrl: "/dashboard/bookings",
+                          }),
+                        }
+                      );
+
+                      const data = await response.json();
+
+                      if (response.ok && data.url) {
+                        // Redirect to Stripe checkout
+                        window.location.href = data.url;
+                      } else {
+                        toast.error(
+                          data.error || "Failed to create subscription checkout"
+                        );
+                      }
+                    } catch (error) {
+                      toast.error("Failed to start subscription process");
+                    }
+                  }}
+                  className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                >
+                  <Crown size={12} />
+                  Upgrade to Accept
+                </button>
+              ) : null}
             </>
           )}
         {/* Show payment link for DJs and admins when accepted */}

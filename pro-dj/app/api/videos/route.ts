@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireActiveSubscription } from "@/lib/subscription-guards";
 
 // GET: Fetch YouTube videos with pagination and filtering
 export async function GET(req: Request) {
@@ -128,6 +129,18 @@ export async function POST(req: Request) {
         { ok: false, error: "Only DJs and Admins can add videos" },
         { status: 403 }
       );
+    }
+
+    // Check subscription status for DJ users
+    if (session.user.role === "DJ") {
+      try {
+        await requireActiveSubscription();
+      } catch (error) {
+        return NextResponse.json(
+          { ok: false, error: "Active subscription required to add videos" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();

@@ -25,6 +25,21 @@ export default async function AdminDashboardPage() {
     redirect("/dashboard");
   }
 
+  // Get user with profile data for display name and profile picture
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      djProfile: {
+        select: { stageName: true },
+      },
+      userMedia: {
+        where: { type: "PROFILE_PICTURE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
   // Get proper display name for admin
   const displayName = await getDisplayName(session.user.id);
 
@@ -115,10 +130,34 @@ export default async function AdminDashboardPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-gray-300">
-            Welcome back, {displayName}! Manage your Pro-DJ platform
-          </p>
+          <div className="flex items-center space-x-4 mb-4">
+            <Link href="/dashboard/profile" className="relative group">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700 border-4 border-violet-500/30 shadow-lg group-hover:border-violet-400/50 transition-all duration-200">
+                {user?.profileImage || user?.userMedia[0]?.url ? (
+                  <img
+                    src={user.profileImage || user.userMedia[0]?.url}
+                    alt="Profile"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
+                      {session.user.name?.charAt(0) ||
+                        session.user.email?.charAt(0) ||
+                        "A"}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-violet-500 rounded-full border-2 border-gray-900"></div>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+              <p className="text-gray-300">
+                Welcome back, {displayName}! Manage your Pro-DJ platform
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}

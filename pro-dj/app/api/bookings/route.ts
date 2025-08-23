@@ -10,6 +10,7 @@ import {
   getAvailableDjs,
   checkEventTimeConflicts,
 } from "@/lib/booking-utils";
+import { requireActiveSubscription } from "@/lib/subscription-guards";
 
 // GET admin and DJ: list bookings
 export async function GET(req: Request) {
@@ -140,6 +141,21 @@ export async function POST(req: Request) {
     }
 
     console.log("User role:", session.user.role);
+
+    // Check subscription status for DJ users
+    if (session.user.role === "DJ") {
+      try {
+        await requireActiveSubscription();
+      } catch (error) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Active subscription required to access bookings",
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     // Restrict booking creation to CLIENT users only
     if (session.user.role !== "CLIENT") {

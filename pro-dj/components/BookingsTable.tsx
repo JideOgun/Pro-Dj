@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Actions from "../app/dashboard/bookings/row-actions";
 import { SocketProvider, useSocketContext } from "./SocketProvider";
 import SuspendedUserGuard from "./SuspendedUserGuard";
 import { Calendar, Clock } from "lucide-react";
+import { useSubscription } from "@/hooks/useSubscription";
+import toast from "react-hot-toast";
 import {
   getStatusColor,
   getStatusText,
@@ -65,6 +68,8 @@ function BookingsTableContent({
 }: BookingsTableProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [isClient, setIsClient] = useState(false);
+  const searchParams = useSearchParams();
+  const { refreshSubscriptionStatus } = useSubscription();
 
   // Get WebSocket context
   const { isConnected, socket } = useSocketContext();
@@ -73,6 +78,26 @@ function BookingsTableContent({
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Handle success/cancel messages from Stripe checkout
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const canceled = searchParams.get("canceled");
+
+    if (success === "true") {
+      toast.success(
+        "Subscription created successfully! Welcome to Pro-DJ Premium!"
+      );
+      // Refresh subscription status after successful checkout
+      setTimeout(() => refreshSubscriptionStatus(), 1000);
+      // Clear URL parameters to prevent multiple toasts
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (canceled === "true") {
+      toast.error("Subscription was canceled. You can try again anytime.");
+      // Clear URL parameters to prevent multiple toasts
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams, refreshSubscriptionStatus]);
 
   // Listen for real-time booking status changes via WebSocket
   useEffect(() => {

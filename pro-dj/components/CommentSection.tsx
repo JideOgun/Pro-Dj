@@ -26,6 +26,11 @@ interface Comment {
     id: string;
     name: string;
     profileImage?: string;
+    userMedia?: Array<{
+      id: string;
+      url: string;
+      type: string;
+    }>;
   };
   likes: number;
   dislikes: number;
@@ -444,11 +449,13 @@ export default function CommentSection({
         <div className="flex items-start space-x-3">
           {/* User Avatar */}
           <div className="flex-shrink-0">
-            {comment.user.profileImage ? (
+            {comment.user.profileImage || comment.user.userMedia?.[0]?.url ? (
               <img
-                src={comment.user.profileImage}
+                src={
+                  comment.user.profileImage || comment.user.userMedia[0]?.url
+                }
                 alt={comment.user.name}
-                className="w-8 h-8 rounded-full"
+                className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
               <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">

@@ -6,6 +6,28 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting database seeding...");
 
+  console.log("🧹 Cleaning up existing data...");
+
+  // Delete existing data in reverse dependency order
+  await prisma.djAddon.deleteMany({});
+  await prisma.djEventPricing.deleteMany({});
+  await prisma.djMix.deleteMany({});
+  await prisma.djYouTubeVideo.deleteMany({});
+  await prisma.eventPhoto.deleteMany({});
+  await prisma.bookingRecovery.deleteMany({});
+  await prisma.booking.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.commentLike.deleteMany({});
+  await prisma.commentDislike.deleteMany({});
+  await prisma.comment.deleteMany({});
+  await prisma.mixLike.deleteMany({});
+  await prisma.repost.deleteMany({});
+  await prisma.follow.deleteMany({});
+  await prisma.userMedia.deleteMany({});
+  await prisma.securityClearance.deleteMany({});
+  await prisma.djProfile.deleteMany({});
+  await prisma.user.deleteMany({});
+
   console.log("🌱 Starting fresh database seeding...");
 
   // Create admin user (Babajide Ogunbanjo with stage name JAY BABA)

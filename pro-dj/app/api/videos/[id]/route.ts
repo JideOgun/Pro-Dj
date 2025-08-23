@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET: Fetch a single video by ID
@@ -152,6 +154,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { id: videoId } = await params;
 
     const video = await prisma.djYouTubeVideo.findUnique({
@@ -172,9 +182,16 @@ export async function DELETE(
       );
     }
 
-    // Check if user is authorized to delete (owner only)
-    // Note: This would typically be done with session validation
-    // For now, we'll allow deletion but you should add proper auth
+    // Check if user is authorized to delete (owner or admin)
+    const isOwner = video.dj.userId === session.user.id;
+    const isAdmin = session.user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized to delete this video" },
+        { status: 403 }
+      );
+    }
 
     // Delete the video
     await prisma.djYouTubeVideo.delete({

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireActiveSubscription } from "@/lib/subscription-guards";
 
 export async function GET(req: Request) {
   try {
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const genre = searchParams.get("genre");
     const search = searchParams.get("search");
+    const djId = searchParams.get("djId");
     const sortBy = searchParams.get("sortBy") || "newest";
     const featured = searchParams.get("featured") === "true";
 
@@ -58,6 +60,10 @@ export async function GET(req: Request) {
 
     if (featured) {
       where.isFeatured = true;
+    }
+
+    if (djId) {
+      where.djId = djId;
     }
 
     // Build order by clause

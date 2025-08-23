@@ -14,6 +14,7 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
+  const [hasDjProfile, setHasDjProfile] = useState(false);
 
   // Handle hydration
   useEffect(() => {
@@ -47,6 +48,9 @@ export default function Navbar() {
             } else {
               setDisplayName(user.name || user.email.split("@")[0] || "");
             }
+
+            // Check if user has a DJ profile (for showing My Bookings)
+            setHasDjProfile(!!user.djProfile);
           }
         })
         .catch((error) => {
@@ -148,7 +152,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           {/* Left side - Brand */}
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-4 lg:space-x-8">
             <Link
               href="/"
               className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
@@ -162,11 +166,24 @@ export default function Navbar() {
             {showDashboard && (
               <Link
                 href="/dashboard"
-                className="text-gray-300 hover:text-white transition-colors font-medium"
+                className="hidden md:block text-gray-300 hover:text-white transition-colors font-medium"
               >
                 Dashboard
               </Link>
             )}
+
+            {/* My Bookings - show for DJs and admin DJs */}
+            {session?.user &&
+              (getEffectiveRole(session.user) === "DJ" ||
+                (getEffectiveRole(session.user) === "ADMIN" &&
+                  hasDjProfile)) && (
+                <Link
+                  href="/dashboard/bookings"
+                  className="hidden lg:block text-gray-300 hover:text-white transition-colors font-medium"
+                >
+                  My Bookings
+                </Link>
+              )}
 
             <Link
               href="/mixes"
@@ -177,7 +194,7 @@ export default function Navbar() {
 
             <Link
               href="/feed"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
+              className="hidden lg:block text-gray-300 hover:text-white transition-colors font-medium"
             >
               Feed
             </Link>
