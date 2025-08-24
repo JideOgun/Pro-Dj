@@ -30,14 +30,14 @@ export async function ensureAdminDjProfile(userId: string) {
         userId: userId,
         stageName: user.name || "Admin DJ",
         bio: "Admin DJ profile with full access to all features",
-        basePriceCents: 5000, // $50
-        isApprovedByAdmin: true, // Auto-approve admin
-        isAvailableForBookings: true,
-        acceptsBookings: true,
-        maxFreeUploads: 999999, // Unlimited for admin
-        isFeatured: false,
-        status: "ACTIVE",
         experience: 5, // Default experience level for admin
+        isApprovedByAdmin: true, // Auto-approve admin
+        isAcceptingBookings: true,
+        isFeatured: false,
+        genres: [], // Empty array for genres
+        portfolio: [], // Empty array for portfolio
+        languages: [], // Empty array for languages
+        eventsOffered: [], // Empty array for events offered
       },
     });
 
