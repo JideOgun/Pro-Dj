@@ -49,52 +49,50 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // TODO: Profile upload temporarily disabled until AWS S3 is configured
     // Process and save image
-    const processedImage = await processAndSaveImage(
-      {
-        buffer,
-        originalname: file.name,
-        mimetype: file.type,
-        size: file.size,
-      } as any,
-      UPLOAD_TYPES.PROFILE_PICTURE,
-      user.id,
-      {
-        width: 400,
-        height: 400,
-        quality: 80,
-        format: "jpeg",
-      }
-    );
+    // const processedImage = await processAndSaveImage(
+    //   {
+    //     buffer,
+    //     originalname: file.name,
+    //     mimetype: file.type,
+    //     size: file.size,
+    //   } as any,
+    //   UPLOAD_TYPES.PROFILE_PICTURE,
+    //   user.id,
+    //   {
+    //     width: 400,
+    //     height: 400,
+    //     quality: 80,
+    //     format: "jpeg",
+    //   }
+    // );
 
-    // Save to database
-    const userMedia = await prisma.userMedia.create({
-      data: {
-        userId: user.id,
-        type: "PROFILE_PICTURE",
-        url: processedImage.url,
-        filename: processedImage.filename,
-        originalName: processedImage.originalName,
-        mimeType: processedImage.mimeType,
-        size: processedImage.size,
-        description: "Profile picture",
-      },
-    });
+    // // Save to database
+    // const userMedia = await prisma.userMedia.create({
+    //   data: {
+    //     userId: user.id,
+    //     type: "PROFILE_PICTURE",
+    //     url: processedImage.url,
+    //     filename: processedImage.filename,
+    //     originalName: processedImage.originalName,
+    //     mimeType: processedImage.mimeType,
+    //     size: processedImage.size,
+    //     description: "Profile picture",
+    //   },
+    // });
 
-    // Update user's profileImage field
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { profileImage: processedImage.url },
-    });
+    // // Update user's profileImage field
+    // await prisma.user.update({
+    //   where: { id: user.id },
+    //   data: { profileImage: processedImage.url },
+    // });
 
     return NextResponse.json({
-      ok: true,
-      data: {
-        url: processedImage.url,
-        filename: processedImage.filename,
-        size: processedImage.size,
-      },
-    });
+      ok: false,
+      error: "Profile upload temporarily disabled. AWS S3 configuration required for production.",
+      message: "Please configure AWS S3 for file uploads in production.",
+    }, { status: 503 });
   } catch (error) {
     console.error("Error uploading profile picture:", error);
     return NextResponse.json(
