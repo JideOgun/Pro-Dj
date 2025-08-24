@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse request body
-    const { mixId, duration } = await req.json();
+    const { mixId, duration, albumArtS3Key } = await req.json();
 
     if (!mixId) {
       return NextResponse.json(
@@ -45,15 +45,35 @@ export async function POST(req: NextRequest) {
         uploadStatus: "COMPLETED", // Use uploadStatus instead of status
         duration: duration || null,
         uploadedAt: new Date(),
+        ...(albumArtS3Key && {
+          albumArtS3Key: albumArtS3Key,
+          albumArtUrl: `/api/files/${albumArtS3Key}`,
+        }),
+      },
+    });
+
+    // Fetch the complete mix data with DJ profile
+    const completeMix = await prisma.djMix.findUnique({
+      where: { id: updatedMix.id },
+      include: {
+        dj: {
+          select: {
+            id: true,
+            stageName: true,
+            bio: true,
+            profileImage: true,
+          },
+        },
       },
     });
 
     return NextResponse.json({
       ok: true,
       data: {
+        mix: completeMix,
         mixId: updatedMix.id,
         title: updatedMix.title,
-        status: updatedMix.status,
+        status: updatedMix.uploadStatus,
       },
     });
 

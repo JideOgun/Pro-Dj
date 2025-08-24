@@ -207,9 +207,51 @@ export default function MixUpload({
         throw new Error("Failed to upload file to S3");
       }
 
+      setUploadProgress(80);
+
+      // Step 3: Upload album art if provided
+      let albumArtS3Key = null;
+      if (albumArt) {
+        try {
+          const albumArtResponse = await fetch("/api/mixes/upload-album-art", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mixId: mixId,
+              fileName: albumArt.name,
+              fileType: albumArt.type,
+              fileSize: albumArt.size,
+            }),
+          });
+
+          if (albumArtResponse.ok) {
+            const albumArtData = await albumArtResponse.json();
+            const { presignedUrl: albumArtPresignedUrl, albumArtS3Key: key } = albumArtData.data;
+
+            // Upload album art to S3
+            const albumArtUploadResponse = await fetch(albumArtPresignedUrl, {
+              method: "PUT",
+              body: albumArt,
+              headers: {
+                "Content-Type": albumArt.type,
+              },
+            });
+
+            if (albumArtUploadResponse.ok) {
+              albumArtS3Key = key;
+            }
+          }
+        } catch (error) {
+          console.warn("Album art upload failed:", error);
+          // Continue with mix upload even if album art fails
+        }
+      }
+
       setUploadProgress(90);
 
-      // Step 3: Complete the upload
+      // Step 4: Complete the upload
       const completeResponse = await fetch("/api/mixes/complete-upload", {
         method: "POST",
         headers: {
@@ -218,6 +260,7 @@ export default function MixUpload({
         body: JSON.stringify({
           mixId: mixId,
           duration: null, // Will be extracted later if needed
+          albumArtS3Key: albumArtS3Key,
         }),
       });
 
