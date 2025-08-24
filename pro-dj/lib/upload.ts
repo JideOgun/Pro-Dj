@@ -93,18 +93,19 @@ export async function processAndSaveImage(
         Key: s3Key,
         Body: processedBuffer,
         ContentType: `image/${options?.format || "jpeg"}`,
-        ACL: "public-read",
+        // Remove ACL since bucket has ACLs disabled
       });
 
       await s3Client.send(command);
 
-      // Return S3 URL
+      // Return S3 key (we'll generate presigned URLs when needed)
       return {
         filename,
         originalName: file.originalname,
         mimeType: `image/${options?.format || "jpeg"}`,
         size: file.size,
-        url: `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-2"}.amazonaws.com/${s3Key}`,
+        url: `/api/files/${s3Key}`, // We'll create an API route to serve files
+        s3Key: s3Key, // Store the S3 key for later use
       };
     } else {
       // Fallback to local storage (for development)
