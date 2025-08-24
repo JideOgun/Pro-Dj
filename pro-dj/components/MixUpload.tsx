@@ -168,40 +168,67 @@ export default function MixUpload({
     setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("title", mixDetails.title);
-      formData.append("description", mixDetails.description);
-      formData.append("genre", mixDetails.genres.join(","));
-      formData.append("tags", mixDetails.tags);
-      formData.append("isPublic", mixDetails.isPublic.toString());
-
-      if (albumArt) {
-        formData.append("albumArt", albumArt);
-      }
-
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + Math.random() * 10;
-        });
-      }, 500);
-
-      const response = await fetch("/api/mixes/upload", {
+      // Step 1: Get presigned URL
+      const presignedResponse = await fetch("/api/mixes/upload-presigned", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+          title: mixDetails.title,
+          description: mixDetails.description,
+          genres: mixDetails.genres,
+        }),
       });
 
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+      if (!presignedResponse.ok) {
+        const errorData = await presignedResponse.json();
+        throw new Error(errorData.error || "Failed to get upload URL");
+      }
 
-      const data = await response.json();
+      const presignedData = await presignedResponse.json();
+      const { presignedUrl, mixId } = presignedData.data;
 
-      if (response.ok) {
+      // Step 2: Upload file directly to S3
+      setUploadProgress(10);
+      
+      const uploadResponse = await fetch(presignedUrl, {
+        method: "PUT",
+        body: selectedFile,
+        headers: {
+          "Content-Type": selectedFile.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file to S3");
+      }
+
+      setUploadProgress(90);
+
+      // Step 3: Complete the upload
+      const completeResponse = await fetch("/api/mixes/complete-upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mixId: mixId,
+          duration: null, // Will be extracted later if needed
+        }),
+      });
+
+      if (!completeResponse.ok) {
+        const errorData = await completeResponse.json();
+        throw new Error(errorData.error || "Failed to complete upload");
+      }
+
+      const data = await completeResponse.json();
+
+      if (completeResponse.ok) {
         // Show success message with mix details
         toast.success(`"${mixDetails.title}" uploaded successfully! 🎵`, {
           icon: "🎵",
