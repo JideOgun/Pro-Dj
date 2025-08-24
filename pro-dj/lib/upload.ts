@@ -36,7 +36,7 @@ export type UploadType = (typeof UPLOAD_TYPES)[keyof typeof UPLOAD_TYPES];
 // AWS S3 Configuration
 const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
   ? new S3Client({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: process.env.AWS_REGION || "us-east-2",
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -104,7 +104,7 @@ export async function processAndSaveImage(
         originalName: file.originalname,
         mimeType: `image/${options?.format || "jpeg"}`,
         size: file.size,
-        url: `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${s3Key}`,
+        url: `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-2"}.amazonaws.com/${s3Key}`,
       };
     } else {
       // Fallback to local storage (for development)

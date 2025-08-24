@@ -13,7 +13,7 @@ This guide will help you set up AWS S3 for file storage in production, enabling 
 1. **Go to [AWS S3 Console](https://s3.console.aws.amazon.com/)**
 2. **Click "Create bucket"**
 3. **Bucket name:** `pro-dj-production-files` (or your preferred name)
-4. **Region:** `us-east-1` (recommended for Vercel)
+4. **Region:** `us-east-2` (your bucket region)
 5. **Block Public Access:** ✅ **Keep all blocks enabled** (we'll use presigned URLs)
 6. **Click "Create bucket"**
 
@@ -106,7 +106,7 @@ aws s3 mb s3://pro-dj-production-files --region us-east-1
 ```
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET_NAME=pro-dj-production-files
 ```
 
