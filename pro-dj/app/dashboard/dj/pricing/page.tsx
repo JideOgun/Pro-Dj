@@ -260,19 +260,19 @@ export default function DjPricingPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-violet-400" />
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-3">
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-violet-400" />
                 Pricing & Add-ons
               </h1>
-              <p className="text-gray-300">
+              <p className="text-gray-300 text-sm sm:text-base">
                 Set your hourly rate and manage your service add-ons
               </p>
             </div>
             <Link
               href="/dashboard/dj"
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 self-start"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
@@ -343,7 +343,7 @@ export default function DjPricingPage() {
           transition={{ delay: 0.4 }}
           className="bg-gray-800 rounded-lg p-6 border border-gray-700/30 mb-8"
         >
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <div>
               <h3 className="text-lg font-semibold text-violet-400 flex items-center gap-2">
                 <DollarSign className="w-5 h-5" />
@@ -355,7 +355,7 @@ export default function DjPricingPage() {
             </div>
             <button
               onClick={() => setShowAddEventModal(true)}
-              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 self-start"
             >
               <Plus className="w-4 h-4" />
               Add Event Type
@@ -392,7 +392,7 @@ export default function DjPricingPage() {
                         </p>
                       </div>
                       {!isEditing && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             onClick={() => {
                               setEditingEventType(eventType);
@@ -423,7 +423,7 @@ export default function DjPricingPage() {
                           <label className="block text-sm font-medium text-gray-300 mb-2">
                             Hourly Rate (USD)
                           </label>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <div className="relative flex-1">
                               <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                               <input
@@ -447,30 +447,32 @@ export default function DjPricingPage() {
                                 placeholder="0.00"
                               />
                             </div>
-                            <button
-                              onClick={() => handleSaveEventRate(eventType)}
-                              disabled={saving}
-                              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-                            >
-                              {saving ? (
-                                <>
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="w-4 h-4" />
-                                  Save
-                                </>
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleCancelEdit(eventType)}
-                              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-                            >
-                              <X className="w-4 h-4" />
-                              Cancel
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveEventRate(eventType)}
+                                disabled={saving}
+                                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                {saving ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Saving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleCancelEdit(eventType)}
+                                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                <X className="w-4 h-4" />
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

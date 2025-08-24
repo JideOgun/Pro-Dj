@@ -77,6 +77,12 @@ export default function HamburgerMenu() {
 
   const menuItems = [
     {
+      title: "Dashboard",
+      href: "/dashboard",
+      icon: Settings,
+      description: "Go to your dashboard",
+    },
+    {
       title: "Account Management",
       href: "/dashboard/account",
       icon: Settings,
@@ -93,6 +99,33 @@ export default function HamburgerMenu() {
       href: "/dashboard/bookings",
       icon: BookOpen,
       description: "Check your booking history",
+    },
+  ];
+
+  const navigationItems = [
+    {
+      title: "Mixes",
+      href: "/mixes",
+      icon: BookOpen,
+      description: "Listen to DJ mixes",
+    },
+    {
+      title: "Feed",
+      href: "/feed",
+      icon: BookOpen,
+      description: "View the latest feed",
+    },
+    {
+      title: "YouTube Sets",
+      href: "/videos",
+      icon: BookOpen,
+      description: "Watch YouTube videos",
+    },
+    {
+      title: "Gallery",
+      href: "/gallery",
+      icon: BookOpen,
+      description: "Browse event photos",
     },
   ];
 
@@ -175,6 +208,34 @@ export default function HamburgerMenu() {
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto">
                   <div className="p-4">
+                    {/* Navigation Section */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        Navigation
+                      </h3>
+                      <div className="space-y-1">
+                        {navigationItems.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors group"
+                            >
+                              <Icon className="w-5 h-5 text-gray-400 group-hover:text-violet-400" />
+                              <div className="flex-1">
+                                <p className="font-medium">{item.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {item.description}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-400" />
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Account Management Section */}
                     <div className="mb-6">
                       <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">

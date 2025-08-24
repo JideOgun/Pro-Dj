@@ -155,82 +155,86 @@ export default function Navbar() {
           <div className="flex items-center space-x-4 lg:space-x-8">
             <Link
               href="/"
-              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity"
             >
               <ProDJLogo variant="transparent" size="2xl" format="png" />
-              <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
                 Pro-DJ
               </span>
             </Link>
 
-            {showDashboard && (
-              <Link
-                href="/dashboard"
-                className="hidden md:block text-gray-300 hover:text-white transition-colors font-medium"
-              >
-                Dashboard
-              </Link>
-            )}
-
-            {/* My Bookings - show for DJs and admin DJs */}
-            {session?.user &&
-              (getEffectiveRole(session.user) === "DJ" ||
-                (getEffectiveRole(session.user) === "ADMIN" &&
-                  hasDjProfile)) && (
+            {/* Desktop Navigation - Hidden on mobile */}
+            <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+              {showDashboard && (
                 <Link
-                  href="/dashboard/bookings"
-                  className="hidden lg:block text-gray-300 hover:text-white transition-colors font-medium"
+                  href="/dashboard"
+                  className="text-gray-300 hover:text-white transition-colors font-medium"
                 >
-                  My Bookings
+                  Dashboard
                 </Link>
               )}
 
-            <Link
-              href="/mixes"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Mixes
-            </Link>
+              {/* My Bookings - show for DJs and admin DJs */}
+              {session?.user &&
+                (getEffectiveRole(session.user) === "DJ" ||
+                  (getEffectiveRole(session.user) === "ADMIN" &&
+                    hasDjProfile)) && (
+                  <Link
+                    href="/dashboard/bookings"
+                    className="text-gray-300 hover:text-white transition-colors font-medium"
+                  >
+                    My Bookings
+                  </Link>
+                )}
 
-            <Link
-              href="/feed"
-              className="hidden lg:block text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Feed
-            </Link>
+              <Link
+                href="/mixes"
+                className="text-gray-300 hover:text-white transition-colors font-medium"
+              >
+                Mixes
+              </Link>
 
-            {/* Book a DJ button - only show for clients */}
+              <Link
+                href="/feed"
+                className="text-gray-300 hover:text-white transition-colors font-medium"
+              >
+                Feed
+              </Link>
+
+              <Link
+                href="/videos"
+                className="text-gray-300 hover:text-white transition-colors font-medium"
+              >
+                YouTube Sets
+              </Link>
+
+              <Link
+                href="/gallery"
+                className="text-gray-300 hover:text-white transition-colors font-medium"
+              >
+                Gallery
+              </Link>
+            </div>
+
+            {/* Mobile-only Book a DJ button */}
             {session?.user && getEffectiveRole(session.user) === "CLIENT" && (
               <Link
                 href="/book"
-                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="md:hidden bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl text-sm"
+              >
+                Book DJ
+              </Link>
+            )}
+
+            {/* Desktop Book a DJ button */}
+            {session?.user && getEffectiveRole(session.user) === "CLIENT" && (
+              <Link
+                href="/book"
+                className="hidden md:block bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Book a DJ
               </Link>
             )}
-
-            <Link
-              href="/videos"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              YouTube Sets
-            </Link>
-
-            <Link
-              href="/gallery"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Gallery
-            </Link>
-
-            {/* Social Media - Commented out until proper API integration
-            <Link
-              href="/social-media"
-              className="text-gray-300 hover:text-white transition-colors font-medium"
-            >
-              Social Media
-            </Link>
-            */}
           </div>
 
           {/* Right side - Auth & Actions */}
@@ -249,11 +253,11 @@ export default function Navbar() {
                 {/* User info with profile photo and role badge - clickable to profile */}
                 <Link
                   href="/dashboard/profile"
-                  className="flex items-center space-x-3 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700/50 hover:bg-gray-700/50 hover:border-gray-600/50 transition-all duration-200 cursor-pointer group"
+                  className="flex items-center space-x-2 sm:space-x-3 bg-gray-800/50 rounded-lg px-2 sm:px-3 py-2 border border-gray-700/50 hover:bg-gray-700/50 hover:border-gray-600/50 transition-all duration-200 cursor-pointer group"
                 >
                   {/* Profile Photo */}
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 border-2 border-violet-500/30 shadow-lg">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-700 border-2 border-violet-500/30 shadow-lg">
                       {profileImage ? (
                         <Image
                           src={profileImage}
@@ -272,23 +276,24 @@ export default function Navbar() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-400" />
+                          <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                         </div>
                       )}
                     </div>
                     {/* Online status indicator */}
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-sm text-white font-medium truncate max-w-32 group-hover:text-violet-300 transition-colors">
+                  {/* Hide text on very small screens */}
+                  <div className="hidden sm:block text-right">
+                    <div className="text-sm text-white font-medium truncate max-w-24 lg:max-w-32 group-hover:text-violet-300 transition-colors">
                       {displayName || session.user.name || session.user.email}
                     </div>
                   </div>
                   <div
                     className={`text-xs px-2 py-1 rounded-full border ${getRoleColor(
                       effectiveRole
-                    )} font-medium group-hover:scale-105 transition-transform`}
+                    )} font-medium group-hover:scale-105 transition-transform hidden sm:block`}
                   >
                     {effectiveRole}
                   </div>
