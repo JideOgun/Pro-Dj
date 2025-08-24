@@ -197,6 +197,45 @@ export default function SubscriptionDashboard() {
     );
   }
 
+  // Admin users don't need subscription
+  if (session?.user?.role === "ADMIN") {
+    return (
+      <div className="bg-gray-800/50 rounded-xl p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Admin Access
+            </div>
+            <button
+              onClick={handleRefresh}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="Refresh subscription status"
+            >
+              <RefreshCw className="h-4 w-4 text-gray-400" />
+            </button>
+          </h2>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-green-400 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-green-300">
+                  Full Platform Access
+                </h3>
+                <p className="text-green-200 mt-1">
+                  As an admin, you have access to all features without requiring
+                  a subscription.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!subscription) {
     return (
       <div className="bg-gray-800/50 rounded-xl p-6">
