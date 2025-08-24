@@ -340,7 +340,7 @@ export async function POST(req: NextRequest) {
     if (awsConfigured) {
       // Upload to S3 using streaming to avoid memory issues
       console.log("Uploading to S3:", {
-        bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
+        bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
         key: s3Key,
         fileSize: file.size,
         contentType: file.type,
@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
 
       const uploadCommand = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
+                  Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
         Key: s3Key,
         Body: buffer,
         ContentType: file.type,
@@ -412,7 +412,7 @@ export async function POST(req: NextRequest) {
           console.log("AWS configured, uploading to S3...");
           // Upload album art to S3
           const albumArtUploadCommand = new PutObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
+            Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
             Key: albumArtS3KeyName,
             Body: albumArtBuffer,
             ContentType: albumArt.type,
@@ -425,7 +425,7 @@ export async function POST(req: NextRequest) {
           } else {
             // Use direct S3 URL for now (you might want to generate a presigned URL for security)
             albumArtUrl = `https://${
-              process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2"
+              process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files"
             }.s3.${
               process.env.AWS_REGION || "us-east-2"
             }.amazonaws.com/${albumArtS3KeyName}`;

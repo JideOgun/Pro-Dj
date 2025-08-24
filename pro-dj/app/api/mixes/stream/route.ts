@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     // Get the file from S3
     const command = new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
+              Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
       Key: mix.s3Key,
     });
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
 
       // Create a new command with range
       const rangeCommand = new GetObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2",
+        Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
         Key: mix.s3Key,
         Range: `bytes=${start}-${end}`,
       });

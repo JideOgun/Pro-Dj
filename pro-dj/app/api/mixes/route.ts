@@ -154,7 +154,7 @@ export async function GET(req: Request) {
         } else {
           // Generate direct S3 URL when CloudFront is not available
           albumArtUrl = `https://${
-            process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2"
+            process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files"
           }.s3.${process.env.AWS_REGION || "us-east-2"}.amazonaws.com/${
             mix.albumArtS3Key
           }`;

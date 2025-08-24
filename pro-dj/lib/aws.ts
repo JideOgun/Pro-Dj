@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 
 // AWS Configuration - only initialize if credentials are available
-const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+export const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
   ? new S3Client({
       region: process.env.AWS_REGION || "us-east-2",
       credentials: {
@@ -19,7 +19,7 @@ const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_
 
 // S3 Bucket Configuration
 export const S3_BUCKET_NAME =
-  process.env.AWS_S3_BUCKET_NAME || "pro-dj-mixes-v2";
+  process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files";
 export const CLOUDFRONT_DOMAIN = process.env.AWS_CLOUDFRONT_DOMAIN;
 
 // File size limits (in bytes)
