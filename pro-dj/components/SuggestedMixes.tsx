@@ -198,7 +198,7 @@ export default function SuggestedMixes({
 
             {/* Audio Player - Non-clickable, controls only */}
             <div
-              className="audio-player-container mb-3 overflow-hidden"
+              className="audio-player-container mb-3"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full">
@@ -212,9 +212,8 @@ export default function SuggestedMixes({
                   djUserId={mix.dj.userId}
                   initialLiked={mix.userLiked || false}
                   initialLikeCount={mix.likeCount || 0}
-                  showLikeButton={false}
-                  showRepostButton={false}
-                  mini={true}
+                  showLikeButton={true}
+                  showRepostButton={true}
                   className="w-full max-w-full"
                   onPlayStart={() => globalAudioManager.stopOtherMixes(mix.id)}
                 />

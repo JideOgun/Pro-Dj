@@ -490,9 +490,9 @@ function MixesPageContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Main Content and Sidebar Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 lg:gap-8 items-start">
           {/* Main Content */}
-          <div className="md:col-span-2 lg:col-span-3">
+          <div className="md:col-span-3 lg:col-span-4">
             {/* Mixes Grid */}
             <div className="space-y-6 lg:space-y-8">
               {mixes.map((mix, index) => (
@@ -643,7 +643,7 @@ function MixesPageContent() {
           </div>
 
           {/* Sidebar */}
-          <div className="md:col-span-1 lg:col-span-2 lg:sticky lg:top-8">
+          <div className="md:col-span-1 lg:col-span-2 lg:sticky lg:top-8 min-w-0">
             <SuggestedMixes />
           </div>
         </div>
