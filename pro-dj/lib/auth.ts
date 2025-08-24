@@ -9,6 +9,8 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
+  // Add NEXTAUTH_URL for production
+  ...(process.env.NEXTAUTH_URL && { url: process.env.NEXTAUTH_URL }),
   providers: [
     // Temporarily comment out Google OAuth until configured
     // GoogleProvider({
