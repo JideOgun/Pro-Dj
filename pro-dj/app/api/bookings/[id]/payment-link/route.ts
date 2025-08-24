@@ -4,9 +4,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-07-30.basil",
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-07-30.basil",
+    })
+  : null;
 
 export async function GET(
   req: Request,
@@ -80,6 +82,14 @@ export async function GET(
   }
 
   try {
+    // Check if Stripe is configured
+    if (!stripe) {
+      return NextResponse.json(
+        { ok: false, error: "Payment processing not configured" },
+        { status: 500 }
+      );
+    }
+
     // Retrieve the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(
       booking.checkoutSessionId

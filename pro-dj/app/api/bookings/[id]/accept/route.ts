@@ -6,9 +6,11 @@ import { sendMail } from "@/lib/email";
 import { acceptEmailHtml } from "@/lib/email-templates";
 import { isDjAvailable } from "@/lib/booking-utils";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-07-30.basil",
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-07-30.basil",
+    })
+  : null;
 
 export async function PATCH(
   req: Request,
@@ -92,6 +94,14 @@ export async function PATCH(
     }
   }
 
+  // Check if Stripe is configured
+  if (!stripe) {
+    return NextResponse.json(
+      { ok: false, error: "Payment processing not configured" },
+      { status: 500 }
+    );
+  }
+
   // Create a Checkout Session for the quoted amount
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -101,7 +111,7 @@ export async function PATCH(
         price_data: {
           currency: "usd",
           product_data: {
-            name: `${booking.eventType} - ${booking.packageKey ?? "Package"}`,
+            name: `${booking.eventType} - Package`,
             description: `Event on ${booking.eventDate
               .toISOString()
               .slice(0, 10)}`,

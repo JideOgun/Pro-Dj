@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+// Initialize Stripe only if we have the secret key (not during build)
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-06-20",
+    })
+  : null;
 
 export interface TerminationResult {
   success: boolean;
@@ -78,28 +81,33 @@ export async function handleDjTermination(
         // Handle refund if payment was made
         if (booking.checkoutSessionId && booking.status === "CONFIRMED") {
           try {
-            // Create refund in Stripe
-            const refund = await stripe.refunds.create({
-              payment_intent: booking.checkoutSessionId,
-              reason: "requested_by_customer",
-              metadata: {
-                bookingId: booking.id,
-                reason: "DJ terminated from platform",
-                adminId: adminId,
-              },
-            });
+            if (!stripe) {
+              console.warn("Stripe not initialized - skipping refund");
+              result.errors.push("Stripe not configured for refunds");
+            } else {
+              // Create refund in Stripe
+              const refund = await stripe.refunds.create({
+                payment_intent: booking.checkoutSessionId,
+                reason: "requested_by_customer",
+                metadata: {
+                  bookingId: booking.id,
+                  reason: "DJ terminated from platform",
+                  adminId: adminId,
+                },
+              });
 
-            // Update booking with refund information
-            await prisma.booking.update({
-              where: { id: booking.id },
-              data: {
-                refundId: refund.id,
-                refundedAt: new Date(),
-                refundAmount: booking.totalAmount,
-              },
-            });
+              // Update booking with refund information
+              await prisma.booking.update({
+                where: { id: booking.id },
+                data: {
+                  refundId: refund.id,
+                  refundedAt: new Date(),
+                  refundAmount: booking.totalAmount,
+                },
+              });
 
-            result.refundedBookings++;
+              result.refundedBookings++;
+            }
           } catch (refundError) {
             console.error(
               `Failed to refund booking ${booking.id}:`,
