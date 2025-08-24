@@ -5,10 +5,10 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const session = await getServerSession(authOptions);
 
     const booking = await prisma.booking.findUnique({

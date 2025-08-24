@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 // GET: Fetch a single mix by ID
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
     const session = await getServerSession(authOptions);
 
     // Find the mix
@@ -106,7 +106,7 @@ export async function GET(
 // DELETE: Delete a mix (owner or admin only)
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -117,7 +117,7 @@ export async function DELETE(
       );
     }
 
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
 
     // Get the mix to check ownership
     const mix = await prisma.djMix.findUnique({

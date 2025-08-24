@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET: Fetch a specific photo with comment count
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const photoId = await params.then((p) => p.id);
@@ -60,7 +60,7 @@ export async function GET(
 // DELETE: Delete a specific photo
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);

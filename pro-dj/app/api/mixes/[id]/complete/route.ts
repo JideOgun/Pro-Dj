@@ -6,10 +6,10 @@ import { generateCloudFrontUrl } from "@/lib/aws";
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {

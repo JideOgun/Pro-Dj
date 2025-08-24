@@ -4,9 +4,9 @@ import { prisma } from "@/lib/prisma";
 // GET - Fetch DJ pricing for a specific event type
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   try {
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get("eventType");

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +16,7 @@ export async function POST(
       );
     }
 
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
     const userId = session.user.id;
 
     // Check if mix exists
@@ -101,7 +101,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -112,7 +112,7 @@ export async function GET(
       );
     }
 
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
     const userId = session.user.id;
 
     // Check if user liked this mix

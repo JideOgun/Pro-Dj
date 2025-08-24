@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // DELETE - Delete an event type and all its packages
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ type: string }> }
+  { params }: { params: { type: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,7 +26,7 @@ export async function DELETE(
       );
     }
 
-    const { type } = await params;
+    const { type } = params;
     const decodedType = decodeURIComponent(type);
 
     if (!decodedType) {

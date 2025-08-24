@@ -4,9 +4,9 @@ import { requireAdmin } from "@/lib/auth-guard";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json(
@@ -41,9 +41,9 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json(

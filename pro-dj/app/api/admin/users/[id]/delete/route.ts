@@ -7,7 +7,7 @@ import { handleDjTermination } from "@/lib/dj-termination";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);

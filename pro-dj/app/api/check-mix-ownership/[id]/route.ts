@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
 
     const mix = await prisma.djMix.findUnique({
       where: { id: mixId },

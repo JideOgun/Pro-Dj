@@ -5,11 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const { id: mixId } = await params;
+    const { id: mixId } = params;
 
     if (!session?.user) {
       return NextResponse.json({

@@ -6,9 +6,9 @@ import { EmailService } from "@/lib/email";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   try {
     const session = await getServerSession(authOptions);
 

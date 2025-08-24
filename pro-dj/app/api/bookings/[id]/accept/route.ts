@@ -12,9 +12,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   const gate = await requireAdminOrDj();
   if (!gate.ok)
     return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });

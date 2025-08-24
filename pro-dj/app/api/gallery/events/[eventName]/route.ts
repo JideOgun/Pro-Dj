@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 // GET: Fetch a specific event by name with all photos and comment counts
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ eventName: string }> }
+  { params }: { params: { eventName: string  } }
 ) {
   try {
-    const { eventName } = await params;
+    const { eventName } = params;
     const decodedEventName = decodeURIComponent(eventName);
 
     // Find all photos for this event
@@ -98,9 +98,9 @@ export async function GET(
 // DELETE: Delete an entire event and all its photos
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ eventName: string }> }
+  { params }: { params: { eventName: string  } }
 ) {
-  const { eventName } = await params;
+  const { eventName } = params;
   try {
     const session = await getServerSession(authOptions);
 

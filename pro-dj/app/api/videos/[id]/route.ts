@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 // GET: Fetch a single video by ID
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id: videoId } = await params;
+    const { id: videoId } = params;
 
     const video = await prisma.djYouTubeVideo.findUnique({
       where: { id: videoId },
@@ -77,10 +77,10 @@ export async function GET(
 // PUT: Update a video (owner only)
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
-    const { id: videoId } = await params;
+    const { id: videoId } = params;
     const body = await req.json();
 
     const video = await prisma.djYouTubeVideo.findUnique({
@@ -151,7 +151,7 @@ export async function PUT(
 // DELETE: Delete a video (owner only)
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -162,7 +162,7 @@ export async function DELETE(
       );
     }
 
-    const { id: videoId } = await params;
+    const { id: videoId } = params;
 
     const video = await prisma.djYouTubeVideo.findUnique({
       where: { id: videoId },

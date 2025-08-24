@@ -10,9 +10,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string  } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
