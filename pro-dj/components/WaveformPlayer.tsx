@@ -14,6 +14,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
+import Image from "next/image";
 import LikeButton from "./LikeButton";
 import RepostButton from "./RepostButton";
 import { useSocketContext } from "./SocketProvider";
@@ -590,13 +591,13 @@ export default function WaveformPlayer({
                   className={`w-16 h-16 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg`}
                 >
                   {albumArtUrl ? (
-                    <img
+                    <Image
                       src={albumArtUrl}
                       alt={title}
-                      className="w-full h-full rounded-xl object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = "none";
+                      fill
+                      className="rounded-xl object-cover"
+                      onError={() => {
+                        // Handle error by hiding the image
                       }}
                     />
                   ) : (

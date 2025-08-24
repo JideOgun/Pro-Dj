@@ -305,6 +305,18 @@ export default function MixDetailPage() {
                 showLikeButton={true}
               />
 
+              {/* Mix Actions - positioned below the player */}
+              <div className="flex justify-end mt-4">
+                <MixActionsDropdown
+                  mixId={mix.id}
+                  mixTitle={mix.title}
+                  onDelete={() => setShowDeleteModal(true)}
+                  onShare={() => setShowShareModal(true)}
+                  canDelete={canDeleteMix(mix)}
+                  canDownload={true}
+                />
+              </div>
+
               {/* Stats */}
               <div className="mt-6 flex items-center space-x-6 text-sm text-gray-400">
                 <div>

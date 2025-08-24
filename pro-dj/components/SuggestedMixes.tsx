@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import WaveformPlayer from "./WaveformPlayer";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { useSocketContext } from "./SocketProvider";
 
@@ -212,8 +213,8 @@ export default function SuggestedMixes({
                   djUserId={mix.dj.userId}
                   initialLiked={mix.userLiked || false}
                   initialLikeCount={mix.likeCount || 0}
-                  showLikeButton={true}
-                  showRepostButton={true}
+                  // showLikeButton={true}
+                  // showRepostButton={true}
                   className="w-full max-w-full"
                   onPlayStart={() => globalAudioManager.stopOtherMixes(mix.id)}
                 />
@@ -228,11 +229,13 @@ export default function SuggestedMixes({
               <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
                 <div className="flex items-center space-x-2">
                   {/* DJ Profile Photo */}
-                  {mix.dj.userProfileImage ? (
+                  {mix.dj.profileImage ? (
                     <img
-                      src={mix.dj.userProfileImage}
+                      src={mix.dj.profileImage}
                       alt={mix.dj.stageName}
-                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      width={16}
+                      height={16}
+                      className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
                     />
                   ) : (
                     <div className="w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">

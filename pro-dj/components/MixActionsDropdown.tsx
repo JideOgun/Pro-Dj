@@ -31,6 +31,11 @@ export default function MixActionsDropdown({
   canDownload = false,
   onClick,
 }: MixActionsDropdownProps) {
+  console.log("MixActionsDropdown rendering:", {
+    mixId,
+    canDelete,
+    canDownload,
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
