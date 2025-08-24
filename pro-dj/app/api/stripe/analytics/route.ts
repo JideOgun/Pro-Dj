@@ -26,6 +26,15 @@ export async function GET() {
       }
     }
 
+    // Check if Stripe is configured
+    if (!stripe) {
+      return NextResponse.json({
+        hasData: false,
+        message: "Payment processing not configured yet",
+        analytics: null
+      });
+    }
+
     // Get date range for analytics (last 30 days)
     const endDate = new Date();
     const startDate = new Date();
@@ -78,6 +87,15 @@ export async function GET() {
         dj: { select: { stageName: true } },
       },
     });
+
+    // Check if there's any payment data
+    if (paymentIntents.data.length === 0 && bookings.length === 0) {
+      return NextResponse.json({
+        hasData: false,
+        message: "No payment data available yet. Start accepting bookings to see your analytics!",
+        analytics: null
+      });
+    }
 
     // Calculate payment analytics
     const totalPayments = paymentIntents.data.length;
@@ -204,7 +222,10 @@ export async function GET() {
       },
     };
 
-    return NextResponse.json(analytics);
+    return NextResponse.json({
+      hasData: true,
+      analytics
+    });
   } catch (error) {
     console.error("Stripe analytics error:", error);
     return NextResponse.json(

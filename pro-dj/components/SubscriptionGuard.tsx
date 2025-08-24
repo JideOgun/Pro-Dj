@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { useSession } from "next-auth/react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SubscriptionUpgradePrompt } from "./SubscriptionUpgradePrompt";
 
@@ -19,11 +20,17 @@ export function SubscriptionGuard({
   showUpgradePrompt = true,
   returnUrl,
 }: SubscriptionGuardProps) {
+  const { data: session } = useSession();
   const { canAccessFeature, loading, hasActiveSubscription } =
     useSubscription();
 
   if (loading) {
     return <div className="animate-pulse">Loading...</div>;
+  }
+
+  // Admin users always have access to all features
+  if (session?.user?.role === "ADMIN") {
+    return <>{children}</>;
   }
 
   const hasAccess = canAccessFeature(feature);

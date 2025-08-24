@@ -69,24 +69,38 @@ interface PaymentAnalytics {
   };
 }
 
+interface AnalyticsResponse {
+  hasData: boolean;
+  message?: string;
+  analytics?: PaymentAnalytics;
+}
+
 export default function PaymentAnalytics() {
   const { data: session } = useSession();
   const [analytics, setAnalytics] = useState<PaymentAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noDataMessage, setNoDataMessage] = useState<string | null>(null);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
       setError(null);
+      setNoDataMessage(null);
 
       const response = await fetch("/api/stripe/analytics");
       if (!response.ok) {
         throw new Error("Failed to fetch analytics");
       }
 
-      const data = await response.json();
-      setAnalytics(data);
+      const data: AnalyticsResponse = await response.json();
+      
+      if (!data.hasData) {
+        setNoDataMessage(data.message || "No payment data available");
+        setAnalytics(null);
+      } else {
+        setAnalytics(data.analytics || null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       toast.error("Failed to load payment analytics");
@@ -120,6 +134,25 @@ export default function PaymentAnalytics() {
         <div className="flex items-center justify-center py-12">
           <AlertTriangle className="w-8 h-8 text-red-400" />
           <span className="ml-3 text-gray-300">{error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (noDataMessage) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div className="text-center py-12">
+          <BarChart3 className="w-16 h-16 text-gray-400 mb-4 mx-auto" />
+          <h4 className="text-lg font-medium mb-2 text-gray-200">
+            No Payment Data Yet
+          </h4>
+          <p className="text-gray-300 mb-4">
+            {noDataMessage}
+          </p>
+          <div className="text-sm text-gray-400">
+            💡 <strong>Tip:</strong> Start accepting bookings and processing payments to see your analytics here!
+          </div>
         </div>
       </div>
     );

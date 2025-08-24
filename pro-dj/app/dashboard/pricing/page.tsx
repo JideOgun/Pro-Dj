@@ -12,6 +12,16 @@ export default async function PricingPage() {
     redirect("/auth");
   }
 
+  // Check if user is also a DJ and redirect them to DJ pricing page
+  const user = await prisma.user.findUnique({
+    where: { id: gate.session?.user?.id },
+    include: { djProfile: true }
+  });
+
+  if (user?.djProfile) {
+    redirect("/dashboard/dj/pricing");
+  }
+
   const rows = await prisma.pricing.findMany({
     where: { isActive: true },
     orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
