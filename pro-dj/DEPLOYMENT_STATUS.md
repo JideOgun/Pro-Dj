@@ -8,11 +8,13 @@
 - ✅ **Prisma Client Generation**: Added `prisma generate` to build process for Vercel
 - ✅ **Build Configuration**: Added `vercel.json` for optimal deployment settings
 - ✅ **Tailwind CSS Dependencies**: Moved `@tailwindcss/postcss` and `tailwindcss` to production dependencies
+- ✅ **AWS S3 Initialization**: Made S3 client initialization conditional to prevent build errors
+- ✅ **Stripe Initialization**: Made Stripe client initialization conditional to prevent build errors
 - ✅ **Local Build Test**: Confirmed build works perfectly locally
 
 ### **Current Status**
 
-- 🟡 **Deployment**: In progress - waiting for Vercel to redeploy with Tailwind fix
+- 🟡 **Deployment**: In progress - waiting for Vercel to redeploy with all fixes
 - 🟡 **Database**: Not yet configured (will use Vercel Postgres)
 - 🟡 **External Services**: Not yet configured (Stripe, AWS S3, Google OAuth)
 
@@ -61,6 +63,34 @@
     "tailwindcss": "^4"
   }
 }
+```
+
+### **5. AWS S3 Conditional Initialization**
+
+```typescript
+// lib/aws.ts - only initialize if credentials are available
+const s3Client =
+  process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? new S3Client({
+        region: process.env.AWS_REGION || "us-east-2",
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      })
+    : null;
+```
+
+### **6. Stripe Conditional Initialization**
+
+```typescript
+// lib/stripe-config.ts - only initialize if secret key is available
+export const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-07-30.basil",
+      // ... other config
+    })
+  : null;
 ```
 
 ## 🎯 **Next Steps After Successful Deployment**
@@ -143,5 +173,7 @@ The application is now **deployment-ready** with:
 - ✅ **Build process optimized**
 - ✅ **Vercel configuration complete**
 - ✅ **Tailwind CSS dependencies fixed**
+- ✅ **AWS S3 initialization fixed**
+- ✅ **Stripe initialization fixed**
 
 **Next**: Wait for Vercel deployment to succeed, then proceed with database and external service setup!

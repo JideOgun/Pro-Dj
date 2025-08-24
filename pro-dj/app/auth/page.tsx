@@ -144,8 +144,8 @@ function AuthPageContent() {
             </p>
           </div>
 
-          {/* Google Sign In */}
-          <button
+          {/* Google Sign In - Temporarily disabled until configured */}
+          {/* <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
             className="w-full bg-white hover:bg-gray-100 disabled:bg-gray-600 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors mb-6 flex items-center justify-center"
@@ -163,7 +163,7 @@ function AuthPageContent() {
                 or use email
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
