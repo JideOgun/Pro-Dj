@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         djId: djProfile.id, // Ensure the mix belongs to this DJ
       },
       data: {
-        status: "ACTIVE",
+        uploadStatus: "COMPLETED", // Use uploadStatus instead of status
         duration: duration || null,
         uploadedAt: new Date(),
       },

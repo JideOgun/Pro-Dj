@@ -74,10 +74,13 @@ export async function POST(req: NextRequest) {
         genres: genres || [],
         s3Key: s3Key,
         fileName: fileName,
+        originalName: fileName, // Add the missing originalName field
         fileSize: fileSize,
         duration: null, // Will be updated after upload
         isPublic: true,
-        status: "UPLOADING", // Will be updated to "ACTIVE" after successful upload
+        uploadStatus: "PENDING", // Use uploadStatus instead of status
+        mimeType: fileType, // Add required mimeType field
+        tags: [], // Add empty tags array
       },
     });
 
