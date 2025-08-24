@@ -293,6 +293,7 @@ export default function ProfilePage() {
     y: 5,
   });
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Load profile data
@@ -678,6 +679,7 @@ export default function ProfilePage() {
     }
 
     setSelectedFile(file);
+    setImageLoaded(false);
     setShowCropModal(true);
     setMessage("");
   };
@@ -690,41 +692,100 @@ export default function ProfilePage() {
     image: HTMLImageElement,
     crop: PixelCrop
   ): Promise<Blob> => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    return new Promise((resolve, reject) => {
+      // Ensure image is loaded
+      if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+        image.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-    if (!ctx) {
-      throw new Error("No 2d context");
-    }
+            if (!ctx) {
+              reject(new Error("No 2d context"));
+              return;
+            }
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+            const scaleX = image.naturalWidth / image.width;
+            const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+            canvas.width = crop.width;
+            canvas.height = crop.height;
 
-    ctx.drawImage(
-      image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width,
-      crop.height
-    );
+            ctx.drawImage(
+              image,
+              crop.x * scaleX,
+              crop.y * scaleY,
+              crop.width * scaleX,
+              crop.height * scaleY,
+              0,
+              0,
+              crop.width,
+              crop.height
+            );
 
-    return new Promise((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error("Failed to create blob"));
+                }
+              },
+              "image/jpeg",
+              0.9
+            );
+          } catch (error) {
+            reject(error);
           }
-        },
-        "image/jpeg",
-        0.9
-      );
+        };
+
+        image.onerror = () => {
+          reject(new Error("Image failed to load"));
+        };
+      } else {
+        // Image is already loaded
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          if (!ctx) {
+            reject(new Error("No 2d context"));
+            return;
+          }
+
+          const scaleX = image.naturalWidth / image.width;
+          const scaleY = image.naturalHeight / image.height;
+
+          canvas.width = crop.width;
+          canvas.height = crop.height;
+
+          ctx.drawImage(
+            image,
+            crop.x * scaleX,
+            crop.y * scaleY,
+            crop.width * scaleX,
+            crop.height * scaleY,
+            0,
+            0,
+            crop.width,
+            crop.height
+          );
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob"));
+              }
+            },
+            "image/jpeg",
+            0.9
+          );
+        } catch (error) {
+          reject(error);
+        }
+      }
     });
   };
 
@@ -774,7 +835,28 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error uploading profile picture:", error);
-      setMessage("Failed to upload profile picture");
+
+      // Provide specific error messages
+      if (error instanceof Error) {
+        if (
+          error.message.includes("Load failed") ||
+          error.message.includes("Image failed to load")
+        ) {
+          setMessage(
+            "Failed to process image. Please try again with a different image."
+          );
+        } else if (error.message.includes("No 2d context")) {
+          setMessage(
+            "Browser doesn't support image processing. Please try a different browser."
+          );
+        } else if (error.message.includes("Failed to create blob")) {
+          setMessage("Failed to process image. Please try again.");
+        } else {
+          setMessage(`Upload failed: ${error.message}`);
+        }
+      } else {
+        setMessage("Failed to upload profile picture. Please try again.");
+      }
       setMessageType("error");
     } finally {
       setUploading(false);
@@ -784,6 +866,7 @@ export default function ProfilePage() {
   const handleCropCancel = () => {
     setShowCropModal(false);
     setSelectedFile(null);
+    setImageLoaded(false);
     setCrop({
       unit: "%",
       width: 90,
@@ -1421,19 +1504,35 @@ export default function ProfilePage() {
               </p>
 
               <div className="flex justify-center">
+                {!imageLoaded && (
+                  <div className="flex items-center justify-center w-96 h-96 bg-gray-700 rounded-lg">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-2"></div>
+                      <p className="text-gray-300 text-sm">Loading image...</p>
+                    </div>
+                  </div>
+                )}
                 <ReactCrop
                   crop={crop}
                   onChange={(c) => setCrop(c)}
                   onComplete={handleCropComplete}
                   aspect={1}
                   circularCrop
-                  className="max-w-full max-h-96"
+                  className={`max-w-full max-h-96 ${
+                    !imageLoaded ? "hidden" : ""
+                  }`}
                 >
                   <img
                     ref={imgRef}
                     src={URL.createObjectURL(selectedFile)}
                     alt="Crop preview"
                     className="max-w-full max-h-96 object-contain"
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => {
+                      setImageLoaded(false);
+                      setMessage("Failed to load image. Please try again.");
+                      setMessageType("error");
+                    }}
                   />
                 </ReactCrop>
               </div>
@@ -1448,7 +1547,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={handleCropSave}
-                disabled={uploading || !completedCrop}
+                disabled={uploading || !completedCrop || !imageLoaded}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
               >
                 <CropIcon className="w-4 h-4" />

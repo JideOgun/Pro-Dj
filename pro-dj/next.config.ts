@@ -47,6 +47,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // TODO: Fix ESLint and TypeScript errors before production deployment
   eslint: {
     ignoreDuringBuilds: true,
   },

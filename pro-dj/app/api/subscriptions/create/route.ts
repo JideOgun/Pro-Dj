@@ -4,8 +4,13 @@ import { authOptions } from "@/lib/auth";
 import { stripe } from "@/lib/stripe-config";
 import { SubscriptionTier, SubscriptionStatus } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, rateLimitConfigs } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = rateLimit(rateLimitConfigs.subscription)(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -100,22 +105,27 @@ export async function POST(request: NextRequest) {
       case SubscriptionTier.DJ_PRO:
         priceId = process.env.STRIPE_DJ_PRO_PRICE_ID?.replace(/"/g, "");
         break;
-      case SubscriptionTier.DJ_PREMIUM:
-        priceId = process.env.STRIPE_DJ_PREMIUM_PRICE_ID?.replace(/"/g, "");
-        break;
       default:
-        throw new Error(`Unknown plan type: ${planType}`);
+        priceId = process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "");
     }
 
     if (!priceId) {
       return NextResponse.json(
-        { error: "Price ID not configured for this plan" },
+        { error: "Price ID not configured" },
         { status: 500 }
       );
     }
 
-    // Create a checkout session for subscription
-    const session_result = await stripe.checkout.sessions.create({
+    // Create Stripe checkout session
+    const session_url = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const success_url = returnUrl
+      ? `${session_url}${returnUrl}?success=true`
+      : `${session_url}/dashboard/dj?success=true`;
+    const cancel_url = returnUrl
+      ? `${session_url}${returnUrl}?canceled=true`
+      : `${session_url}/dashboard/dj?canceled=true`;
+
+    const checkoutSession = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ["card"],
       line_items: [
@@ -125,29 +135,22 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "subscription",
-      subscription_data: {
-        trial_period_days: 30, // First month free
-        metadata: {
-          userId: user.id,
-          planType,
-        },
-      },
-      success_url: `${
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      }${returnUrl || "/dashboard/bookings"}?success=true`,
-      cancel_url: `${
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      }${returnUrl || "/dashboard/bookings"}?canceled=true`,
+      success_url: success_url,
+      cancel_url: cancel_url,
       metadata: {
-        userId: user.id,
-        planType,
+        userId: session.user.id,
+        planType: planType,
+      },
+      subscription_data: {
+        metadata: {
+          userId: session.user.id,
+          planType: planType,
+        },
       },
     });
 
     return NextResponse.json({
-      ok: true,
-      sessionId: session_result.id,
-      url: session_result.url,
+      url: checkoutSession.url,
     });
   } catch (error) {
     console.error("Error creating subscription:", error);

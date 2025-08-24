@@ -82,9 +82,6 @@ export async function POST(req: Request) {
           serviceProviderTermsAgreedAt: new Date(),
           contractorTermsVersion: "1.0",
           serviceProviderTermsVersion: "1.0",
-          businessType: validatedData.businessType,
-          isCorporation: validatedData.businessType === "CORPORATION",
-          isSoleProprietor: validatedData.businessType === "SOLE_PROPRIETOR",
         });
       } else {
         // Regular DJ registration (without contractor terms yet)
@@ -96,9 +93,32 @@ export async function POST(req: Request) {
       }
     }
 
-    const user = await prisma.user.create({
-      data: userData as Parameters<typeof prisma.user.create>[0]["data"],
+    // Create user and security clearance in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: userData as Parameters<typeof prisma.user.create>[0]["data"],
+      });
+
+      // Create SecurityClearance record for DJs with business information
+      if (
+        validatedData.role === "DJ" &&
+        validatedData.contractorTerms &&
+        validatedData.businessType
+      ) {
+        await tx.securityClearance.create({
+          data: {
+            userId: user.id,
+            businessType: validatedData.businessType,
+            isCorporation: validatedData.businessType === "CORPORATION",
+            isSoleProprietor: validatedData.businessType === "SOLE_PROPRIETOR",
+          },
+        });
+      }
+
+      return user;
     });
+
+    const user = result;
 
     // Send welcome email
     try {

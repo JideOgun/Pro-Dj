@@ -94,6 +94,13 @@ export async function GET(req: Request) {
               id: true,
             },
           },
+          djEventPricing: {
+            select: {
+              eventType: true,
+              hourlyRateCents: true,
+              description: true,
+            },
+          },
         },
       }),
       prisma.djProfile.count({ where }),
@@ -118,6 +125,7 @@ export async function GET(req: Request) {
         totalMixes: dj.mixes.length,
         totalEvents: dj.eventPhotos.length,
         averageRating: 0, // TODO: Add rating calculation if needed
+        eventPricing: dj.djEventPricing || [],
       };
     });
 
@@ -125,6 +133,7 @@ export async function GET(req: Request) {
     const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
+      ok: true,
       djs: formattedDjs,
       totalPages,
       totalDjs: total,

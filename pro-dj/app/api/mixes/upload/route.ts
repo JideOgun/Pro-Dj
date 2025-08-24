@@ -13,6 +13,7 @@ import {
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { requireActiveSubscription } from "@/lib/subscription-guards";
+import { rateLimit, rateLimitConfigs } from "@/lib/rate-limit";
 
 // Check if user can upload based on actual mix count and subscription status
 async function canUploadMix(
@@ -86,7 +87,11 @@ const extractDuration = async (buffer: Buffer): Promise<number | null> => {
   }
 };
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = rateLimit(rateLimitConfigs.upload)(req);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {

@@ -9,7 +9,15 @@
     "lint": "next lint",
     "seed": "tsx prisma/seed.ts",
     "cleanup": "node --expose-gc scripts/memory-cleanup.js",
-    "migrate-tax-data": "tsx scripts/migrate-tax-data.ts"
+    "migrate-tax-data": "tsx scripts/migrate-tax-data.ts",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:generate": "npx prisma generate",
+    "db:reset": "npx prisma migrate reset --force",
+    "production:setup": "npm run db:generate && npm run db:migrate && npm run seed",
+    "production:start": "NODE_ENV=production npm run production:setup && npm start",
+    "docker:build": "docker build -t pro-dj .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env pro-dj",
+    "vercel:deploy": "vercel --prod"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",

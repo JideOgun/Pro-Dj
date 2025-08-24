@@ -528,41 +528,100 @@ export default function DjRegisterPage() {
     image: HTMLImageElement,
     crop: PixelCrop
   ): Promise<Blob> => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    return new Promise((resolve, reject) => {
+      // Ensure image is loaded
+      if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+        image.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-    if (!ctx) {
-      throw new Error("No 2d context");
-    }
+            if (!ctx) {
+              reject(new Error("No 2d context"));
+              return;
+            }
 
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
+            const scaleX = image.naturalWidth / image.width;
+            const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+            canvas.width = crop.width;
+            canvas.height = crop.height;
 
-    ctx.drawImage(
-      image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width,
-      crop.height
-    );
+            ctx.drawImage(
+              image,
+              crop.x * scaleX,
+              crop.y * scaleY,
+              crop.width * scaleX,
+              crop.height * scaleY,
+              0,
+              0,
+              crop.width,
+              crop.height
+            );
 
-    return new Promise((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error("Failed to create blob"));
+                }
+              },
+              "image/jpeg",
+              0.9
+            );
+          } catch (error) {
+            reject(error);
           }
-        },
-        "image/jpeg",
-        0.9
-      );
+        };
+
+        image.onerror = () => {
+          reject(new Error("Image failed to load"));
+        };
+      } else {
+        // Image is already loaded
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          if (!ctx) {
+            reject(new Error("No 2d context"));
+            return;
+          }
+
+          const scaleX = image.naturalWidth / image.width;
+          const scaleY = image.naturalHeight / image.height;
+
+          canvas.width = crop.width;
+          canvas.height = crop.height;
+
+          ctx.drawImage(
+            image,
+            crop.x * scaleX,
+            crop.y * scaleY,
+            crop.width * scaleX,
+            crop.height * scaleY,
+            0,
+            0,
+            crop.width,
+            crop.height
+          );
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob"));
+              }
+            },
+            "image/jpeg",
+            0.9
+          );
+        } catch (error) {
+          reject(error);
+        }
+      }
     });
   };
 
@@ -606,7 +665,28 @@ export default function DjRegisterPage() {
       }
     } catch (error) {
       console.error("Error uploading profile picture:", error);
-      toast.error("Failed to upload profile picture");
+
+      // Provide specific error messages
+      if (error instanceof Error) {
+        if (
+          error.message.includes("Load failed") ||
+          error.message.includes("Image failed to load")
+        ) {
+          toast.error(
+            "Failed to process image. Please try again with a different image."
+          );
+        } else if (error.message.includes("No 2d context")) {
+          toast.error(
+            "Browser doesn't support image processing. Please try a different browser."
+          );
+        } else if (error.message.includes("Failed to create blob")) {
+          toast.error("Failed to process image. Please try again.");
+        } else {
+          toast.error(`Upload failed: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to upload profile picture. Please try again.");
+      }
     } finally {
       setUploading(false);
     }
@@ -705,8 +785,8 @@ export default function DjRegisterPage() {
           "DJ profile created successfully! Your profile is now pending admin approval."
         );
 
-        // Redirect to DJ dashboard
-        window.location.href = "/dashboard/dj";
+        // Redirect to DJ dashboard using Next.js router
+        router.push("/dashboard/dj");
       } else {
         console.error("DJ registration failed:", data);
         toast.error(data.error || "Failed to create DJ profile");

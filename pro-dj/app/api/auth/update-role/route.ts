@@ -23,39 +23,64 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validatedData = updateRoleSchema.parse(body);
 
-    const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        role: validatedData.role,
-        agreedToTerms: true,
-        agreedToPrivacy: true,
-        termsAgreedAt: new Date(),
-        privacyAgreedAt: new Date(),
-        termsVersion: "1.0",
-        privacyVersion: "1.0",
-        ...(validatedData.role === "DJ"
-          ? validatedData.contractorTerms && validatedData.businessType
-            ? {
-                // DJ role update with contractor terms (from terms agreement flow)
-                agreedToContractorTerms: true,
-                agreedToServiceProviderTerms: true,
-                contractorTermsAgreedAt: new Date(),
-                serviceProviderTermsAgreedAt: new Date(),
-                contractorTermsVersion: "1.0",
-                serviceProviderTermsVersion: "1.0",
-                businessType: validatedData.businessType,
-                isCorporation: validatedData.businessType === "CORPORATION",
-                isSoleProprietor:
-                  validatedData.businessType === "SOLE_PROPRIETOR",
-              }
-            : {
-                // Regular DJ role update (without contractor terms yet)
-                agreedToContractorTerms: false,
-                agreedToServiceProviderTerms: false,
-              }
-          : {}),
-      },
+    // Update user and create security clearance in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          role: validatedData.role,
+          agreedToTerms: true,
+          agreedToPrivacy: true,
+          termsAgreedAt: new Date(),
+          privacyAgreedAt: new Date(),
+          termsVersion: "1.0",
+          privacyVersion: "1.0",
+          ...(validatedData.role === "DJ"
+            ? validatedData.contractorTerms && validatedData.businessType
+              ? {
+                  // DJ role update with contractor terms (from terms agreement flow)
+                  agreedToContractorTerms: true,
+                  agreedToServiceProviderTerms: true,
+                  contractorTermsAgreedAt: new Date(),
+                  serviceProviderTermsAgreedAt: new Date(),
+                  contractorTermsVersion: "1.0",
+                  serviceProviderTermsVersion: "1.0",
+                }
+              : {
+                  // Regular DJ role update (without contractor terms yet)
+                  agreedToContractorTerms: false,
+                  agreedToServiceProviderTerms: false,
+                }
+            : {}),
+        },
+      });
+
+      // Create or update SecurityClearance record for DJs with business information
+      if (
+        validatedData.role === "DJ" &&
+        validatedData.contractorTerms &&
+        validatedData.businessType
+      ) {
+        await tx.securityClearance.upsert({
+          where: { userId: session.user.id },
+          update: {
+            businessType: validatedData.businessType,
+            isCorporation: validatedData.businessType === "CORPORATION",
+            isSoleProprietor: validatedData.businessType === "SOLE_PROPRIETOR",
+          },
+          create: {
+            userId: session.user.id,
+            businessType: validatedData.businessType,
+            isCorporation: validatedData.businessType === "CORPORATION",
+            isSoleProprietor: validatedData.businessType === "SOLE_PROPRIETOR",
+          },
+        });
+      }
+
+      return updatedUser;
     });
+
+    const updatedUser = result;
 
     return NextResponse.json({
       ok: true,
