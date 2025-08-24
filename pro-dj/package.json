@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "node --max-old-space-size=4096 server.js",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "NODE_ENV=production node --max-old-space-size=4096 server.js",
     "lint": "next lint",
     "seed": "tsx prisma/seed.ts",
