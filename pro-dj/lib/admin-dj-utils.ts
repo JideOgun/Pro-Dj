@@ -37,6 +37,7 @@ export async function ensureAdminDjProfile(userId: string) {
         maxFreeUploads: 999999, // Unlimited for admin
         isFeatured: false,
         status: "ACTIVE",
+        experience: 5, // Default experience level for admin
       },
     });
 
