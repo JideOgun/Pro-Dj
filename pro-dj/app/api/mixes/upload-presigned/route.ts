@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generatePresignedUploadUrl, generateS3Key } from "@/lib/aws";
+import { getOrCreateAdminDjProfile } from "@/lib/admin-dj-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,15 +15,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get DJ profile
-    const djProfile = await prisma.djProfile.findFirst({
-      where: { userId: session.user.id },
-    });
-
-    if (!djProfile) {
+    // Get or create DJ profile (auto-creates for admin users)
+    let djProfile;
+    try {
+      djProfile = await getOrCreateAdminDjProfile(session.user.id);
+    } catch (error) {
       return NextResponse.json(
-        { ok: false, error: "DJ profile not found" },
-        { status: 404 }
+        { ok: false, error: "Failed to get or create DJ profile" },
+        { status: 500 }
       );
     }
 
