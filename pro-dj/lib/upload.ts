@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -32,6 +33,19 @@ export const UPLOAD_TYPES = {
 
 export type UploadType = (typeof UPLOAD_TYPES)[keyof typeof UPLOAD_TYPES];
 
+// AWS S3 Configuration
+const s3Client = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  ? new S3Client({
+      region: process.env.AWS_REGION || "us-east-1",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    })
+  : null;
+
+const S3_BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files";
+
 // Process and save uploaded image
 export async function processAndSaveImage(
   file: Express.Multer.File,
@@ -45,14 +59,10 @@ export async function processAndSaveImage(
   }
 ) {
   try {
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), "public", "uploads", uploadType);
-    await mkdir(uploadDir, { recursive: true });
-
     // Generate unique filename
     const fileExtension = options?.format || "jpeg";
     const filename = `${uuidv4()}.${fileExtension}`;
-    const filepath = path.join(uploadDir, filename);
+    const s3Key = `${uploadType}/${userId}/${filename}`;
 
     // Process image with Sharp
     let imageProcessor = sharp(file.buffer);
@@ -66,25 +76,52 @@ export async function processAndSaveImage(
     }
 
     // Convert to specified format and quality
+    let processedBuffer: Buffer;
     if (options?.format === "webp") {
-      imageProcessor = imageProcessor.webp({ quality: options?.quality || 80 });
+      processedBuffer = await imageProcessor.webp({ quality: options?.quality || 80 }).toBuffer();
     } else if (options?.format === "png") {
-      imageProcessor = imageProcessor.png({ quality: options?.quality || 80 });
+      processedBuffer = await imageProcessor.png({ quality: options?.quality || 80 }).toBuffer();
     } else {
-      imageProcessor = imageProcessor.jpeg({ quality: options?.quality || 80 });
+      processedBuffer = await imageProcessor.jpeg({ quality: options?.quality || 80 }).toBuffer();
     }
 
-    // Save processed image
-    await imageProcessor.toFile(filepath);
+    // Upload to S3 if configured, otherwise fallback to local storage
+    if (s3Client) {
+      // Upload to S3
+      const command = new PutObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: s3Key,
+        Body: processedBuffer,
+        ContentType: `image/${options?.format || "jpeg"}`,
+        ACL: "public-read",
+      });
 
-    // Return file metadata
-    return {
-      filename,
-      originalName: file.originalname,
-      mimeType: `image/${options?.format || "jpeg"}`,
-      size: file.size,
-      url: `/uploads/${uploadType}/${filename}`,
-    };
+      await s3Client.send(command);
+
+      // Return S3 URL
+      return {
+        filename,
+        originalName: file.originalname,
+        mimeType: `image/${options?.format || "jpeg"}`,
+        size: file.size,
+        url: `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${s3Key}`,
+      };
+    } else {
+      // Fallback to local storage (for development)
+      const uploadDir = path.join(process.cwd(), "public", "uploads", uploadType);
+      await mkdir(uploadDir, { recursive: true });
+      const filepath = path.join(uploadDir, filename);
+      
+      await writeFile(filepath, processedBuffer);
+
+      return {
+        filename,
+        originalName: file.originalname,
+        mimeType: `image/${options?.format || "jpeg"}`,
+        size: file.size,
+        url: `/uploads/${uploadType}/${filename}`,
+      };
+    }
   } catch (error) {
     console.error("Error processing image:", error);
     throw new Error("Failed to process image");
@@ -97,18 +134,29 @@ export async function deleteUploadedFile(
   filename: string
 ) {
   try {
-    const filepath = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      uploadType,
-      filename
-    );
-    await writeFile(filepath, ""); // This will be replaced with proper deletion
-    return true;
+    if (s3Client) {
+      // Delete from S3
+      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      const command = new DeleteObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: `${uploadType}/${filename}`,
+      });
+      await s3Client.send(command);
+    } else {
+      // Delete from local storage
+      const filepath = path.join(
+        process.cwd(),
+        "public",
+        "uploads",
+        uploadType,
+        filename
+      );
+      const { unlink } = await import("fs/promises");
+      await unlink(filepath);
+    }
   } catch (error) {
     console.error("Error deleting file:", error);
-    return false;
+    throw new Error("Failed to delete file");
   }
 }
 
