@@ -349,48 +349,52 @@ function MixesPageContent() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <div className="bg-gray-800/50 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">DJ Mixes</h1>
-              <p className="text-gray-300 text-lg">
-                Discover amazing mixes from talented DJs
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Search Bar */}
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search mixes by title or DJ name..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setPage(1);
-                    }}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          {/* Title Section */}
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">DJ Mixes</h1>
+            <p className="text-gray-300 text-sm sm:text-base lg:text-lg">
+              Discover amazing mixes from talented DJs
+            </p>
+          </div>
 
+          {/* Controls Section */}
+          <div className="space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+            {/* Search Bar - Full width on mobile */}
+            <div className="relative flex-1 max-w-full sm:max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search mixes by title or DJ name..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="block w-full pl-10 pr-3 py-2 sm:py-2.5 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent text-sm sm:text-base"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setPage(1);
+                  }}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Controls - Stack on mobile, row on desktop */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {/* Genre Filter */}
               <div className="relative" ref={genreFilterRef}>
                 <button
                   onClick={() => setShowGenreFilter(!showGenreFilter)}
-                  className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  className="flex items-center justify-center sm:justify-start w-full sm:w-auto px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm sm:text-base"
                 >
                   <Filter className="w-4 h-4 mr-2" />
-                  <span className="mr-2">{selectedGenre}</span>
+                  <span className="mr-2 truncate">{selectedGenre}</span>
                   <ChevronDown
                     className={`w-4 h-4 transition-transform ${
                       showGenreFilter ? "rotate-180" : ""
@@ -398,7 +402,7 @@ function MixesPageContent() {
                   />
                 </button>
                 {showGenreFilter && (
-                  <div className="absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  <div className="absolute left-0 mt-2 w-full sm:w-48 bg-gray-800 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
                     {GENRES.map((genre) => (
                       <button
                         key={genre}
@@ -407,7 +411,7 @@ function MixesPageContent() {
                           setShowGenreFilter(false);
                           setPage(1);
                         }}
-                        className={`w-full text-left px-4 py-2 hover:bg-gray-700 ${
+                        className={`w-full text-left px-4 py-2 hover:bg-gray-700 text-sm sm:text-base ${
                           selectedGenre === genre
                             ? "text-violet-400 bg-gray-700"
                             : ""
@@ -428,7 +432,7 @@ function MixesPageContent() {
               <div className="relative" ref={sortDropdownRef}>
                 <button
                   onClick={() => setShowSortDropdown(!showSortDropdown)}
-                  className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  className="flex items-center justify-center sm:justify-start w-full sm:w-auto px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm sm:text-base"
                 >
                   <span className="mr-2">
                     Sort by: {sortBy === "newest" ? "Newest" : "Oldest"}
@@ -440,14 +444,14 @@ function MixesPageContent() {
                   />
                 </button>
                 {showSortDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg z-10">
+                  <div className="absolute right-0 sm:right-0 mt-2 w-full sm:w-48 bg-gray-800 rounded-lg shadow-lg z-10">
                     <button
                       onClick={() => {
                         setSortBy("newest");
                         setShowSortDropdown(false);
                         setPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-700 rounded-t-lg ${
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-700 rounded-t-lg text-sm sm:text-base ${
                         sortBy === "newest" ? "text-violet-400" : ""
                       }`}
                     >
@@ -459,7 +463,7 @@ function MixesPageContent() {
                         setShowSortDropdown(false);
                         setPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-700 rounded-b-lg ${
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-700 rounded-b-lg text-sm sm:text-base ${
                         sortBy === "oldest" ? "text-violet-400" : ""
                       }`}
                     >
@@ -472,11 +476,11 @@ function MixesPageContent() {
               {/* Upload Button and Free Upload Counter */}
               {(session?.user?.role === "DJ" ||
                 session?.user?.role === "ADMIN") && (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <FreeUploadCounter />
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    className="flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors"
+                    className="flex items-center justify-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors text-sm sm:text-base"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Mix
@@ -604,7 +608,7 @@ function MixesPageContent() {
               <div className="mt-8 text-center">
                 <button
                   onClick={() => setPage((prev) => prev + 1)}
-                  className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200 text-sm sm:text-base"
                 >
                   Load More Mixes
                 </button>
@@ -612,9 +616,9 @@ function MixesPageContent() {
             )}
 
             {mixes.length === 0 && !loading && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-lg mb-2">No mixes found</div>
-                <p className="text-gray-500 mb-4">
+              <div className="text-center py-8 sm:py-12 px-4">
+                <div className="text-gray-400 text-base sm:text-lg mb-2">No mixes found</div>
+                <p className="text-gray-500 mb-4 text-sm sm:text-base">
                   {session?.user?.role === "DJ" ||
                   session?.user?.role === "ADMIN"
                     ? "Upload your first mix to get started!"
@@ -622,17 +626,17 @@ function MixesPageContent() {
                 </p>
                 {(session?.user?.role === "DJ" ||
                   session?.user?.role === "ADMIN") && (
-                  <div className="flex gap-3 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                       onClick={() => setShowUploadModal(true)}
-                      className="inline-flex items-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200"
+                      className="inline-flex items-center justify-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors duration-200 text-sm sm:text-base"
                     >
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Mix
                     </button>
                     <a
                       href="/dashboard/dj"
-                      className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors duration-200"
+                      className="inline-flex items-center justify-center px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-colors duration-200 text-sm sm:text-base"
                     >
                       Go to Dashboard
                     </a>
