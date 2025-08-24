@@ -518,15 +518,16 @@ function MixesPageContent() {
                         size="sm"
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <MixActionsDropdown
-                        mixId={mix.id}
-                        mixTitle={mix.title}
-                        onDelete={() => handleDelete(mix.id)}
-                        onShare={() => handleShare(mix)}
-                        canDelete={canDeleteMix(mix)}
-                        canDownload={true}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <MixActionsDropdown
+                          mixId={mix.id}
+                          mixTitle={mix.title}
+                          onDelete={() => handleDelete(mix.id)}
+                          onShare={() => handleShare(mix)}
+                          canDelete={canDeleteMix(mix)}
+                          canDownload={true}
+                        />
+                      </div>
                     </div>
                   </div>
 
