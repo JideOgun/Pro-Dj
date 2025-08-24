@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Fetch the complete mix data with DJ profile
+    // Fetch the complete mix data with DJ profile and user info
     const completeMix = await prisma.djMix.findUnique({
       where: { id: updatedMix.id },
       include: {
@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
             id: true,
             stageName: true,
             bio: true,
-            profileImage: true,
+            user: {
+              select: {
+                profileImage: true,
+              },
+            },
           },
         },
       },
