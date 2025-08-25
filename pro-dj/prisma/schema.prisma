@@ -36,17 +36,17 @@ privacyVersion String?
 termsAgreedAt DateTime?
 termsVersion String?
 agreedToContractorTerms Boolean @default(false)
-  agreedToServiceProviderTerms Boolean @default(false)
-  contractorTermsAgreedAt DateTime?
-  contractorTermsVersion String?
-  serviceProviderTermsAgreedAt DateTime?
-  serviceProviderTermsVersion String?
-  w9Submitted Boolean @default(false)
-  w9SubmittedAt DateTime?
-  freeUploadsUsed Int @default(0)
-  maxFreeUploads Int @default(1)
-  resetToken String?
-  resetTokenExpiry DateTime?
+agreedToServiceProviderTerms Boolean @default(false)
+contractorTermsAgreedAt DateTime?
+contractorTermsVersion String?
+serviceProviderTermsAgreedAt DateTime?
+serviceProviderTermsVersion String?
+w9Submitted Boolean @default(false)
+w9SubmittedAt DateTime?
+freeUploadsUsed Int @default(0)
+maxFreeUploads Int @default(1)
+resetToken String?
+resetTokenExpiry DateTime?
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 commentDislikes CommentDislike[]
@@ -87,6 +87,20 @@ refundAmount Int?
 refundId String?
 refundedAt DateTime?
 totalAmount Int?
+// Escrow and fee fields
+platformFeeCents Int? // 10% platform fee
+escrowStatus EscrowStatus @default(PENDING)
+clientConfirmed Boolean @default(false)
+djConfirmed Boolean @default(false)
+eventCompletedAt DateTime?
+payoutStatus PayoutStatus @default(PENDING)
+payoutAmountCents Int? // Amount DJ receives after fee
+payoutId String? // Stripe transfer ID
+payoutAt DateTime?
+disputeStatus DisputeStatus @default(NONE)
+disputeReason String?
+disputeCreatedAt DateTime?
+disputeResolvedAt DateTime?
 dj DjProfile? @relation(fields: [djId], references: [id])
 user User @relation(fields: [userId], references: [id])
 recovery BookingRecovery[] @relation("OriginalBooking")
@@ -94,6 +108,8 @@ review Review?
 
 @@index([status])
 @@index([djId])
+@@index([escrowStatus])
+@@index([payoutStatus])
 }
 
 model Post {
@@ -212,6 +228,10 @@ eventsOffered String[]
 isAcceptingBookings Boolean @default(true)
 isApprovedByAdmin Boolean @default(false)
 stripeCustomerId String? // Stripe customer ID for subscription management
+stripeConnectAccountId String? // Stripe Connect account ID for payouts
+stripeConnectAccountStatus String? // Status of Connect account (pending, active, restricted)
+stripeConnectAccountEnabled Boolean @default(false) // Whether Connect account is ready for payouts
+stripeConnectAccountCreatedAt DateTime? // When Connect account was created
 bookings Booking[]
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 djAddons DjAddon[]
@@ -649,4 +669,27 @@ UPLOADING
 COMPLETED
 FAILED
 CANCELLED
+}
+
+enum EscrowStatus {
+PENDING
+HELD
+RELEASED
+DISPUTED
+REFUNDED
+}
+
+enum PayoutStatus {
+PENDING
+PROCESSING
+COMPLETED
+FAILED
+CANCELLED
+}
+
+enum DisputeStatus {
+NONE
+OPEN
+RESOLVED
+ESCALATED
 }
