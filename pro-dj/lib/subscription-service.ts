@@ -236,7 +236,7 @@ export class SubscriptionService {
 
     if (!subscription) return false;
 
-    return [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL].includes(
+    return ["ACTIVE", "TRIAL"].includes(
       subscription.status
     );
   }

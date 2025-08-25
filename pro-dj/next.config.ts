@@ -77,7 +77,11 @@ const nextConfig: NextConfig = {
       config.externals = config.externals || [];
       if (typeof config.externals === "function") {
         const originalExternals = config.externals;
-        config.externals = (context, request, callback) => {
+        config.externals = (
+          context: unknown,
+          request: string,
+          callback: (err: Error | null, result?: string) => void
+        ) => {
           if (request === "crypto" || request === "node:crypto") {
             return callback(null, "commonjs crypto");
           }

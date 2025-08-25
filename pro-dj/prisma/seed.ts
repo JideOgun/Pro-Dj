@@ -84,6 +84,31 @@ async function main() {
     role: admin.role,
   });
 
+  // Grant subscription to admin DJ
+  const adminExpirationDate = new Date();
+  adminExpirationDate.setFullYear(adminExpirationDate.getFullYear() + 1);
+
+  await prisma.subscription.create({
+    data: {
+      userId: admin.id,
+      planType: "DJ_BASIC",
+      status: "ACTIVE",
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: adminExpirationDate,
+      amountCents: 0, // Free for admin
+      currency: "usd",
+      isInTrial: false,
+      cancelAtPeriodEnd: false,
+      stripeSubscriptionId: `admin_seeded_${admin.id}_${Date.now()}`,
+      stripeCustomerId: `admin_seeded_customer_${admin.id}`,
+      stripePriceId:
+        process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
+        "admin_seeded_price",
+    },
+  });
+
+  console.log("✅ Admin DJ subscription granted");
+
   // Create test client user
   const CLIENT_PASSWORD = "password";
   const CLIENT_EMAIL = "imani@test.com";
@@ -213,6 +238,45 @@ async function main() {
     });
 
     console.log(`✅ DJ created: ${djData.stageName} (${djData.email})`);
+  }
+
+  // Grant subscriptions to all seeded DJs
+  console.log("🎫 Granting subscriptions to seeded DJs...");
+
+  const seededDjs = await prisma.user.findMany({
+    where: {
+      role: Role.DJ,
+      email: {
+        in: testDjs.map((dj) => dj.email),
+      },
+    },
+  });
+
+  for (const dj of seededDjs) {
+    // Calculate expiration date (1 year from now)
+    const expirationDate = new Date();
+    expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+    await prisma.subscription.create({
+      data: {
+        userId: dj.id,
+        planType: "DJ_BASIC",
+        status: "ACTIVE",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: expirationDate,
+        amountCents: 0, // Free for seeded DJs
+        currency: "usd",
+        isInTrial: false,
+        cancelAtPeriodEnd: false,
+        stripeSubscriptionId: `seeded_${dj.id}_${Date.now()}`,
+        stripeCustomerId: `seeded_customer_${dj.id}`,
+        stripePriceId:
+          process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
+          "seeded_price",
+      },
+    });
+
+    console.log(`✅ Subscription granted to ${dj.email}`);
   }
 
   // Create event-specific pricing for all test DJs
@@ -387,6 +451,9 @@ async function main() {
   console.log(`   - Admin: ${admin.email} (${admin.name}) - Stage: JAY BABA`);
   console.log(`   - Client: ${client.email}`);
   console.log(`   - Test DJs: ${testDjs.map((dj) => dj.stageName).join(", ")}`);
+  console.log(
+    `   - All seeded DJs have been granted 1-year free subscriptions`
+  );
 }
 
 main()

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import BookingCalendar from "@/components/BookingCalendar";
 import TimeoutManagement from "@/components/TimeoutManagement";
+import AutomatedTimeoutProcessor from "@/components/AutomatedTimeoutProcessor";
 import { hasAdminPrivileges } from "@/lib/auth-utils";
 import { getDisplayName } from "@/lib/user-utils";
 import {
@@ -16,6 +17,7 @@ import {
   ClipboardList,
   DollarSign,
   ArrowRight,
+  Crown,
 } from "lucide-react";
 
 export default async function AdminDashboardPage() {
@@ -127,6 +129,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
+      <AutomatedTimeoutProcessor />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -348,6 +351,17 @@ export default async function AdminDashboardPage() {
               <h3 className="font-semibold mb-1">Pricing</h3>
               <p className="text-gray-400 text-sm">
                 Manage platform pricing packages
+              </p>
+            </Link>
+
+            <Link
+              href="/dashboard/admin/subscriptions"
+              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <Crown className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">Subscriptions</h3>
+              <p className="text-gray-400 text-sm">
+                Manage user subscriptions and billing
               </p>
             </Link>
 

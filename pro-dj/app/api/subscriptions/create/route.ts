@@ -24,41 +24,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { planType = SubscriptionTier.DJ_BASIC, returnUrl } = body;
 
-    // Check if user already has a subscription
+    // Check if user already has an active subscription
     const existingSubscription = await prisma.subscription.findUnique({
       where: { userId: session.user.id },
     });
 
-    if (existingSubscription) {
+    if (
+      existingSubscription &&
+      (existingSubscription.status === "ACTIVE" ||
+        existingSubscription.status === "TRIAL")
+    ) {
       return NextResponse.json(
         { error: "User already has a subscription" },
         { status: 400 }
       );
-    }
-
-    // For development, create a temporary subscription immediately
-    // This will be updated by the webhook when it arrives
-    if (process.env.NODE_ENV === "development") {
-      const tempSubscription = await prisma.subscription.create({
-        data: {
-          userId: session.user.id,
-          stripeSubscriptionId: `temp_${Date.now()}`,
-          stripeCustomerId: `temp_cus_${Date.now()}`,
-          stripePriceId: "temp_price",
-          planType: planType,
-          status: SubscriptionStatus.TRIAL,
-          amountCents: 500,
-          currency: "usd",
-          interval: "month",
-          intervalCount: 1,
-          isInTrial: true,
-          trialStart: new Date(),
-          trialEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          platformFeePercentage: 10,
-        },
-      });
     }
 
     // Get user details

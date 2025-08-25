@@ -78,10 +78,26 @@ export async function checkSubscriptionStatus(
     }
 
     const isActive =
-      subscription.status === SubscriptionStatus.ACTIVE ||
-      subscription.status === SubscriptionStatus.TRIAL;
+      subscription.status === "ACTIVE" ||
+      subscription.status === "TRIAL";
 
-    const isInTrial = subscription.status === SubscriptionStatus.TRIAL;
+    const isInTrial = subscription.status === "TRIAL";
+
+    // If subscription is cancelled, treat as if no subscription exists
+    if (subscription.status === "CANCELLED") {
+      return {
+        hasActiveSubscription: false,
+        canAccessFeature: freeUploadsRemaining > 0,
+        isInTrial: false,
+        freeUploadsRemaining,
+        message:
+          freeUploadsRemaining > 0
+            ? `${freeUploadsRemaining} free upload${
+                freeUploadsRemaining === 1 ? "" : "s"
+              } remaining`
+            : "No free uploads remaining - subscription required",
+      };
+    }
 
     let trialDaysRemaining: number | undefined;
     if (isInTrial && subscription.trialEnd) {

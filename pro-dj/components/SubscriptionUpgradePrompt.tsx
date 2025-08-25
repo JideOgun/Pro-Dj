@@ -17,10 +17,6 @@ export function SubscriptionUpgradePrompt({
   returnUrl,
 }: SubscriptionUpgradePromptProps) {
   const [loading, setLoading] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [showPromoCode, setShowPromoCode] = useState(false);
-  const [promoLoading, setPromoLoading] = useState(false);
-  const [promoError, setPromoError] = useState("");
   const router = useRouter();
   const { refreshSubscriptionStatus } = useSubscription();
 
@@ -76,46 +72,6 @@ export function SubscriptionUpgradePrompt({
     }
   };
 
-  const handlePromoCodeRedeem = async () => {
-    if (!promoCode.trim()) {
-      setPromoError("Please enter a promo code");
-      return;
-    }
-
-    setPromoLoading(true);
-    setPromoError("");
-
-    try {
-      const response = await fetch("/api/promo-codes/redeem", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ promoCode: promoCode.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Refresh subscription status
-        await refreshSubscriptionStatus();
-        
-        // Show success message
-        alert(data.message);
-        
-        // Close the prompt if onClose is provided
-        if (onClose) {
-          onClose();
-        }
-      } else {
-        setPromoError(data.error || "Failed to redeem promo code");
-      }
-    } catch (error) {
-      console.error("Error redeeming promo code:", error);
-      setPromoError("Failed to redeem promo code");
-    } finally {
-      setPromoLoading(false);
-    }
-  };
-
   return (
     <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 text-center relative">
       {onClose && (
@@ -159,39 +115,6 @@ export function SubscriptionUpgradePrompt({
       >
         {loading ? "Loading..." : "Start Free Trial"}
       </button>
-
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <button
-          onClick={() => setShowPromoCode(!showPromoCode)}
-          className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-        >
-          Have a promo code?
-        </button>
-
-        {showPromoCode && (
-          <div className="mt-3 space-y-3">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="Enter promo code"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-              <button
-                onClick={handlePromoCodeRedeem}
-                disabled={promoLoading}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
-              >
-                {promoLoading ? "Redeeming..." : "Redeem"}
-              </button>
-            </div>
-            {promoError && (
-              <p className="text-red-600 text-sm">{promoError}</p>
-            )}
-          </div>
-        )}
-      </div>
 
       <p className="text-xs text-gray-500 mt-3">
         Cancel anytime. No commitment required.

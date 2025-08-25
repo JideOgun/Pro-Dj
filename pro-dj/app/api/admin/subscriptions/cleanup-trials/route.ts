@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -22,39 +22,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        djProfile: {
-          select: {
-            stageName: true,
+    // Find and delete temporary trial subscriptions created during development
+    const deletedTrials = await prisma.subscription.deleteMany({
+      where: {
+        OR: [
+          {
+            stripeSubscriptionId: {
+              startsWith: "temp_",
+            },
           },
-        },
-        subscription: {
-          select: {
-            id: true,
-            status: true,
-            planType: true,
+          {
+            stripeCustomerId: {
+              startsWith: "temp_cus_",
+            },
           },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
+          {
+            stripePriceId: "temp_price",
+          },
+        ],
       },
     });
 
     return NextResponse.json({
       success: true,
-      users,
+      message: `Cleaned up ${deletedTrials.count} development trial subscriptions`,
+      deletedCount: deletedTrials.count,
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error cleaning up trial subscriptions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to cleanup trial subscriptions" },
       { status: 500 }
     );
   }

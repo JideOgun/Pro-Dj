@@ -22,23 +22,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        djProfile: {
-          select: {
-            stageName: true,
-          },
-        },
-        subscription: {
+    const subscriptions = await prisma.subscription.findMany({
+      include: {
+        user: {
           select: {
             id: true,
-            status: true,
-            planType: true,
+            email: true,
+            name: true,
+            role: true,
+            djProfile: {
+              select: {
+                stageName: true,
+              },
+            },
           },
         },
       },
@@ -49,12 +45,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      users,
+      subscriptions,
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching subscriptions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to fetch subscriptions" },
       { status: 500 }
     );
   }

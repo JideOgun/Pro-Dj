@@ -14,6 +14,7 @@ import {
 import toast from "react-hot-toast";
 import { useLoading } from "./LoadingProvider";
 import { hasAdminPrivileges } from "@/lib/auth-utils";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface VideoDetails {
   title: string;
@@ -35,6 +36,11 @@ interface YouTubeVideoInfo {
 export default function YouTubeVideoUpload() {
   const { data: session } = useSession();
   const { showLoading, hideLoading } = useLoading();
+  const {
+    hasActiveSubscription,
+    freeUploadsRemaining,
+    loading: subscriptionLoading,
+  } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
   const [videoDetails, setVideoDetails] = useState<VideoDetails>({
     title: "",
@@ -215,6 +221,58 @@ export default function YouTubeVideoUpload() {
                 <X className="w-6 h-6" />
               </button>
             </div>
+
+            {/* Subscription Check */}
+            {!subscriptionLoading &&
+              !hasActiveSubscription &&
+              freeUploadsRemaining === 0 && (
+                <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200">
+                  <div className="text-center">
+                    <div className="text-amber-800 text-lg font-semibold mb-2">
+                      No Free Uploads Remaining
+                    </div>
+                    <p className="text-amber-700 mb-4">
+                      You've used all your free uploads. Upgrade to continue
+                      uploading unlimited videos!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(
+                            "/api/subscriptions/create",
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                planType: "DJ_BASIC",
+                                returnUrl: "/videos",
+                              }),
+                            }
+                          );
+
+                          const data = await response.json();
+
+                          if (response.ok && data.url) {
+                            window.location.href = data.url;
+                          } else {
+                            toast.error(
+                              data.error ||
+                                "Failed to create subscription checkout"
+                            );
+                          }
+                        } catch (error) {
+                          toast.error("Failed to start subscription process");
+                        }
+                      }}
+                      className="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upgrade for Unlimited Uploads
+                    </button>
+                  </div>
+                </div>
+              )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">

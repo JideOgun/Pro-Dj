@@ -17,27 +17,11 @@ export const metadata: Metadata = {
     "Book professional DJs for your events. Browse portfolios, listen to mixes, and secure your perfect DJ.",
   icons: {
     icon: [
-      { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/icons/favicon-16x16.png", type: "image/png", sizes: "16x16" },
-      { url: "/icons/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      {
-        url: "/icons/android-chrome-192x192.png",
-        type: "image/png",
-        sizes: "192x192",
-      },
-      {
-        url: "/icons/android-chrome-512x512.png",
-        type: "image/png",
-        sizes: "512x512",
-      },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
     ],
-    apple: [
-      {
-        url: "/icons/apple-touch-icon.png",
-        type: "image/png",
-        sizes: "180x180",
-      },
-    ],
+    shortcut: "/favicon-32x32.png",
+    apple: "/icons/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
   appleWebApp: {
@@ -80,27 +64,12 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#8b5cf6" />
 
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="/icons/favicon-32x32.png"
-        />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="/icons/favicon-16x16.png"
-        />
         <link rel="manifest" href="/manifest.json" />
         <link
           rel="mask-icon"
           href="/icons/safari-pinned-tab.svg"
           color="#8b5cf6"
         />
-        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.className} bg-black text-white`}>
         <Providers>

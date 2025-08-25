@@ -16,7 +16,13 @@ export function FreeUploadCounter({ className = "" }: FreeUploadCounterProps) {
 
   useEffect(() => {
     const fetchMixCount = async () => {
-      if (!session?.user || hasActiveSubscription) {
+      if (!session?.user) {
+        setLoadingMixes(false);
+        return;
+      }
+
+      // Only fetch mix count for users without active subscriptions
+      if (hasActiveSubscription) {
         setLoadingMixes(false);
         return;
       }
@@ -48,12 +54,23 @@ export function FreeUploadCounter({ className = "" }: FreeUploadCounterProps) {
     fetchMixCount();
   }, [session, hasActiveSubscription]);
 
+  console.log("FreeUploadCounter Debug:", {
+    loading,
+    loadingMixes,
+    hasActiveSubscription,
+    mixCount,
+    session: session?.user?.email,
+    role: session?.user?.role,
+  });
+
   if (loading || loadingMixes) {
+    console.log("FreeUploadCounter: Hidden due to loading");
     return null;
   }
 
   // Don't show for subscribers or admins
   if (hasActiveSubscription) {
+    console.log("FreeUploadCounter: Hidden due to active subscription");
     return null;
   }
 
@@ -66,11 +83,38 @@ export function FreeUploadCounter({ className = "" }: FreeUploadCounterProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {remainingUploads > 0 ? (
-        <span className="px-2 py-1 bg-green-100 text-green-800 border border-green-200 text-xs font-medium rounded-full flex items-center">
+        <button
+          onClick={async () => {
+            try {
+              const response = await fetch("/api/subscriptions/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  planType: "DJ_BASIC",
+                  returnUrl: "/mixes",
+                }),
+              });
+
+              const data = await response.json();
+
+              if (response.ok && data.url) {
+                window.location.href = data.url;
+              } else {
+                toast.error(
+                  data.error || "Failed to create subscription checkout"
+                );
+              }
+            } catch (error) {
+              toast.error("Failed to start subscription process");
+            }
+          }}
+          className="px-2 py-1 bg-green-100 text-green-800 border border-green-200 text-xs font-medium rounded-full flex items-center hover:bg-green-200 transition-colors cursor-pointer"
+        >
           <Upload className="w-3 h-3 mr-1" />
-          {remainingUploads} Free Upload
-          {remainingUploads === 1 ? "" : "s"} Remaining
-        </span>
+          {remainingUploads} Free Upload{remainingUploads === 1 ? "" : "s"}{" "}
+          Remaining
+          <span className="ml-1 text-green-600">• Subscribe for Unlimited</span>
+        </button>
       ) : (
         <button
           onClick={async () => {

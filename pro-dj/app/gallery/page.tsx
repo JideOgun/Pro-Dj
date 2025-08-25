@@ -26,6 +26,7 @@ import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GalleryEventCounter } from "@/components/GalleryEventCounter";
 import { GallerySubscriptionPrompt } from "@/components/GallerySubscriptionPrompt";
+import { FreeUploadCounter } from "@/components/FreeUploadCounter";
 
 interface EventPhoto {
   id: string;
@@ -177,6 +178,7 @@ function GalleryPageContent() {
             {/* Upload Button */}
             {canUpload() && (
               <div className="mt-8 flex items-center gap-3">
+                <FreeUploadCounter />
                 <GalleryEventCounter />
                 <button
                   onClick={() =>

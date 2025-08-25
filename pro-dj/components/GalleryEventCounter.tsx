@@ -18,7 +18,13 @@ export function GalleryEventCounter({
 
   useEffect(() => {
     const fetchEventCount = async () => {
-      if (!session?.user || hasActiveSubscription) {
+      if (!session?.user) {
+        setLoadingEvents(false);
+        return;
+      }
+
+      // Only fetch event count for users without active subscriptions
+      if (hasActiveSubscription) {
         setLoadingEvents(false);
         return;
       }
@@ -77,11 +83,38 @@ export function GalleryEventCounter({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {remainingEvents > 0 ? (
-        <span className="px-2 py-1 bg-green-100 text-green-800 border border-green-200 text-xs font-medium rounded-full flex items-center">
+        <button
+          onClick={async () => {
+            try {
+              const response = await fetch("/api/subscriptions/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  planType: "DJ_BASIC",
+                  returnUrl: "/gallery",
+                }),
+              });
+
+              const data = await response.json();
+
+              if (response.ok && data.url) {
+                window.location.href = data.url;
+              } else {
+                toast.error(
+                  data.error || "Failed to create subscription checkout"
+                );
+              }
+            } catch (error) {
+              toast.error("Failed to start subscription process");
+            }
+          }}
+          className="px-2 py-1 bg-green-100 text-green-800 border border-green-200 text-xs font-medium rounded-full flex items-center hover:bg-green-200 transition-colors cursor-pointer"
+        >
           <Calendar className="w-3 h-3 mr-1" />
           {remainingEvents} Free Event{remainingEvents === 1 ? "" : "s"}{" "}
           Remaining
-        </span>
+          <span className="ml-1 text-green-600">• Subscribe for Unlimited</span>
+        </button>
       ) : (
         <button
           onClick={async () => {

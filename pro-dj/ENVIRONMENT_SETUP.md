@@ -61,6 +61,13 @@ ADMIN_EMAIL=admin@yourdomain.com
 ADMIN_PASSWORD=secure-admin-password
 ```
 
+### Automated Timeout Processing
+
+```bash
+# Secret token for cron job authentication (generate a secure random string)
+CRON_SECRET_TOKEN="your-secure-random-token-here"
+```
+
 ## 2. Environment Variable Generation
 
 ### Generate NEXTAUTH_SECRET

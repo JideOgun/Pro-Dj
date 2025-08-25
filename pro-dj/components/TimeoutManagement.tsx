@@ -78,6 +78,17 @@ export default function TimeoutManagement() {
       </div>
 
       <div className="space-y-4">
+        <div className="bg-green-900/30 border border-green-700/30 rounded-lg p-4">
+          <h3 className="font-medium text-green-200 mb-2 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Automated Processing Active
+          </h3>
+          <p className="text-sm text-green-300 mb-3">
+            Expired bookings are automatically processed every 30 minutes when
+            an admin is online.
+          </p>
+        </div>
+
         <div className="bg-gray-700/50 rounded-lg p-4">
           <h3 className="font-medium text-white mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4" />
