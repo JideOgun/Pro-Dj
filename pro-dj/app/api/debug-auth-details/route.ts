@@ -4,96 +4,111 @@ import bcrypt from "bcryptjs";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("🔍 Debugging authentication issues...");
+    console.log("🔍 Starting detailed auth debug...");
 
-    // Check environment variables
-    const envCheck = {
+    // Environment variables check
+    const environment = {
       NODE_ENV: process.env.NODE_ENV,
-      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "SET" : "NOT SET",
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "SET" : "NOT_SET",
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-      DATABASE_URL: process.env.DATABASE_URL ? "SET" : "NOT SET",
+      DATABASE_URL: process.env.DATABASE_URL ? "SET" : "NOT_SET",
       hasAdminEmail: !!process.env.ADMIN_EMAIL,
       hasAdminPassword: !!process.env.ADMIN_PASSWORD,
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     };
 
-    console.log("Environment check:", envCheck);
-
-    // Test database connection
-    let dbConnection = "FAILED";
-    let userCount = 0;
-    let adminUser = null;
+    // Database connection test
+    let database = {
+      connection: "UNKNOWN",
+      userCount: 0,
+      adminUser: null,
+      connectionError: null,
+    };
 
     try {
-      // Test basic database connection
+      // Test basic connection
       await prisma.$queryRaw`SELECT 1`;
-      dbConnection = "SUCCESS";
-
+      database.connection = "SUCCESS";
+      
       // Count users
-      userCount = await prisma.user.count();
+      const userCount = await prisma.user.count();
+      database.userCount = userCount;
 
-      // Check for admin user
-      adminUser = await prisma.user.findFirst({
-        where: { role: "ADMIN" },
+      // Find admin user
+      const adminUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: process.env.ADMIN_EMAIL },
+            { role: "ADMIN" }
+          ]
+        },
         select: {
           id: true,
           email: true,
           name: true,
           role: true,
           status: true,
-          hasPassword: true,
-        },
+          password: true, // Include password for debugging
+        }
       });
 
-      // Check all users
-      const allUsers = await prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          status: true,
-        },
-      });
-
-      console.log("Database connection successful");
-      console.log("User count:", userCount);
-      console.log("Admin user:", adminUser);
-      console.log("All users:", allUsers);
+      database.adminUser = adminUser ? {
+        id: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: adminUser.role,
+        status: adminUser.status,
+        hasPassword: !!adminUser.password,
+        passwordLength: adminUser.password?.length || 0,
+      } : null;
 
     } catch (dbError) {
-      console.error("Database connection failed:", dbError);
-      dbConnection = "FAILED";
+      database.connection = "FAILED";
+      database.connectionError = dbError instanceof Error ? dbError.message : "Unknown error";
     }
 
-    // Test password hashing
-    let passwordTest = "FAILED";
+    // Password test
+    let passwordTest = "UNKNOWN";
     try {
-      const testPassword = "test123";
-      const hashedPassword = await bcrypt.hash(testPassword, 10);
-      const isValid = await bcrypt.compare(testPassword, hashedPassword);
-      passwordTest = isValid ? "SUCCESS" : "FAILED";
-    } catch (passwordError) {
-      console.error("Password test failed:", passwordError);
+      if (process.env.ADMIN_PASSWORD && database.adminUser) {
+        // Test password hashing
+        const testHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+        passwordTest = "SUCCESS";
+      } else {
+        passwordTest = "SKIPPED - No password or admin user";
+      }
+    } catch (pwError) {
+      passwordTest = "FAILED";
     }
+
+    // Test NextAuth configuration
+    let nextAuthTest = "UNKNOWN";
+    try {
+      if (process.env.NEXTAUTH_SECRET && process.env.NEXTAUTH_URL) {
+        nextAuthTest = "CONFIGURED";
+      } else {
+        nextAuthTest = "MISSING_CONFIG";
+      }
+    } catch (authError) {
+      nextAuthTest = "ERROR";
+    }
+
+    console.log("✅ Detailed auth debug completed");
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      environment: envCheck,
-      database: {
-        connection: dbConnection,
-        userCount,
-        adminUser,
-      },
+      environment,
+      database,
       passwordTest,
-      message: "Authentication debug information",
+      nextAuthTest,
+      message: "Detailed authentication debug information",
     });
-
   } catch (error) {
-    console.error("❌ Error in auth debug:", error);
+    console.error("❌ Error in detailed auth debug:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
