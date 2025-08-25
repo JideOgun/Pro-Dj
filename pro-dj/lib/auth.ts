@@ -31,47 +31,58 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(creds) {
-        if (!creds?.email || !creds.password) return null;
+        try {
+          if (!creds?.email || !creds.password) {
+            console.log("Missing credentials");
+            return null;
+          }
 
-        console.log("Credentials login attempt:", { email: creds.email });
+          console.log("Credentials login attempt:", { email: creds.email });
 
-        const user = await prisma.user.findFirst({
-          where: {
-            email: {
-              equals: creds.email,
-              mode: "insensitive",
+          const user = await prisma.user.findFirst({
+            where: {
+              email: {
+                equals: creds.email,
+                mode: "insensitive",
+              },
             },
-          },
-        });
+          });
 
-        if (!user) {
-          console.log("User not found");
+          if (!user) {
+            console.log("User not found:", creds.email);
+            return null;
+          }
+
+          if (!user.password) {
+            console.log("User has no password:", creds.email);
+            return null;
+          }
+
+          const ok = await bcrypt.compare(creds.password, user.password);
+          console.log("Password comparison result:", ok);
+
+          if (!ok) {
+            console.log("Invalid password for user:", creds.email);
+            return null;
+          }
+
+          console.log("Login successful for user:", {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+          });
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            status: user.status,
+          };
+        } catch (error) {
+          console.error("Error in authorize function:", error);
           return null;
         }
-
-        if (!user.password) {
-          console.log("User has no password");
-          return null;
-        }
-
-        const ok = await bcrypt.compare(creds.password, user.password);
-        console.log("Password comparison result:", ok);
-
-        if (!ok) return null;
-
-        console.log("Login successful for user:", {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          status: user.status,
-        };
       },
     }),
   ],
@@ -187,5 +198,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/auth",
   },
-  useSecureCookies: false,
+  useSecureCookies: process.env.NODE_ENV === "production",
 };
