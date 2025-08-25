@@ -12,7 +12,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string  } }
+  { params }: { params: { id: string } }
 ) {
   const { id } = params;
   const session = await getServerSession(authOptions);

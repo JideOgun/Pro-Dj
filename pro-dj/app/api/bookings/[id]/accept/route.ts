@@ -14,7 +14,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string  } }
+  { params }: { params: { id: string } }
 ) {
   const { id } = params;
   const gate = await requireAdminOrDj();
