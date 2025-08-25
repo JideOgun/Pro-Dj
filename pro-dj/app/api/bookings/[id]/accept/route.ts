@@ -109,7 +109,28 @@ export async function PATCH(
     );
   }
 
-  // Create a Checkout Session for the quoted amount
+  // Calculate platform fee (10% of quoted price)
+  const platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
+  const djPayoutCents = booking.quotedPriceCents - platformFeeCents;
+
+  // Check if DJ has Connect account for payouts
+  let djConnectAccountId = null;
+  if (djId) {
+    const djProfile = await prisma.djProfile.findUnique({
+      where: { id: djId },
+      select: { stripeConnectAccountId: true, stripeConnectAccountEnabled: true },
+    });
+    
+    if (!djProfile?.stripeConnectAccountId || !djProfile.stripeConnectAccountEnabled) {
+      return NextResponse.json(
+        { ok: false, error: "DJ must complete Stripe Connect onboarding to accept bookings" },
+        { status: 400 }
+      );
+    }
+    djConnectAccountId = djProfile.stripeConnectAccountId;
+  }
+
+  // Create a Checkout Session for the quoted amount with application fee
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: booking.user?.email ?? undefined,
@@ -131,7 +152,16 @@ export async function PATCH(
     metadata: {
       bookingId: booking.id,
       userId: booking.userId,
+      djId: djId || "",
+      platformFeeCents: platformFeeCents.toString(),
+      djPayoutCents: djPayoutCents.toString(),
     },
+    payment_intent_data: djConnectAccountId ? {
+      application_fee_amount: platformFeeCents,
+      transfer_data: {
+        destination: djConnectAccountId,
+      },
+    } : undefined,
     success_url: `${process.env.APP_URL}/book/success?bid=${booking.id}`,
     cancel_url: `${process.env.APP_URL}/book/cancel?bid=${booking.id}`,
     // optional: expires_at to limit how long they can pay
@@ -142,6 +172,9 @@ export async function PATCH(
     data: {
       status: "ACCEPTED",
       checkoutSessionId: session.id,
+      platformFeeCents: platformFeeCents,
+      payoutAmountCents: djPayoutCents,
+      escrowStatus: "PENDING",
       ...(djId && { djId }), // Assign DJ if provided
     },
   });
