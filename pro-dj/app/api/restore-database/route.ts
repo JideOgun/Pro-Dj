@@ -11,9 +11,10 @@ export async function POST(request: NextRequest) {
 
     console.log("🔧 Restoring production database with admin credentials...");
 
-    // Clean up any existing data first
+    // Clean up any existing data first (delete in correct order to avoid foreign key constraints)
     console.log("🧹 Cleaning up existing data...");
     await prisma.subscription.deleteMany({});
+    await prisma.djMix.deleteMany({});
     await prisma.djProfile.deleteMany({});
     await prisma.user.deleteMany({});
 
