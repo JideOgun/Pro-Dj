@@ -261,21 +261,37 @@ function BookPageContent() {
     loadDjs();
   }, []);
 
-  // Filter DJs based on search and event type
+  // Filter DJs based on search term and preferred genres
   const filteredDjs = djs.filter((dj) => {
-    // Then filter by search term
-    if (!djSearchTerm) return true;
-    return (
-      dj.stageName.toLowerCase().includes(djSearchTerm.toLowerCase()) ||
-      (dj.genres || []).some((genre) =>
-        genre.toLowerCase().includes(djSearchTerm.toLowerCase())
-      ) ||
-      (dj.bio && dj.bio.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
-      (dj.specialties &&
-        dj.specialties.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
-      (dj.location &&
-        dj.location.toLowerCase().includes(djSearchTerm.toLowerCase()))
-    );
+    // Filter by search term
+    if (djSearchTerm) {
+      const searchMatch = 
+        dj.stageName.toLowerCase().includes(djSearchTerm.toLowerCase()) ||
+        (dj.genres || []).some((genre) =>
+          genre.toLowerCase().includes(djSearchTerm.toLowerCase())
+        ) ||
+        (dj.bio && dj.bio.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
+        (dj.specialties &&
+          dj.specialties.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
+        (dj.location &&
+          dj.location.toLowerCase().includes(djSearchTerm.toLowerCase()));
+      
+      if (!searchMatch) return false;
+    }
+
+    // Filter by preferred genres
+    if (preferredGenres.length > 0) {
+      const hasMatchingGenre = (dj.genres || []).some((djGenre) =>
+        preferredGenres.some((preferredGenre) =>
+          djGenre.toLowerCase().includes(preferredGenre.toLowerCase()) ||
+          preferredGenre.toLowerCase().includes(djGenre.toLowerCase())
+        )
+      );
+      
+      if (!hasMatchingGenre) return false;
+    }
+
+    return true;
   });
 
   // Get suggested DJs based on event type and preferences

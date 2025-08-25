@@ -8,7 +8,7 @@ export async function ensureAdminDjProfile(userId: string) {
     // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true, name: true, email: true },
+      select: { role: true, name: true, email: true, bio: true },
     });
 
     if (!user || user.role !== "ADMIN") {
@@ -24,20 +24,27 @@ export async function ensureAdminDjProfile(userId: string) {
       return existingProfile;
     }
 
-    // Create DJ profile for admin
+    // Check if user has a DJ profile from being a DJ first
+    const userAsDj = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { djProfile: true },
+    });
+
+    // If user already has a DJ profile, use their existing stage name
+    if (userAsDj?.djProfile) {
+      return userAsDj.djProfile;
+    }
+
+    // Create DJ profile for admin using only user data, no hardcoded defaults
     const djProfile = await prisma.djProfile.create({
       data: {
         userId: userId,
-        stageName: user.name || "Admin DJ",
-        bio: "Admin DJ profile with full access to all features",
-        experience: 5, // Default experience level for admin
+        stageName: user.name || "Admin DJ", // Use real name as stage name
+        bio: user.bio, // Optional field, can be null
+        experience: 0, // Required field, minimal value
         isApprovedByAdmin: true, // Auto-approve admin
         isAcceptingBookings: true,
         isFeatured: false,
-        genres: [], // Empty array for genres
-        portfolio: [], // Empty array for portfolio
-        languages: [], // Empty array for languages
-        eventsOffered: [], // Empty array for events offered
       },
     });
 

@@ -36,11 +36,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check for duplicate title
+    // Check for duplicate title - only active mixes
     const existingTitleMix = await prisma.djMix.findFirst({
       where: {
         djId: djProfile.id,
         title: title || fileName.replace(/\.[^/.]+$/, ""),
+        // Only check for non-deleted mixes
+        deletedAt: null,
       },
     });
 

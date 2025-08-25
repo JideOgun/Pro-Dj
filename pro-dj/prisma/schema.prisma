@@ -36,15 +36,17 @@ privacyVersion String?
 termsAgreedAt DateTime?
 termsVersion String?
 agreedToContractorTerms Boolean @default(false)
-agreedToServiceProviderTerms Boolean @default(false)
-contractorTermsAgreedAt DateTime?
-contractorTermsVersion String?
-serviceProviderTermsAgreedAt DateTime?
-serviceProviderTermsVersion String?
-w9Submitted Boolean @default(false)
-w9SubmittedAt DateTime?
-freeUploadsUsed Int @default(0)
-maxFreeUploads Int @default(1)
+  agreedToServiceProviderTerms Boolean @default(false)
+  contractorTermsAgreedAt DateTime?
+  contractorTermsVersion String?
+  serviceProviderTermsAgreedAt DateTime?
+  serviceProviderTermsVersion String?
+  w9Submitted Boolean @default(false)
+  w9SubmittedAt DateTime?
+  freeUploadsUsed Int @default(0)
+  maxFreeUploads Int @default(1)
+  resetToken String?
+  resetTokenExpiry DateTime?
 bookings Booking[]
 comments Comment[] @relation("UserComments")
 commentDislikes CommentDislike[]

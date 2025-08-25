@@ -4,6 +4,7 @@ import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Chrome, Music } from "lucide-react";
+import ForgotPasswordForm from "@/components/ForgotPasswordForm";
 
 function AuthPageContent() {
   const router = useRouter();
@@ -11,6 +12,7 @@ function AuthPageContent() {
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -338,6 +340,18 @@ function AuthPageContent() {
                 {isLogin ? "Sign up" : "Sign in"}
               </button>
             </p>
+            
+            {/* Forgot password link for login */}
+            {isLogin && (
+              <div className="mt-3">
+                <button
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-violet-400 hover:text-violet-300 text-sm"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Info for new users */}
@@ -365,6 +379,26 @@ function AuthPageContent() {
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-white">Forgot Password</h2>
+                <button
+                  onClick={() => setShowForgotPassword(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <ForgotPasswordForm />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

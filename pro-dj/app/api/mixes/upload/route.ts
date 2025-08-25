@@ -282,6 +282,8 @@ export async function POST(req: NextRequest) {
             mode: "insensitive",
           },
           uploadStatus: "COMPLETED",
+          // Only check for non-deleted mixes
+          deletedAt: null,
         },
         select: {
           id: true,

@@ -4,11 +4,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Stripe from "stripe";
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+// Initialize Stripe only if secret key is available
+let stripe: Stripe | null = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: "2025-07-30.basil",
-    })
-  : null;
+    });
+  }
+} catch (error) {
+  console.error("Failed to initialize Stripe:", error);
+  stripe = null;
+}
 
 export async function GET(
   req: Request,
