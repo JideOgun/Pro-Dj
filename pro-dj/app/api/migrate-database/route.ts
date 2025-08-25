@@ -49,15 +49,17 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Database migration completed successfully",
       userCount,
-      columnsAdded: updatedTableInfo
+      columnsAdded: updatedTableInfo,
     });
-
   } catch (error) {
     console.error("❌ Error in database migration:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      details: error instanceof Error ? error.stack : undefined,
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

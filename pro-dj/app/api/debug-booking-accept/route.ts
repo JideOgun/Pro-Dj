@@ -5,13 +5,15 @@ import Stripe from "stripe";
 export async function POST(request: NextRequest) {
   try {
     const { bookingId } = await request.json();
-    
+
     console.log("🔍 Debugging booking acceptance for:", bookingId);
 
     // Check environment variables
     const envCheck = {
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? "SET" : "NOT_SET",
-      STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY ? "SET" : "NOT_SET",
+      STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY
+        ? "SET"
+        : "NOT_SET",
       APP_URL: process.env.APP_URL,
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     };
@@ -21,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Test Stripe initialization
     let stripe: Stripe | null = null;
     let stripeError = null;
-    
+
     try {
       if (process.env.STRIPE_SECRET_KEY) {
         stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -47,11 +49,14 @@ export async function POST(request: NextRequest) {
 
     if (!booking) {
       console.log("❌ Booking not found");
-      return NextResponse.json({
-        success: false,
-        error: "Booking not found",
-        step: "booking_lookup"
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Booking not found",
+          step: "booking_lookup",
+        },
+        { status: 404 }
+      );
     }
 
     console.log("✅ Booking found:", {
@@ -60,17 +65,20 @@ export async function POST(request: NextRequest) {
       eventType: booking.eventType,
       quotedPriceCents: booking.quotedPriceCents,
       hasUser: !!booking.user,
-      hasDj: !!booking.dj
+      hasDj: !!booking.dj,
     });
 
     // Check if booking has quoted price
     if (!booking.quotedPriceCents) {
       console.log("❌ No quoted price on booking");
-      return NextResponse.json({
-        success: false,
-        error: "No quote on booking",
-        step: "price_check"
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No quote on booking",
+          step: "price_check",
+        },
+        { status: 400 }
+      );
     }
 
     // Test Stripe checkout session creation
@@ -101,13 +109,21 @@ export async function POST(request: NextRequest) {
             bookingId: booking.id,
             userId: booking.userId,
           },
-          success_url: `${process.env.APP_URL || process.env.NEXTAUTH_URL}/book/success?bid=${booking.id}`,
-          cancel_url: `${process.env.APP_URL || process.env.NEXTAUTH_URL}/book/cancel?bid=${booking.id}`,
+          success_url: `${
+            process.env.APP_URL || process.env.NEXTAUTH_URL
+          }/book/success?bid=${booking.id}`,
+          cancel_url: `${
+            process.env.APP_URL || process.env.NEXTAUTH_URL
+          }/book/cancel?bid=${booking.id}`,
         });
         console.log("✅ Stripe checkout session created:", checkoutSession.id);
       } catch (error) {
-        checkoutError = error instanceof Error ? error.message : "Unknown error";
-        console.log("❌ Stripe checkout session creation failed:", checkoutError);
+        checkoutError =
+          error instanceof Error ? error.message : "Unknown error";
+        console.log(
+          "❌ Stripe checkout session creation failed:",
+          checkoutError
+        );
       }
     }
 
@@ -117,7 +133,7 @@ export async function POST(request: NextRequest) {
       envCheck,
       stripe: {
         initialized: !!stripe,
-        error: stripeError
+        error: stripeError,
       },
       booking: {
         id: booking.id,
@@ -125,21 +141,23 @@ export async function POST(request: NextRequest) {
         eventType: booking.eventType,
         quotedPriceCents: booking.quotedPriceCents,
         hasUser: !!booking.user,
-        hasDj: !!booking.dj
+        hasDj: !!booking.dj,
       },
       checkout: {
         created: !!checkoutSession,
         sessionId: checkoutSession?.id,
-        error: checkoutError
-      }
+        error: checkoutError,
+      },
     });
-
   } catch (error) {
     console.error("❌ Error in booking acceptance debug:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      step: "exception"
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        step: "exception",
+      },
+      { status: 500 }
+    );
   }
 }

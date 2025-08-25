@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
-    
+
     console.log("🔍 Debugging NextAuth flow for:", email);
 
     // Step 1: Check environment variables
@@ -20,14 +20,17 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Simulate exact NextAuth authorize function
     console.log("Step 2: Simulating NextAuth authorize function...");
-    
+
     if (!email || !password) {
       console.log("❌ Missing credentials");
-      return NextResponse.json({
-        success: false,
-        error: "Missing credentials",
-        step: "credentials_check"
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing credentials",
+          step: "credentials_check",
+        },
+        { status: 400 }
+      );
     }
 
     console.log("Credentials provided:", { email, hasPassword: !!password });
@@ -45,12 +48,15 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       console.log("❌ User not found");
-      return NextResponse.json({
-        success: false,
-        error: "User not found",
-        step: "user_lookup",
-        envCheck
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not found",
+          step: "user_lookup",
+          envCheck,
+        },
+        { status: 401 }
+      );
     }
 
     console.log("✅ User found:", {
@@ -58,34 +64,40 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role,
       status: user.status,
-      hasPassword: !!user.password
+      hasPassword: !!user.password,
     });
 
     // Step 4: Check password
     if (!user.password) {
       console.log("❌ User has no password");
-      return NextResponse.json({
-        success: false,
-        error: "User has no password",
-        step: "password_check",
-        envCheck
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User has no password",
+          step: "password_check",
+          envCheck,
+        },
+        { status: 401 }
+      );
     }
 
     // Step 5: Verify password (exact NextAuth logic)
     console.log("Step 5: Verifying password...");
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     console.log("Password comparison result:", isPasswordValid);
 
     if (!isPasswordValid) {
       console.log("❌ Password verification failed");
-      return NextResponse.json({
-        success: false,
-        error: "Invalid password",
-        step: "password_verification",
-        envCheck
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid password",
+          step: "password_verification",
+          envCheck,
+        },
+        { status: 401 }
+      );
     }
 
     console.log("✅ Password verified successfully");
@@ -106,15 +118,17 @@ export async function POST(request: NextRequest) {
       message: "NextAuth flow simulation successful",
       user: userObject,
       envCheck,
-      step: "success"
+      step: "success",
     });
-
   } catch (error) {
     console.error("❌ Error in NextAuth flow debug:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      step: "exception"
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        step: "exception",
+      },
+      { status: 500 }
+    );
   }
 }

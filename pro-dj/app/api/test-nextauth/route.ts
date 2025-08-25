@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
 
     // Try to get session
     const session = await getServerSession(authOptions);
-    
+
     console.log("Session result:", session ? "FOUND" : "NOT_FOUND");
-    
+
     if (session) {
       console.log("Session details:", {
         user: session.user?.email,
@@ -32,28 +32,32 @@ export async function GET(request: NextRequest) {
       success: true,
       timestamp: new Date().toISOString(),
       environment: envCheck,
-      session: session ? {
-        exists: true,
-        user: {
-          id: session.user?.id,
-          email: session.user?.email,
-          name: session.user?.name,
-          role: session.user?.role,
-          status: session.user?.status,
-        }
-      } : {
-        exists: false,
-        user: null
-      },
-      message: "NextAuth session test completed"
+      session: session
+        ? {
+            exists: true,
+            user: {
+              id: session.user?.id,
+              email: session.user?.email,
+              name: session.user?.name,
+              role: session.user?.role,
+              status: session.user?.status,
+            },
+          }
+        : {
+            exists: false,
+            user: null,
+          },
+      message: "NextAuth session test completed",
     });
-
   } catch (error) {
     console.error("❌ Error in NextAuth test:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    );
   }
 }
