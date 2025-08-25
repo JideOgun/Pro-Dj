@@ -10,19 +10,19 @@ export async function POST(request: NextRequest) {
     const adminName = process.env.ADMIN_NAME || "Babajide Ogunbanjo";
 
     console.log("🔧 Restoring production database with admin credentials...");
-    
+
     // Clean up any existing data first
     console.log("🧹 Cleaning up existing data...");
     await prisma.subscription.deleteMany({});
     await prisma.djProfile.deleteMany({});
     await prisma.user.deleteMany({});
-    
+
     console.log("✅ Database cleaned");
 
     // Create admin user with real credentials
     console.log("👑 Creating admin user...");
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    
+
     const admin = await prisma.user.create({
       data: {
         email: adminEmail,
@@ -52,7 +52,13 @@ export async function POST(request: NextRequest) {
         experience: 8,
         location: "New York, NY",
         travelRadius: 100,
-        eventsOffered: ["Wedding", "Club", "Corporate", "Birthday", "Private Party"],
+        eventsOffered: [
+          "Wedding",
+          "Club",
+          "Corporate",
+          "Birthday",
+          "Private Party",
+        ],
         isApprovedByAdmin: true,
         isAcceptingBookings: true,
         isFeatured: true,
@@ -81,7 +87,9 @@ export async function POST(request: NextRequest) {
         cancelAtPeriodEnd: false,
         stripeSubscriptionId: `admin_restored_${admin.id}_${Date.now()}`,
         stripeCustomerId: `admin_restored_customer_${admin.id}`,
-        stripePriceId: process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") || "admin_restored_price",
+        stripePriceId:
+          process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
+          "admin_restored_price",
       },
     });
 
@@ -90,7 +98,7 @@ export async function POST(request: NextRequest) {
     // Create test client user
     console.log("👤 Creating test client...");
     const clientPassword = await bcrypt.hash("password", 10);
-    
+
     const client = await prisma.user.create({
       data: {
         email: "imani@test.com",
@@ -164,9 +172,9 @@ export async function POST(request: NextRequest) {
 
     for (const djData of testDjs) {
       console.log(`🎵 Creating DJ: ${djData.stageName}`);
-      
+
       const djPassword = await bcrypt.hash(djData.password, 10);
-      
+
       const dj = await prisma.user.create({
         data: {
           email: djData.email,
@@ -218,7 +226,9 @@ export async function POST(request: NextRequest) {
           cancelAtPeriodEnd: false,
           stripeSubscriptionId: `test_dj_${dj.id}_${Date.now()}`,
           stripeCustomerId: `test_dj_customer_${dj.id}`,
-          stripePriceId: process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") || "test_dj_price",
+          stripePriceId:
+            process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
+            "test_dj_price",
         },
       });
 
@@ -236,18 +246,22 @@ export async function POST(request: NextRequest) {
       },
       testUsers: {
         client: "imani@test.com / password",
-        djs: ["osean@test.com", "djsb@test.com", "jamiedred@test.com", "djto@test.com"].map(email => `${email} / password`),
+        djs: [
+          "osean@test.com",
+          "djsb@test.com",
+          "jamiedred@test.com",
+          "djto@test.com",
+        ].map((email) => `${email} / password`),
       },
       usersCreated: 6, // admin + client + 4 DJs
     });
-
   } catch (error) {
     console.error("❌ Error restoring production:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-        details: error instanceof Error ? error.stack : undefined
+        details: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );
