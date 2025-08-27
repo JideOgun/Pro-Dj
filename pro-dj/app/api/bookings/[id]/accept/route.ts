@@ -137,8 +137,8 @@ export async function PATCH(
     isEmployee = ["PART_TIME_W2", "FULL_TIME_W2"].includes(djProfile.employmentType);
 
     if (isEmployee) {
-      // Employee: Higher platform fee (30-40%)
-      platformFeeCents = Math.round(booking.quotedPriceCents * 0.35); // 35% for employees
+      // Employee: Higher platform fee (60% to Pro-DJ, 40% to DJ)
+      platformFeeCents = Math.round(booking.quotedPriceCents * 0.60); // 60% for Pro-DJ
       djPayoutCents = booking.quotedPriceCents - platformFeeCents;
       
       // Employees don't need Stripe Connect for immediate payouts (handled via payroll)
