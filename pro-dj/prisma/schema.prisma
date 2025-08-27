@@ -105,6 +105,8 @@ dj DjProfile? @relation(fields: [djId], references: [id])
 user User @relation(fields: [userId], references: [id])
 recovery BookingRecovery[] @relation("OriginalBooking")
 review Review?
+equipmentAssignments EquipmentAssignment[]
+performanceMetrics DjPerformanceMetric[]
 
 @@index([status])
 @@index([djId])
@@ -232,6 +234,20 @@ stripeConnectAccountId String? // Stripe Connect account ID for payouts
 stripeConnectAccountStatus String? // Status of Connect account (pending, active, restricted)
 stripeConnectAccountEnabled Boolean @default(false) // Whether Connect account is ready for payouts
 stripeConnectAccountCreatedAt DateTime? // When Connect account was created
+// Employment fields
+employmentType DjEmploymentType @default(CONTRACTOR)
+employmentStartDate DateTime?
+employmentEndDate DateTime?
+hourlyRate Decimal? // Hourly rate for part-time employees
+eventBonus Decimal? // Bonus per completed event
+maxWeeklyHours Int @default(25) // Maximum hours per week (stay under ACA threshold)
+backgroundCheckCompleted Boolean @default(false)
+backgroundCheckDate DateTime?
+equipmentTrainingCompleted Boolean @default(false)
+equipmentTrainingDate DateTime?
+performanceRating Decimal @default(0) // 0-5 star rating
+totalEventsCompleted Int @default(0)
+lastActiveDate DateTime?
 bookings Booking[]
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 djAddons DjAddon[]
@@ -242,6 +258,10 @@ youtubeVideos DjYouTubeVideo[]
 eventPhotos EventPhoto[]
 pricing Pricing[]
 reviews Review[]
+availability DjAvailability[]
+equipmentAssignments EquipmentAssignment[]
+payrollRecords PayrollRecord[]
+performanceMetrics DjPerformanceMetric[]
 }
 
 model Review {
@@ -629,6 +649,116 @@ subscription Subscription @relation(fields: [subscriptionId], references: [id], 
 @@index([subscriptionId])
 }
 
+model DjAvailability {
+id String @id @default(uuid())
+djId String
+dayOfWeek Int // 0=Sunday, 1=Monday, etc.
+startTime String // "18:00" format
+endTime String // "23:00" format
+isAvailable Boolean @default(true)
+effectiveDate DateTime @default(now())
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+dj DjProfile @relation(fields: [djId], references: [id], onDelete: Cascade)
+
+@@index([djId])
+@@index([dayOfWeek])
+}
+
+model EquipmentItem {
+id String @id @default(uuid())
+name String
+category String // "Speaker", "Microphone", "Mixer", etc.
+brand String?
+model String?
+serialNumber String?
+purchaseDate DateTime?
+purchaseCost Decimal?
+condition String @default("GOOD") // "EXCELLENT", "GOOD", "FAIR", "NEEDS_REPAIR"
+location String? // Storage location
+isActive Boolean @default(true)
+maintenanceNotes String?
+lastMaintenanceDate DateTime?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+assignments EquipmentAssignment[]
+
+@@index([category])
+@@index([isActive])
+}
+
+model EquipmentAssignment {
+id String @id @default(uuid())
+equipmentId String
+djId String
+bookingId String?
+assignedDate DateTime @default(now())
+returnedDate DateTime?
+condition String? // Condition when returned
+notes String?
+createdAt DateTime @default(now())
+equipment EquipmentItem @relation(fields: [equipmentId], references: [id])
+dj DjProfile @relation(fields: [djId], references: [id])
+booking Booking? @relation(fields: [bookingId], references: [id])
+
+@@index([equipmentId])
+@@index([djId])
+@@index([bookingId])
+@@index([assignedDate])
+}
+
+model PayrollRecord {
+id String @id @default(uuid())
+djId String
+payPeriodStart DateTime
+payPeriodEnd DateTime
+hoursWorked Decimal
+eventsCompleted Int @default(0)
+hourlyPay Decimal
+eventBonuses Decimal @default(0)
+grossPay Decimal
+federalTax Decimal @default(0)
+stateTax Decimal @default(0)
+socialSecurity Decimal @default(0)
+medicare Decimal @default(0)
+employerSSN Decimal @default(0) // Employer portion of Social Security
+employerMedicare Decimal @default(0) // Employer portion of Medicare
+employerFUTA Decimal @default(0) // Federal unemployment tax
+employerSUTA Decimal @default(0) // State unemployment tax
+workersComp Decimal @default(0) // Workers compensation
+totalEmployerTax Decimal @default(0)
+netPay Decimal
+payDate DateTime?
+status PayrollStatus @default(PENDING)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+dj DjProfile @relation(fields: [djId], references: [id])
+
+@@index([djId])
+@@index([payPeriodStart])
+@@index([status])
+}
+
+model DjPerformanceMetric {
+id String @id @default(uuid())
+djId String
+bookingId String
+clientRating Int? // 1-5 stars
+onTimeArrival Boolean?
+equipmentFunctional Boolean?
+professionalAppearance Boolean?
+clientFeedback String?
+adminNotes String?
+createdAt DateTime @default(now())
+dj DjProfile @relation(fields: [djId], references: [id])
+booking Booking @relation(fields: [bookingId], references: [id])
+
+@@unique([djId, bookingId])
+@@index([djId])
+@@index([clientRating])
+}
+
 enum Role {
 ADMIN
 CLIENT
@@ -692,4 +822,18 @@ NONE
 OPEN
 RESOLVED
 ESCALATED
+}
+
+enum DjEmploymentType {
+CONTRACTOR
+PART_TIME_W2
+FULL_TIME_W2
+TERMINATED
+}
+
+enum PayrollStatus {
+PENDING
+PROCESSED
+PAID
+CANCELLED
 }
