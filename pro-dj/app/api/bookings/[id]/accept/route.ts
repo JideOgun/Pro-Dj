@@ -109,25 +109,58 @@ export async function PATCH(
     );
   }
 
-  // Calculate platform fee (10% of quoted price)
-  const platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
-  const djPayoutCents = booking.quotedPriceCents - platformFeeCents;
-
-  // Check if DJ has Connect account for payouts
+  // Get DJ details to determine employment type and fee structure
   let djConnectAccountId = null;
+  let platformFeeCents: number;
+  let djPayoutCents: number;
+  let isEmployee = false;
+
   if (djId) {
     const djProfile = await prisma.djProfile.findUnique({
       where: { id: djId },
-      select: { stripeConnectAccountId: true, stripeConnectAccountEnabled: true },
+      select: { 
+        stripeConnectAccountId: true, 
+        stripeConnectAccountEnabled: true,
+        employmentType: true,
+        hourlyRate: true,
+        eventBonus: true,
+      },
     });
     
-    if (!djProfile?.stripeConnectAccountId || !djProfile.stripeConnectAccountEnabled) {
+    if (!djProfile) {
       return NextResponse.json(
-        { ok: false, error: "DJ must complete Stripe Connect onboarding to accept bookings" },
-        { status: 400 }
+        { ok: false, error: "DJ not found" },
+        { status: 404 }
       );
     }
-    djConnectAccountId = djProfile.stripeConnectAccountId;
+
+    isEmployee = ["PART_TIME_W2", "FULL_TIME_W2"].includes(djProfile.employmentType);
+
+    if (isEmployee) {
+      // Employee: Higher platform fee (30-40%)
+      platformFeeCents = Math.round(booking.quotedPriceCents * 0.35); // 35% for employees
+      djPayoutCents = booking.quotedPriceCents - platformFeeCents;
+      
+      // Employees don't need Stripe Connect for immediate payouts (handled via payroll)
+      djConnectAccountId = null;
+    } else {
+      // Contractor: Lower platform fee (10%)
+      platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
+      djPayoutCents = booking.quotedPriceCents - platformFeeCents;
+      
+      // Contractors need Stripe Connect for direct payouts
+      if (!djProfile?.stripeConnectAccountId || !djProfile.stripeConnectAccountEnabled) {
+        return NextResponse.json(
+          { ok: false, error: "DJ must complete Stripe Connect onboarding to accept bookings" },
+          { status: 400 }
+        );
+      }
+      djConnectAccountId = djProfile.stripeConnectAccountId;
+    }
+  } else {
+    // Default contractor rates if no DJ assigned yet
+    platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
+    djPayoutCents = booking.quotedPriceCents - platformFeeCents;
   }
 
   // Create a Checkout Session for the quoted amount with application fee
@@ -155,6 +188,7 @@ export async function PATCH(
       djId: djId || "",
       platformFeeCents: platformFeeCents.toString(),
       djPayoutCents: djPayoutCents.toString(),
+      isEmployee: isEmployee.toString(),
     },
     payment_intent_data: djConnectAccountId ? {
       application_fee_amount: platformFeeCents,
