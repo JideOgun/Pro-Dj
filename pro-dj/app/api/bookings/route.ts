@@ -174,6 +174,7 @@ export async function POST(req: Request) {
     const endTime = String(body?.endTime ?? "").trim();
     const message = String(body?.message ?? "").trim();
     const djId = body?.djId ? String(body.djId).trim() : null;
+    const packageId = body?.packageId ? String(body.packageId).trim() : null;
     const extra = body?.extra ?? null; // contains selectedAddons and other details
     const preferredGenres = body?.preferredGenres ?? [];
     const musicStyle = String(body?.musicStyle ?? "").trim();
@@ -198,20 +199,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get Pro-DJ standardized pricing for this event type
+    // Get Pro-DJ standardized pricing for this event type and package
     let quotedPriceCents = 0;
     let proDjServicePricingId: string | null = null;
     let selectedAddons: string[] = [];
 
+    if (!packageId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "⚠️ Please select a package for your event.",
+        },
+        { status: 400 }
+      );
+    }
+
     const servicePricing = await prisma.proDjServicePricing.findUnique({
-      where: { eventType: bookingType },
+      where: { id: packageId },
     });
 
     if (!servicePricing || !servicePricing.isActive) {
       return NextResponse.json(
         {
           ok: false,
-          error: `🎵 Sorry, we don't currently offer Pro-DJ services for ${bookingType} events. Please contact us for custom pricing.`,
+          error: `🎵 Sorry, the selected package is not available. Please refresh and try again.`,
         },
         { status: 400 }
       );
@@ -225,11 +236,28 @@ export async function POST(req: Request) {
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     const billableHours = Math.max(durationHours, servicePricing.minimumHours);
 
-    // Base price = Pro-DJ hourly rate × billable hours × region multiplier
-    const regionalRate = Math.round(
-      servicePricing.basePricePerHour * servicePricing.regionMultiplier
-    );
-    quotedPriceCents = regionalRate * billableHours;
+    // Use package-based pricing if available, otherwise fall back to hourly
+    if (servicePricing.basePriceCents) {
+      // Package-based pricing
+      quotedPriceCents = Math.round(
+        servicePricing.basePriceCents * servicePricing.regionMultiplier
+      );
+    } else if (servicePricing.basePricePerHour) {
+      // Hourly-based pricing (fallback)
+      const regionalRate = Math.round(
+        servicePricing.basePricePerHour * servicePricing.regionMultiplier
+      );
+      quotedPriceCents = regionalRate * billableHours;
+    } else {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "🎵 Sorry, pricing information is not available for this package.",
+        },
+        { status: 400 }
+      );
+    }
 
     // Add Pro-DJ add-on prices if any
     if (extra?.selectedAddons) {
@@ -473,18 +501,20 @@ export async function POST(req: Request) {
     );
   } catch (error: unknown) {
     console.error("POST /api/bookings error:", error);
-    
+
     // Provide user-friendly error messages
     let errorMessage = "Unable to submit booking request. Please try again.";
     let statusCode = 500;
-    
+
     if (error instanceof Error) {
       // Handle specific Prisma errors
       if (error.message.includes("Invalid value for argument")) {
-        errorMessage = "There was an issue with the booking data. Please check your event details and try again.";
+        errorMessage =
+          "There was an issue with the booking data. Please check your event details and try again.";
         statusCode = 400;
       } else if (error.message.includes("Unique constraint")) {
-        errorMessage = "A booking already exists for this time slot. Please choose a different time.";
+        errorMessage =
+          "A booking already exists for this time slot. Please choose a different time.";
         statusCode = 409;
       } else if (error.message.includes("Required field")) {
         errorMessage = "Please fill in all required fields and try again.";
@@ -494,7 +524,67 @@ export async function POST(req: Request) {
         console.error("Detailed error:", error.message);
       }
     }
-    
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: errorMessage,
+      },
+      { status: statusCode }
+    );
+  }
+}
+
+
+    if (error instanceof Error) {
+      // Handle specific Prisma errors
+      if (error.message.includes("Invalid value for argument")) {
+        errorMessage =
+          "There was an issue with the booking data. Please check your event details and try again.";
+        statusCode = 400;
+      } else if (error.message.includes("Unique constraint")) {
+        errorMessage =
+          "A booking already exists for this time slot. Please choose a different time.";
+        statusCode = 409;
+      } else if (error.message.includes("Required field")) {
+        errorMessage = "Please fill in all required fields and try again.";
+        statusCode = 400;
+      } else {
+        // Log the actual error for debugging
+        console.error("Detailed error:", error.message);
+      }
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: errorMessage,
+      },
+      { status: statusCode }
+    );
+  }
+}
+
+
+    if (error instanceof Error) {
+      // Handle specific Prisma errors
+      if (error.message.includes("Invalid value for argument")) {
+        errorMessage =
+          "There was an issue with the booking data. Please check your event details and try again.";
+        statusCode = 400;
+      } else if (error.message.includes("Unique constraint")) {
+        errorMessage =
+          "A booking already exists for this time slot. Please choose a different time.";
+        statusCode = 409;
+      } else if (error.message.includes("Required field")) {
+        errorMessage = "Please fill in all required fields and try again.";
+        statusCode = 400;
+      } else {
+        // Log the actual error for debugging
+        console.error("Detailed error:", error.message);
+      }
+    }
+
     return NextResponse.json(
       {
         ok: false,

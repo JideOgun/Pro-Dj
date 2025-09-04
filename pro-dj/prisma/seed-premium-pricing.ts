@@ -8,34 +8,120 @@ async function seedPremiumPricing() {
   // First, create all add-ons and get their IDs
   const addonData = [
     // Core Services
-    { name: "Professional Sound System", description: "High-quality sound system for events", priceFixed: 0, category: "Core Services" },
-    { name: "Wireless Microphone Package", description: "Professional wireless microphones for speeches and announcements", priceFixed: 10000, category: "Sound" },
-    { name: "Basic Lighting Setup", description: "Essential lighting for events", priceFixed: 0, category: "Lighting" },
-    { name: "Event Coordination", description: "Professional event coordination and MC services", priceFixed: 0, category: "Core Services" },
-    { name: "Setup & Breakdown", description: "Complete setup and teardown service", priceFixed: 0, category: "Core Services" },
-    
+    {
+      name: "Professional Sound System",
+      description: "High-quality sound system for events",
+      priceFixed: 0,
+      category: "Core Services",
+    },
+    {
+      name: "Wireless Microphone Package",
+      description:
+        "Professional wireless microphones for speeches and announcements",
+      priceFixed: 10000,
+      category: "Sound",
+    },
+    {
+      name: "Basic Lighting Setup",
+      description: "Essential lighting for events",
+      priceFixed: 0,
+      category: "Lighting",
+    },
+    {
+      name: "Event Coordination",
+      description: "Professional event coordination and MC services",
+      priceFixed: 0,
+      category: "Core Services",
+    },
+    {
+      name: "Setup & Breakdown",
+      description: "Complete setup and teardown service",
+      priceFixed: 0,
+      category: "Core Services",
+    },
+
     // Wedding Specific
-    { name: "Wedding Planning Consultation", description: "Pre-event consultation for timeline and music selection", priceFixed: 15000, category: "Consultation" },
-    { name: "Ceremony & Reception Package", description: "Complete coverage for both ceremony and reception", priceFixed: 25000, category: "Wedding Services" },
-    { name: "Extended Planning Consultation", description: "Extended consultation for complex weddings", priceFixed: 25000, category: "Consultation" },
-    
+    {
+      name: "Wedding Planning Consultation",
+      description: "Pre-event consultation for timeline and music selection",
+      priceFixed: 15000,
+      category: "Consultation",
+    },
+    {
+      name: "Ceremony & Reception Package",
+      description: "Complete coverage for both ceremony and reception",
+      priceFixed: 25000,
+      category: "Wedding Services",
+    },
+    {
+      name: "Extended Planning Consultation",
+      description: "Extended consultation for complex weddings",
+      priceFixed: 25000,
+      category: "Consultation",
+    },
+
     // Premium Services
-    { name: "Premium Sound System", description: "High-end speakers and subwoofers for large venues", priceFixed: 50000, category: "Sound" },
-    { name: "Wireless Decor Uplighting", description: "Professional wireless LED uplighting for venue ambiance", priceFixed: 40000, category: "Lighting" },
-    { name: "Backup Equipment", description: "Full backup sound system for mission-critical events", priceFixed: 30000, category: "Equipment" },
-    { name: "Custom Playlist Creation", description: "Personalized playlist creation and consultation", priceFixed: 10000, category: "Consultation" },
-    
+    {
+      name: "Premium Sound System",
+      description: "High-end speakers and subwoofers for large venues",
+      priceFixed: 50000,
+      category: "Sound",
+    },
+    {
+      name: "Wireless Decor Uplighting",
+      description: "Professional wireless LED uplighting for venue ambiance",
+      priceFixed: 40000,
+      category: "Lighting",
+    },
+    {
+      name: "Backup Equipment",
+      description: "Full backup sound system for mission-critical events",
+      priceFixed: 30000,
+      category: "Equipment",
+    },
+    {
+      name: "Custom Playlist Creation",
+      description: "Personalized playlist creation and consultation",
+      priceFixed: 10000,
+      category: "Consultation",
+    },
+
     // Additional Add-ons
-    { name: "Karaoke Setup", description: "Professional karaoke system with song library", priceFixed: 20000, category: "Entertainment" },
-    { name: "Photo Booth Integration", description: "Complete photo booth setup with music coordination", priceFixed: 35000, category: "Entertainment" },
-    { name: "Digital Monogram", description: "Custom digital monogram projection for special moments", priceFixed: 15000, category: "Special Effects" },
-    { name: "Projector & Slideshow", description: "Professional projector setup for slideshows and videos", priceFixed: 25000, category: "Equipment" },
-    { name: "Song Customization", description: "Custom song editing and remixing for special moments", priceFixed: 10000, category: "Consultation" },
+    {
+      name: "Karaoke Setup",
+      description: "Professional karaoke system with song library",
+      priceFixed: 20000,
+      category: "Entertainment",
+    },
+    {
+      name: "Photo Booth Integration",
+      description: "Complete photo booth setup with music coordination",
+      priceFixed: 35000,
+      category: "Entertainment",
+    },
+    {
+      name: "Digital Monogram",
+      description: "Custom digital monogram projection for special moments",
+      priceFixed: 15000,
+      category: "Special Effects",
+    },
+    {
+      name: "Projector & Slideshow",
+      description: "Professional projector setup for slideshows and videos",
+      priceFixed: 25000,
+      category: "Equipment",
+    },
+    {
+      name: "Song Customization",
+      description: "Custom song editing and remixing for special moments",
+      priceFixed: 10000,
+      category: "Consultation",
+    },
   ];
 
   // Create add-ons and store their IDs
   const addonIds: { [key: string]: string } = {};
-  
+
   for (const addon of addonData) {
     const existing = await prisma.proDjAddon.findFirst({
       where: { name: addon.name, category: addon.category },
@@ -62,7 +148,8 @@ async function seedPremiumPricing() {
       basePriceCents: 200000, // $2,000 - 5-hour package
       regionMultiplier: 1.3,
       durationHours: 5,
-      description: "Complete wedding coverage including ceremony, cocktail hour, and reception. Includes microphones for officiant and toasts, reception coordination as MC, and planning consultation.",
+      description:
+        "Complete wedding coverage including ceremony, cocktail hour, and reception. Includes microphones for officiant and toasts, reception coordination as MC, and planning consultation.",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Wireless Microphone Package"],
@@ -80,7 +167,8 @@ async function seedPremiumPricing() {
       basePriceCents: 320000, // $3,200 - 8-hour package
       regionMultiplier: 1.3,
       durationHours: 8,
-      description: "Full-day wedding experience with extended coverage and premium services. Perfect for larger weddings and those wanting extra time for setup and coordination.",
+      description:
+        "Full-day wedding experience with extended coverage and premium services. Perfect for larger weddings and those wanting extra time for setup and coordination.",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Wireless Microphone Package"],
@@ -104,7 +192,8 @@ async function seedPremiumPricing() {
       regionMultiplier: 1.2,
       minimumHours: 4,
       durationHours: 4,
-      description: "Premium corporate event DJ service for meetings, conferences, and company parties with professional presentation and coordination",
+      description:
+        "Premium corporate event DJ service for meetings, conferences, and company parties with professional presentation and coordination",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Wireless Microphone Package"],
@@ -121,7 +210,8 @@ async function seedPremiumPricing() {
       regionMultiplier: 1.0,
       minimumHours: 4,
       durationHours: 4,
-      description: "Premium birthday party DJ service for all ages with personalized music selection and party coordination",
+      description:
+        "Premium birthday party DJ service for all ages with personalized music selection and party coordination",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Wireless Microphone Package"],
@@ -138,7 +228,8 @@ async function seedPremiumPricing() {
       regionMultiplier: 1.1,
       minimumHours: 4,
       durationHours: 4,
-      description: "Premium private party DJ service for intimate gatherings with personalized music selection and professional coordination",
+      description:
+        "Premium private party DJ service for intimate gatherings with personalized music selection and professional coordination",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Wireless Microphone Package"],
@@ -155,7 +246,8 @@ async function seedPremiumPricing() {
       regionMultiplier: 1.0,
       minimumHours: 3,
       durationHours: 3,
-      description: "Professional club DJ service with high-energy performance - base rate since venues provide lighting and equipment",
+      description:
+        "Professional club DJ service with high-energy performance - base rate since venues provide lighting and equipment",
       includedAddonIds: [
         addonIds["Professional Sound System"],
         addonIds["Event Coordination"],
@@ -167,7 +259,7 @@ async function seedPremiumPricing() {
     // Seed service pricing
     for (const pricing of servicePricing) {
       const { includedAddonIds, ...pricingData } = pricing;
-      
+
       const created = await prisma.proDjServicePricing.upsert({
         where: {
           eventType_packageType: {
@@ -185,9 +277,9 @@ async function seedPremiumPricing() {
           where: { id: created.id },
           data: {
             proDjAddons: {
-              connect: includedAddonIds.map(id => ({ id }))
-            }
-          }
+              connect: includedAddonIds.map((id) => ({ id })),
+            },
+          },
         });
       }
     }

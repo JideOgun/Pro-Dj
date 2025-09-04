@@ -71,15 +71,17 @@ function BookPageContent() {
     description: string;
     includedAddons: string[];
   } | null>(null);
-  const [availablePackages, setAvailablePackages] = useState<Array<{
-    id: string;
-    packageType: string;
-    packageName: string;
-    basePriceCents: number;
-    durationHours: number;
-    description: string;
-    includedAddons: string[];
-  }>>([]);
+  const [availablePackages, setAvailablePackages] = useState<
+    Array<{
+      id: string;
+      packageType: string;
+      packageName: string;
+      basePriceCents: number;
+      durationHours: number;
+      description: string;
+      includedAddons: string[];
+    }>
+  >([]);
 
   // DJ preference (optional) - client can express preference but admin assigns
   const [preferredDj, setPreferredDj] = useState<{
@@ -217,18 +219,80 @@ function BookPageContent() {
     }
 
     try {
-      const response = await fetch(`/api/pricing/pro-dj?eventType=${bookingType}`);
+      const response = await fetch(
+        `/api/pricing/pro-dj?eventType=${bookingType}`
+      );
       if (response.ok) {
         const data = await response.json();
         setAvailablePackages(data.packages || []);
-        
+
         // Auto-select the first package if none selected
         if (data.packages && data.packages.length > 0 && !selectedPackage) {
-          setSelectedPackage(data.packages[0]);
+          handlePackageSelection(data.packages[0]);
         }
       }
     } catch (error) {
       console.error("Error loading packages:", error);
+    }
+  };
+
+  // Handle package selection with end time calculation
+  const handlePackageSelection = (pkg: {
+    id: string;
+    packageType: string;
+    packageName: string;
+    durationHours: number;
+    includedAddons: string[];
+  }) => {
+    console.log("Package selected:", pkg);
+    setSelectedPackage(pkg);
+
+    // If start time is already set and this is a package-based event, calculate end time
+    if (startTime && pkg.durationHours) {
+      calculateEndTimeFromPackage(startTime, pkg);
+    }
+  };
+
+  // Calculate end time based on start time and package duration
+  const calculateEndTimeFromPackage = (
+    startTimeValue: string,
+    pkg: {
+      id: string;
+      packageType: string;
+      packageName: string;
+      durationHours: number;
+      includedAddons: string[];
+    }
+  ) => {
+    console.log("Calculating end time from package:", {
+      startTime: startTimeValue,
+      packageDuration: pkg.durationHours,
+      packageName: pkg.packageName,
+    });
+
+    // Parse start time (format: HH:MM)
+    const [hours, minutes] = startTimeValue.split(":").map(Number);
+    const startTimeDate = new Date();
+    startTimeDate.setHours(hours, minutes, 0, 0);
+
+    // Add package duration
+    const endTimeDate = new Date(
+      startTimeDate.getTime() + pkg.durationHours * 60 * 60 * 1000
+    );
+
+    // Format as HH:MM
+    const endTimeString = endTimeDate.toTimeString().slice(0, 5);
+    console.log("Calculated end time:", endTimeString);
+    setEndTime(endTimeString);
+  };
+
+  // Handle start time change with end time calculation
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime);
+
+    // If a package is selected and it has duration, calculate end time
+    if (selectedPackage && selectedPackage.durationHours) {
+      calculateEndTimeFromPackage(newStartTime, selectedPackage);
     }
   };
 
@@ -311,6 +375,13 @@ function BookPageContent() {
       setSelectedAddons(selectedPackage.includedAddons);
     }
   }, [selectedPackage]);
+
+  // Auto-calculate end time when package or start time changes (only for package-based events)
+  useEffect(() => {
+    if (selectedPackage && startTime && selectedPackage.durationHours) {
+      calculateEndTimeFromPackage(startTime, selectedPackage);
+    }
+  }, [selectedPackage, startTime]);
 
   // Load available DJs when event details change
   useEffect(() => {
@@ -828,6 +899,7 @@ function BookPageContent() {
           endTime: `${eventDate}T${endTime}`,
           message,
           djId: preferredDjId, // Optional preference - admin will make final assignment
+          packageId: selectedPackage?.id, // Include the selected package ID
           extra: {
             contactEmail,
             clientEquipment,
@@ -953,7 +1025,7 @@ function BookPageContent() {
                             ? "border-violet-500 bg-violet-900/20"
                             : "border-gray-600 bg-gray-700 hover:border-gray-500"
                         }`}
-                        onClick={() => setSelectedPackage(pkg)}
+                        onClick={() => handlePackageSelection(pkg)}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -975,7 +1047,9 @@ function BookPageContent() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <span>🎵</span>
-                                <span>{pkg.includedAddons.length} included services</span>
+                                <span>
+                                  {pkg.includedAddons.length} included services
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -1018,7 +1092,7 @@ function BookPageContent() {
                   <input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
                     required
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
@@ -1026,25 +1100,85 @@ function BookPageContent() {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     End Time *
+                    {selectedPackage && selectedPackage.durationHours && (
+                      <span className="text-xs text-violet-400 ml-2">
+                        (Auto-calculated from {selectedPackage.durationHours}h
+                        package)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     required
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    disabled={
+                      !!(selectedPackage && selectedPackage.durationHours)
+                    }
+                    className={`w-full border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                      selectedPackage && selectedPackage.durationHours
+                        ? "bg-gray-600 border-gray-500 cursor-not-allowed"
+                        : "bg-gray-700 border-gray-600"
+                    }`}
                   />
+                  {selectedPackage && selectedPackage.durationHours && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      End time automatically set based on{" "}
+                      {selectedPackage.packageName} duration
+                    </p>
+                  )}
+                  {selectedPackage && !selectedPackage.durationHours && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Set your preferred end time for this hourly-based event
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Event Duration Display */}
               {totalEventDuration > 0 && (
-                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                  <div className="text-blue-200 text-sm">
+                <div
+                  className={`border rounded-lg p-4 ${
+                    selectedPackage &&
+                    selectedPackage.durationHours &&
+                    totalEventDuration === selectedPackage.durationHours
+                      ? "bg-green-900/20 border-green-500/30"
+                      : "bg-blue-900/20 border-blue-500/30"
+                  }`}
+                >
+                  <div
+                    className={`text-sm ${
+                      selectedPackage &&
+                      selectedPackage.durationHours &&
+                      totalEventDuration === selectedPackage.durationHours
+                        ? "text-green-200"
+                        : "text-blue-200"
+                    }`}
+                  >
                     Event Duration:{" "}
                     <span className="font-semibold">
                       {totalEventDuration} hours
                     </span>
+                    {selectedPackage &&
+                      selectedPackage.durationHours &&
+                      totalEventDuration === selectedPackage.durationHours && (
+                        <span className="text-green-300 ml-2">
+                          ✓ Matches {selectedPackage.packageName} duration
+                        </span>
+                      )}
+                    {selectedPackage &&
+                      selectedPackage.durationHours &&
+                      totalEventDuration !== selectedPackage.durationHours && (
+                        <span className="text-yellow-300 ml-2">
+                          ⚠️ Does not match package duration (
+                          {selectedPackage.durationHours}h)
+                        </span>
+                      )}
+                    {selectedPackage && !selectedPackage.durationHours && (
+                      <span className="text-blue-300 ml-2">
+                        Hourly-based event
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

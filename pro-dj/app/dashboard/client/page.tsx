@@ -83,12 +83,6 @@ export default async function ClientDashboardPage() {
                       src={user.profileImage || user.userMedia[0]?.url}
                       alt="Profile"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        e.currentTarget.nextElementSibling?.classList?.remove(
-                          "hidden"
-                        );
-                      }}
                     />
                     <div className="w-full h-full flex items-center justify-center hidden">
                       <span className="text-2xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
