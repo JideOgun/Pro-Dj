@@ -18,6 +18,35 @@ export async function POST(req: NextRequest) {
     
     // Run the specific SQL migrations that are missing
     const migrations = [
+      // Update BookingStatus enum to include new values
+      `DO $$ 
+      BEGIN
+        -- Add new enum values if they don't exist
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'PENDING_ADMIN_REVIEW' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'PENDING_ADMIN_REVIEW';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'ADMIN_REVIEWING' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'ADMIN_REVIEWING';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'DJ_ASSIGNED' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'DJ_ASSIGNED';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'COMPLETED' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'COMPLETED';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'CANCELLED' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'CANCELLED';
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'DISPUTED' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'BookingStatus')) THEN
+          ALTER TYPE "BookingStatus" ADD VALUE 'DISPUTED';
+        END IF;
+      END $$;`,
+      
       // Add stripeConnectAccountId and other missing fields to DjProfile
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "stripeConnectAccountId" TEXT;`,
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "stripeConnectAccountStatus" TEXT;`,
