@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     prisma.user.count(),
     prisma.booking.count(),
-    prisma.booking.count({ where: { status: "PENDING" } }),
+    prisma.booking.count({ where: { status: "PENDING_ADMIN_REVIEW" } }),
     prisma.booking.count({ where: { status: "CONFIRMED" } }),
     prisma.user.count({ where: { role: "DJ" } }),
     prisma.user.count({ where: { role: "CLIENT" } }),
@@ -101,14 +101,20 @@ export default async function AdminDashboardPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "PENDING":
+      case "PENDING_ADMIN_REVIEW":
         return "bg-yellow-900/40 text-yellow-200";
-      case "ACCEPTED":
+      case "ADMIN_REVIEWING":
+        return "bg-orange-900/40 text-orange-200";
+      case "DJ_ASSIGNED":
         return "bg-blue-900/40 text-blue-200";
       case "CONFIRMED":
         return "bg-green-900/40 text-green-200";
-      case "DECLINED":
+      case "CANCELLED":
         return "bg-red-900/40 text-red-200";
+      case "COMPLETED":
+        return "bg-green-900/40 text-green-200";
+      case "DISPUTED":
+        return "bg-purple-900/40 text-purple-200";
       default:
         return "bg-gray-800 text-gray-200";
     }
