@@ -104,9 +104,9 @@ export default async function AdminBookingsPage() {
           </div>
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="text-2xl font-bold text-red-400">
-              {bookings.filter((b) => b.status === "DECLINED").length}
+              {bookings.filter((b) => b.status === "CANCELLED").length}
             </div>
-            <div className="text-gray-400 text-sm">Declined</div>
+            <div className="text-gray-400 text-sm">Cancelled</div>
           </div>
         </div>
 
