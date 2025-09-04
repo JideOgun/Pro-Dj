@@ -56,24 +56,49 @@ export const AVAILABLE_ADDONS: Addon[] = [
 
 export const BOOKING_CONFIG = {
   Wedding: {
-    extraFields: ["venueName", "guestCount"],
-    recommendedAddons: ["lighting", "setup", "mc"], // Suggested for weddings
+    extraFields: ["venueName", "guestCount", "ceremonyTime", "receptionTime"],
+    recommendedAddons: [
+      "lighting",
+      "setup",
+      "mc",
+      "Wedding Planning Consultation",
+      "Wireless Decor Uplighting",
+      "Photo Booth Integration",
+    ], // Premium wedding services
+  },
+  Corporate: {
+    extraFields: ["companyName", "eventPurpose", "attendeeCount"],
+    recommendedAddons: [
+      "setup",
+      "mc",
+      "Corporate Presentation Support",
+      "Projector & Slideshow",
+      "Wireless Decor Uplighting",
+    ], // Premium corporate services
+  },
+  "Private Party": {
+    extraFields: ["partyType", "guestCount", "venueType"],
+    recommendedAddons: [
+      "lighting",
+      "setup",
+      "Custom Playlist Creation",
+      "Wireless Decor Uplighting",
+      "Karaoke Setup",
+    ], // Premium private party services
+  },
+  Birthday: {
+    extraFields: ["age", "partyTheme", "guestCount"],
+    recommendedAddons: [
+      "lighting",
+      "setup",
+      "Karaoke Setup",
+      "Wireless Decor Uplighting",
+      "Song Customization",
+    ], // Premium birthday services
   },
   Club: {
     extraFields: ["clubName"],
-    recommendedAddons: ["setup"], // Clubs often need premium equipment
-  },
-  Corporate: {
-    extraFields: ["companyName"],
-    recommendedAddons: ["setup", "mc"], // Corporate events often need MC
-  },
-  Birthday: {
-    extraFields: ["age"],
-    recommendedAddons: ["lighting"], // Lighting adds to party atmosphere
-  },
-  "Private Party": {
-    extraFields: [],
-    recommendedAddons: ["lighting", "setup"], // Depends on venue
+    recommendedAddons: ["setup"], // Clubs have their own equipment
   },
 } as const;
 

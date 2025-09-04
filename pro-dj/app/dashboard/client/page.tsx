@@ -78,11 +78,26 @@ export default async function ClientDashboardPage() {
             <Link href="/dashboard/profile" className="relative group">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-700 border-4 border-violet-500/30 shadow-lg group-hover:border-violet-400/50 transition-all duration-200">
                 {user?.profileImage || user?.userMedia[0]?.url ? (
-                  <img
-                    src={user.profileImage || user.userMedia[0]?.url}
-                    alt="Profile"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
+                  <>
+                    <img
+                      src={user.profileImage || user.userMedia[0]?.url}
+                      alt="Profile"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.classList?.remove(
+                          "hidden"
+                        );
+                      }}
+                    />
+                    <div className="w-full h-full flex items-center justify-center hidden">
+                      <span className="text-2xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
+                        {session.user.name?.charAt(0) ||
+                          session.user.email?.charAt(0) ||
+                          "U"}
+                      </span>
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="text-2xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
@@ -209,7 +224,7 @@ export default async function ClientDashboardPage() {
               href="/book"
               className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm"
             >
-              New Booking
+              Book Pro-DJ Service
             </Link>
           </div>
 
@@ -224,7 +239,7 @@ export default async function ClientDashboardPage() {
                 href="/book"
                 className="bg-violet-600 hover:bg-violet-700 px-6 py-3 rounded-lg inline-block"
               >
-                Book Now
+                Book Pro-DJ Service
               </Link>
             </div>
           ) : (

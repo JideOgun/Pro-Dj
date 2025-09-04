@@ -381,7 +381,7 @@ export default function DjContractorAgreementModal({
                           className="w-4 h-4 text-violet-600 bg-gray-700 border-gray-600 focus:ring-violet-500 focus:ring-2"
                         />
                         <span className="text-gray-300 text-sm">
-                          Sole Proprietor (using my personal SSN)
+                          Individual Subcontractor (using my personal SSN)
                         </span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">

@@ -22,7 +22,7 @@ export default function LegalIndexPage() {
         </div>
 
         {/* Legal Documents Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Link href="/legal/terms" className="group">
             <div className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-violet-500">
               <div className="flex items-center mb-4">
@@ -101,6 +101,38 @@ export default function LegalIndexPage() {
               </p>
               <div className="flex items-center text-violet-400 text-sm">
                 <span>Read Refund Policy</span>
+                <svg
+                  className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/legal/subcontractor-agreement" className="group">
+            <div className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-orange-500">
+              <div className="flex items-center mb-4">
+                <FileText className="w-8 h-8 text-orange-400 mr-3" />
+                <h2 className="text-xl font-semibold text-orange-300 group-hover:text-orange-200">
+                  Subcontractor Agreement
+                </h2>
+              </div>
+              <p className="text-gray-300 mb-4">
+                Independent contractor agreement for DJ subcontractors,
+                including compensation structure, training requirements, and
+                performance standards.
+              </p>
+              <div className="flex items-center text-orange-400 text-sm">
+                <span>Read Agreement</span>
                 <svg
                   className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform"
                   fill="none"

@@ -16,8 +16,6 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
-import { SubscriptionUpgradePrompt } from "./SubscriptionUpgradePrompt";
-import { useSubscription } from "@/hooks/useSubscription";
 
 interface MixUploadProps {
   onClose: () => void;
@@ -60,11 +58,7 @@ export default function MixUpload({
   onUploadComplete,
 }: MixUploadProps) {
   const { data: session } = useSession();
-  const {
-    hasActiveSubscription,
-    freeUploadsRemaining,
-    loading: subscriptionLoading,
-  } = useSubscription();
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [albumArt, setAlbumArt] = useState<File | null>(null);
   const [mixDetails, setMixDetails] = useState<MixDetails>({
@@ -460,61 +454,6 @@ export default function MixUpload({
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Subscription Check */}
-            {!subscriptionLoading &&
-              !hasActiveSubscription &&
-              freeUploadsRemaining === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg"
-                >
-                  <div className="text-center">
-                    <div className="text-amber-800 text-lg font-semibold mb-2">
-                      No Free Uploads Remaining
-                    </div>
-                    <p className="text-amber-700 mb-4">
-                      You've used all your free uploads. Upgrade to continue
-                      uploading unlimited mixes!
-                    </p>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(
-                            "/api/subscriptions/create",
-                            {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                planType: "DJ_BASIC",
-                                returnUrl: "/mixes",
-                              }),
-                            }
-                          );
-
-                          const data = await response.json();
-
-                          if (response.ok && data.url) {
-                            window.location.href = data.url;
-                          } else {
-                            toast.error(
-                              data.error ||
-                                "Failed to create subscription checkout"
-                            );
-                          }
-                        } catch (error) {
-                          toast.error("Failed to start subscription process");
-                        }
-                      }}
-                      className="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upgrade for Unlimited Uploads
-                    </button>
-                  </div>
-                </motion.div>
-              )}
 
             <div className="space-y-6">
               {/* File Upload */}

@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get current document versions (you can make this dynamic)
-    const currentTermsVersion = "1.0.0";
+    // Get current document versions (updated for subcontractor model)
+    const currentTermsVersion = "2.0.0";
     const currentPrivacyVersion = "1.0.0";
 
     // Update user with agreement information

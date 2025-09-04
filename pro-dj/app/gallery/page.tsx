@@ -1,32 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  Calendar,
-  MapPin,
-  Camera,
-  ArrowRight,
-  Trash2,
-  AlertTriangle,
-  MoreVertical,
-  Upload,
-  Star,
-  Eye,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Music,
-  Award,
-} from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+
+import { Calendar, MapPin, Camera, ArrowRight, Upload, X } from "lucide-react";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { GalleryEventCounter } from "@/components/GalleryEventCounter";
-import { GallerySubscriptionPrompt } from "@/components/GallerySubscriptionPrompt";
-import { FreeUploadCounter } from "@/components/FreeUploadCounter";
 
 interface EventPhoto {
   id: string;
@@ -51,42 +33,35 @@ interface Event {
 interface DJ {
   djId: string;
   stageName: string;
-  profileImage: string | null;
-  userProfileImage: string | null;
-  userId: string;
   events: Event[];
 }
 
-function GalleryPageContent() {
+export default function GalleryPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [djs, setDjs] = useState<DJ[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchGallery();
-  }, []);
+  // Upload functionality
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  // Handle success/cancel messages from Stripe checkout
-  useEffect(() => {
-    const success = searchParams.get("success");
-    const canceled = searchParams.get("canceled");
+  // Upload form state
+  const [uploadForm, setUploadForm] = useState({
+    title: "",
+    description: "",
+    eventName: "",
+    eventDate: "",
+    eventType: "",
+    venue: "",
+    location: "",
+    tags: "",
+    isFeatured: false,
+  });
 
-    if (success === "true") {
-      toast.success(
-        "Subscription created successfully! Welcome to Pro-DJ Premium!"
-      );
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (canceled === "true") {
-      toast.error("Subscription was canceled. You can try again anytime.");
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [searchParams]);
-
-  const fetchGallery = async () => {
+  const fetchGallery = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -102,41 +77,131 @@ function GalleryPageContent() {
         setError(data.error || "Failed to fetch gallery");
       }
     } catch (error) {
-      console.error("Error fetching gallery:", error);
       setError("Failed to fetch gallery");
+      console.error("Gallery fetch error:", error);
     } finally {
       setLoading(false);
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetchGallery();
+  }, [fetchGallery]);
+
+  // Upload functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    // Validate each file
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach((file) => {
+      if (file.size > maxSize) {
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        errors.push(
+          `${file.name}: File size (${fileSizeMB}MB) exceeds 10MB limit`
+        );
+      } else if (!file.type.startsWith("image/")) {
+        errors.push(`${file.name}: Only image files are allowed`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      toast.error(`${errors.length} file(s) rejected: ${errors.join(", ")}`);
+    }
+
+    setSelectedFiles(validFiles);
+  };
+
+  const handleFileUpload = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+
+    const uploadedPhotos: Array<{ id: string; title: string; url: string }> =
+      [];
+    const errors: string[] = [];
+
+    // Upload files one by one
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+
+      try {
+        const formData = new FormData();
+        formData.append("photo", file);
+        formData.append("title", uploadForm.title || file.name);
+        formData.append("description", uploadForm.description || "");
+        formData.append("eventName", uploadForm.eventName || "");
+        formData.append("eventDate", uploadForm.eventDate || "");
+        formData.append("eventType", uploadForm.eventType || "");
+        formData.append("venue", uploadForm.venue || "");
+        formData.append("location", uploadForm.location || "");
+        formData.append("tags", uploadForm.tags || "");
+        formData.append("isFeatured", uploadForm.isFeatured.toString());
+
+        const response = await fetch("/api/gallery", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.ok) {
+          uploadedPhotos.push(result.data);
+        } else {
+          errors.push(`${file.name}: ${result.error}`);
+        }
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        errors.push(`${file.name}: Upload failed`);
+      }
+    }
+
+    // Show results
+    if (uploadedPhotos.length > 0 && errors.length === 0) {
+      toast.success(
+        `Successfully uploaded ${uploadedPhotos.length} photo${
+          uploadedPhotos.length === 1 ? "" : "s"
+        }`
+      );
+      setShowUploadModal(false);
+      setSelectedFiles([]);
+      setUploadForm({
+        title: "",
+        description: "",
+        eventName: "",
+        eventDate: "",
+        eventType: "",
+        venue: "",
+        location: "",
+        tags: "",
+        isFeatured: false,
+      });
+      await fetchGallery();
+    } else if (uploadedPhotos.length > 0 && errors.length > 0) {
+      toast.success(
+        `Uploaded ${uploadedPhotos.length} photo${
+          uploadedPhotos.length === 1 ? "" : "s"
+        }, but ${errors.length} failed`
+      );
+    } else if (errors.length > 0) {
+      toast.error(`Upload failed: ${errors.join(", ")}`);
+    }
+
+    setUploading(false);
   };
 
   const canUpload = () => {
     return session?.user?.role === "DJ" || session?.user?.role === "ADMIN";
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "Date not specified";
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const getEventTypeColor = (eventType: string | null) => {
-    switch (eventType?.toLowerCase()) {
-      case "wedding":
-        return "bg-pink-500/20 text-pink-300 border-pink-500/30";
-      case "club":
-        return "bg-purple-500/20 text-purple-300 border-purple-500/30";
-      case "birthday":
-        return "bg-blue-500/20 text-blue-300 border-blue-500/30";
-      case "corporate":
-        return "bg-green-500/20 text-green-300 border-green-500/30";
-      case "party":
-        return "bg-orange-500/20 text-orange-300 border-orange-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-300 border-gray-500/30";
-    }
+  const handleUploadClick = () => {
+    setShowUploadModal(true);
   };
 
   if (loading) {
@@ -151,7 +216,7 @@ function GalleryPageContent() {
             <p className="text-red-400 mb-4">{error}</p>
             <button
               onClick={fetchGallery}
-              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors"
+              className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-lg"
             >
               Try Again
             </button>
@@ -177,13 +242,9 @@ function GalleryPageContent() {
 
             {/* Upload Button */}
             {canUpload() && (
-              <div className="mt-8 flex items-center gap-3">
-                <FreeUploadCounter />
-                <GalleryEventCounter />
+              <div className="mt-8">
                 <button
-                  onClick={() =>
-                    toast.success("Upload functionality coming soon")
-                  }
+                  onClick={handleUploadClick}
                   className="inline-flex items-center bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                 >
                   <Upload className="w-5 h-5 mr-2" />
@@ -210,9 +271,7 @@ function GalleryPageContent() {
             </p>
             {canUpload() && (
               <button
-                onClick={() =>
-                  toast.success("Upload functionality coming soon")
-                }
+                onClick={handleUploadClick}
                 className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center"
               >
                 <Upload className="w-5 h-5 mr-2" />
@@ -223,194 +282,232 @@ function GalleryPageContent() {
         ) : (
           <div className="space-y-12">
             {djs.map((dj) => (
-              <div
-                key={dj.djId}
-                className="bg-gray-900/50 rounded-xl overflow-hidden border border-gray-800"
-              >
+              <div key={dj.djId} className="space-y-6">
                 {/* DJ Header */}
-                <div className="p-3 border-b border-gray-800">
-                  <div className="flex items-center space-x-3">
-                    {/* DJ Profile Picture */}
-                    {dj.userProfileImage ? (
-                      <div className="relative w-10 h-10">
-                        <Image
-                          src={dj.userProfileImage}
-                          alt={dj.stageName}
-                          fill
-                          className="rounded-full object-cover border-2 border-violet-500/30"
-                          sizes="40px"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center border-2 border-violet-500/30">
-                        <Music className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-
-                    {/* DJ Information */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h2 className="text-lg font-bold text-white">
-                          {dj.stageName}
-                        </h2>
-                        <div className="flex items-center space-x-1 text-violet-400">
-                          <Award className="w-4 h-4" />
-                          <span className="text-xs font-medium">
-                            Professional DJ
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-4 text-gray-400 text-xs">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>
-                            {dj.events.length}{" "}
-                            {dj.events.length === 1 ? "Event" : "Events"}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Camera className="w-3 h-3" />
-                          <span>
-                            {dj.events.reduce(
-                              (total, event) => total + event.photos.length,
-                              0
-                            )}{" "}
-                            Photos
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-3 h-3" />
-                          <span>
-                            {dj.events.reduce(
-                              (total, event) =>
-                                total +
-                                event.photos.filter((p) => p.isFeatured).length,
-                              0
-                            )}{" "}
-                            Featured
-                          </span>
-                        </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-2xl font-bold text-violet-400">
+                      {dj.stageName}
+                    </div>
+                    <div className="flex items-center space-x-4 text-gray-400 text-sm">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>
+                          {dj.events.length}{" "}
+                          {dj.events.length === 1 ? "Event" : "Events"}
+                        </span>
                       </div>
                     </div>
-
-                    {/* View Profile Button */}
-                    <Link
-                      href={`/dj/profile/${dj.djId}`}
-                      className="bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg transition-colors inline-flex items-center text-xs font-medium"
-                    >
-                      <Eye className="w-3 h-3 mr-1" />
-                      View Profile
-                    </Link>
                   </div>
+                  <Link
+                    href={`/dj/profile/${dj.djId}`}
+                    className="bg-violet-600 hover:bg-violet-700 text-white px-3 py-1 rounded-lg transition-colors inline-flex items-center text-xs font-medium"
+                  >
+                    View Profile
+                    <ArrowRight className="w-3 h-3 ml-1" />
+                  </Link>
                 </div>
 
-                {/* Events Grid */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">
-                      Recent Events
-                    </h3>
-                  </div>
+                {/* Events Gallery */}
+                <div className="space-y-8">
+                  {dj.events.map((event) => (
+                    <div key={event.eventName} className="space-y-4">
+                      {/* Event Header */}
+                      <div className="border-b border-gray-800 pb-4">
+                        <h3 className="text-xl font-semibold text-white">
+                          {event.eventName}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-400 text-sm">
+                          {event.eventDate && (
+                            <div className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              {new Date(event.eventDate).toLocaleDateString()}
+                            </div>
+                          )}
+                          {(event.venue || event.location) && (
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 mr-2" />
+                              {event.venue && event.location
+                                ? `${event.venue}, ${event.location}`
+                                : event.venue || event.location}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {dj.events.map((event) => {
-                      // Get the first photo as the cover image
-                      const coverPhoto = event.photos[0];
-                      const photoCount = event.photos.length;
-
-                      return (
-                        <div
-                          key={event.eventName}
-                          className="group bg-gray-800/50 rounded-lg overflow-hidden border border-gray-700 hover:border-violet-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10 relative"
-                        >
-                          <Link
-                            href={`/gallery/${encodeURIComponent(
-                              event.eventName
-                            )}`}
-                            className="block"
+                      {/* Photos Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {event.photos.map((photo) => (
+                          <div
+                            key={photo.id}
+                            className="group relative bg-gray-800 rounded-lg overflow-hidden hover:shadow-xl hover:shadow-violet-500/20 transition-all duration-300"
                           >
-                            {/* Cover Image */}
-                            <div className="relative aspect-[4/3] overflow-hidden">
+                            <div className="aspect-square relative">
                               <Image
-                                src={coverPhoto.url}
-                                alt={coverPhoto.altText || event.eventName}
+                                src={photo.url}
+                                alt={photo.altText || photo.title}
                                 fill
                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                sizes="300px"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                               />
-
-                              {/* Photo Count Badge */}
-                              <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                                <Camera className="w-4 h-4 inline mr-1" />
-                                {photoCount}{" "}
-                                {photoCount === 1 ? "photo" : "photos"}
-                              </div>
-
-                              {/* Featured Badge */}
-                              {coverPhoto.isFeatured && (
-                                <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                                  ⭐ Featured
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Event Info */}
-                            <div className="p-4">
-                              <h3 className="text-lg font-bold mb-2 group-hover:text-violet-300 transition-colors">
-                                {event.eventName}
-                              </h3>
-
-                              <div className="space-y-2 mb-3">
-                                {/* Event Type */}
-                                {event.eventType && (
-                                  <div
-                                    className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getEventTypeColor(
-                                      event.eventType
-                                    )}`}
-                                  >
-                                    {event.eventType}
-                                  </div>
-                                )}
-
-                                {/* Date */}
-                                <div className="flex items-center text-gray-400 text-sm">
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  {formatDate(event.eventDate)}
-                                </div>
-
-                                {/* Venue/Location */}
-                                {(event.venue || event.location) && (
-                                  <div className="flex items-center text-gray-400 text-sm">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    {event.venue && event.location
-                                      ? `${event.venue}, ${event.location}`
-                                      : event.venue || event.location}
-                                  </div>
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <div className="absolute bottom-4 left-4 right-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
+                                <h4 className="text-white font-medium text-sm truncate">
+                                  {photo.title}
+                                </h4>
+                                {photo.description && (
+                                  <p className="text-gray-300 text-xs mt-1 line-clamp-2">
+                                    {photo.description}
+                                  </p>
                                 )}
                               </div>
-
-                              <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
                             </div>
-                          </Link>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-export default function GalleryPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <GalleryPageContent />
-    </Suspense>
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">
+                Upload Event Photos
+              </h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Upload Form */}
+            <div className="space-y-6">
+              {/* File Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Select Photos
+                </label>
+                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-violet-500 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <label
+                    htmlFor="photo-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <span className="text-gray-300">
+                      Click to select photos or drag and drop
+                    </span>
+                    <span className="text-sm text-gray-500 mt-1">
+                      Max 10MB per file
+                    </span>
+                  </label>
+                </div>
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-300 mb-2">
+                      Selected: {selectedFiles.length} file(s)
+                    </p>
+                    <div className="space-y-1">
+                      {selectedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="text-xs text-gray-400 flex justify-between"
+                        >
+                          <span>{file.name}</span>
+                          <span>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Event Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Event Name
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadForm.eventName}
+                    onChange={(e) =>
+                      setUploadForm({
+                        ...uploadForm,
+                        eventName: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    placeholder="Enter event name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Event Date
+                  </label>
+                  <input
+                    type="date"
+                    value={uploadForm.eventDate}
+                    onChange={(e) =>
+                      setUploadForm({
+                        ...uploadForm,
+                        eventDate: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFileUpload}
+                  disabled={selectedFiles.length === 0 || uploading}
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload {selectedFiles.length} Photo
+                      {selectedFiles.length !== 1 ? "s" : ""}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -137,11 +137,26 @@ export default async function AdminDashboardPage() {
             <Link href="/dashboard/profile" className="relative group">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-700 border-4 border-violet-500/30 shadow-lg group-hover:border-violet-400/50 transition-all duration-200">
                 {user?.profileImage || user?.userMedia[0]?.url ? (
-                  <img
-                    src={user.profileImage || user.userMedia[0]?.url}
-                    alt="Profile"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
+                  <>
+                    <img
+                      src={user.profileImage || user.userMedia[0]?.url}
+                      alt="Profile"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.classList?.remove(
+                          "hidden"
+                        );
+                      }}
+                    />
+                    <div className="w-full h-full flex items-center justify-center hidden">
+                      <span className="text-xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
+                        {session.user.name?.charAt(0) ||
+                          session.user.email?.charAt(0) ||
+                          "A"}
+                      </span>
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="text-xl text-gray-300 font-bold group-hover:text-violet-300 transition-colors">
@@ -322,6 +337,28 @@ export default async function AdminDashboardPage() {
             </Link>
 
             <Link
+              href="/dashboard/admin/booking-queue"
+              className="bg-gradient-to-r from-violet-700 to-pink-700 hover:from-violet-600 hover:to-pink-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <Calendar className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">Booking Queue</h3>
+              <p className="text-gray-200 text-sm">
+                Review and assign DJs to bookings
+              </p>
+            </Link>
+
+            <Link
+              href="/dashboard/admin/pricing"
+              className="bg-gradient-to-r from-green-700 to-emerald-700 hover:from-green-600 hover:to-emerald-600 p-4 rounded-lg text-center transition-colors"
+            >
+              <DollarSign className="w-6 h-6 mb-2" />
+              <h3 className="font-semibold mb-1">Pricing Management</h3>
+              <p className="text-gray-200 text-sm">
+                Manage Pro-DJ service pricing & add-ons
+              </p>
+            </Link>
+
+            <Link
               href="/dashboard/admin/clients"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
@@ -344,24 +381,13 @@ export default async function AdminDashboardPage() {
             </Link>
 
             <Link
-              href="/dashboard/pricing"
+              href="/dashboard/admin/pricing"
               className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
             >
               <DollarSign className="w-6 h-6 mb-2" />
               <h3 className="font-semibold mb-1">Pricing</h3>
               <p className="text-gray-400 text-sm">
-                Manage platform pricing packages
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/admin/subscriptions"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
-            >
-              <Crown className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Subscriptions</h3>
-              <p className="text-gray-400 text-sm">
-                Manage user subscriptions and billing
+                Manage Pro-DJ service pricing & add-ons
               </p>
             </Link>
 

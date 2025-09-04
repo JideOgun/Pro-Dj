@@ -15,6 +15,7 @@ export default function Navbar() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
   const [hasDjProfile, setHasDjProfile] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Handle hydration
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function Navbar() {
 
             if (profileImageUrl) {
               setProfileImage(profileImageUrl);
+              setImageError(false); // Reset error state for new image
             }
 
             // Set display name (prioritize stage name for DJs)
@@ -80,6 +82,7 @@ export default function Navbar() {
 
               if (profileImageUrl) {
                 setProfileImage(profileImageUrl);
+                setImageError(false); // Reset error state for new image
               }
             }
           })
@@ -258,21 +261,25 @@ export default function Navbar() {
                   {/* Profile Photo */}
                   <div className="relative">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-gray-700 border-2 border-violet-500/30 shadow-lg">
-                      {profileImage ? (
+                      {profileImage && !imageError ? (
                         <Image
                           src={profileImage}
                           alt="Profile"
                           width={40}
                           height={40}
                           className="w-full h-full object-cover"
+                          onError={() => setImageError(true)}
+                          unoptimized
                         />
-                      ) : session.user.image ? (
+                      ) : session.user.image && !imageError ? (
                         <Image
                           src={session.user.image}
                           alt="Profile"
                           width={40}
                           height={40}
                           className="w-full h-full object-cover"
+                          onError={() => setImageError(true)}
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

@@ -3,11 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
-import {
-  BOOKING_CONFIG,
-  type BookingType,
-  type AddonType,
-} from "@/lib/booking-config";
+import { BOOKING_CONFIG, type BookingType } from "@/lib/booking-config";
 import toast from "react-hot-toast";
 import {
   Music,
@@ -37,47 +33,63 @@ function BookPageContent() {
   const [clientEquipment, setClientEquipment] = useState("");
   const [extra, setExtra] = useState<Record<string, string>>({});
 
-  // Addon system - now per DJ
-  const [djAddons, setDjAddons] = useState<
-    Record<
-      string,
-      Array<{
-        addonKey: string;
-        label: string;
-        description: string;
-        priceCents: number;
-        isCustom: boolean;
-        customCategory?: string | null;
-      }>
-    >
-  >({});
-  const [selectedDjAddons, setSelectedDjAddons] = useState<
-    Record<string, string[]>
-  >({});
-
-  // DJ selection
-  const [selectedDjs, setSelectedDjs] = useState<
+  // Pro-DJ standardized add-ons system
+  const [proDjAddons, setProDjAddons] = useState<
     Array<{
-      djId: string;
-      startTime: string;
-      endTime: string;
-      dj: {
-        id: string;
-        stageName: string;
-        genres: string[];
-
-        eventsOffered?: string[];
-        bio?: string;
-        specialties?: string;
-        location?: string;
-        eventPricing?: Array<{
-          eventType: string;
-          hourlyRateCents: number;
-          description: string | null;
-        }>;
-      };
+      id: string;
+      name: string;
+      description: string;
+      category: string;
+      priceFixed: number | null;
+      pricePerHour: number | null;
+      requiresSpecialEquipment: boolean;
+      totalPrice: number;
     }>
   >([]);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+
+  // Pro-DJ pricing state
+  const [proDjPricing, setProDjPricing] = useState<{
+    basePriceCents: number;
+    addonPriceCents: number;
+    totalPriceCents: number;
+    eventType: string;
+    durationHours: number;
+    billableHours: number;
+    basePricePerHour: number;
+    minimumHours: number;
+  } | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+
+  // DJ preference (optional) - client can express preference but admin assigns
+  const [preferredDj, setPreferredDj] = useState<{
+    djId: string;
+    stageName: string;
+  } | null>(null);
+  const [availableDjs, setAvailableDjs] = useState<
+    Array<{
+      id: string;
+      stageName: string;
+      user: { name: string };
+      rating: number;
+      totalBookings: number;
+      bio?: string;
+      specialties?: string;
+      genres?: string[];
+    }>
+  >([]);
+
+  // Simple selectedDjs array for backward compatibility (Pro-DJ model)
+  const selectedDjs = preferredDj
+    ? [
+        {
+          djId: preferredDj.djId,
+          dj: { stageName: preferredDj.stageName },
+          startTime: startTime,
+          endTime: endTime,
+        },
+      ]
+    : [];
 
   const [djs, setDjs] = useState<
     Array<{
@@ -176,28 +188,100 @@ function BookPageContent() {
     return eventPricing?.hourlyRateCents || 0;
   };
 
-  // Calculate total price for a specific DJ
-  const calculateDjTotalPrice = (djId: string): number => {
-    const selectedDj = selectedDjs.find((dj) => dj.djId === djId);
-    if (!selectedDj) return 0;
+  // Calculate Pro-DJ standardized pricing
+  const calculateProDjPricing = async () => {
+    if (!bookingType || !startTime || !endTime) {
+      setProDjPricing(null);
+      return;
+    }
 
-    const djDuration = calculateDjDuration(
-      selectedDj.startTime,
-      selectedDj.endTime
-    );
-    const hourlyRate = getDjHourlyRate(selectedDj.dj, bookingType);
-    const basePrice = hourlyRate * djDuration;
-    const selectedAddonsForDj = selectedDjAddons[djId] || [];
-    const djAddonsForDj = djAddons[djId] || [];
+    // Ensure we have proper date/time format
+    const dateToUse = eventDate || new Date().toISOString().split("T")[0];
+    const startDateTime = `${dateToUse}T${startTime}:00`;
+    const endDateTime = `${dateToUse}T${endTime}:00`;
 
-    const addonPrice = selectedAddonsForDj.reduce((total, addonKey) => {
-      const addon = djAddonsForDj.find((a) => a.addonKey === addonKey);
-      return total + (addon?.priceCents || 0);
-    }, 0);
-    return basePrice + addonPrice;
+    setPriceLoading(true);
+    try {
+      // Calculate with selected add-ons
+      const response = await fetch("/api/pricing/pro-dj", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: bookingType,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          selectedAddons,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProDjPricing(data.calculation);
+      } else {
+        console.error("Failed to fetch Pro-DJ pricing");
+        setProDjPricing(null);
+      }
+    } catch (error) {
+      console.error("Error calculating Pro-DJ pricing:", error);
+      setProDjPricing(null);
+    } finally {
+      setPriceLoading(false);
+    }
   };
 
-  // Note: Add-ons are no longer auto-selected - clients choose themselves
+  // Load Pro-DJ add-ons when booking type and time changes
+  useEffect(() => {
+    const loadProDjAddons = async () => {
+      if (!bookingType || !startTime || !endTime) return;
+
+      try {
+        const response = await fetch(
+          `/api/pricing/pro-dj?eventType=${bookingType}&startTime=${startTime}&endTime=${endTime}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setProDjAddons(data.addons || []);
+        }
+      } catch (error) {
+        console.error("Error loading Pro-DJ add-ons:", error);
+      }
+    };
+
+    loadProDjAddons();
+  }, [bookingType, startTime, endTime]);
+
+  // Calculate pricing when form details or add-ons change
+  useEffect(() => {
+    calculateProDjPricing();
+  }, [bookingType, startTime, endTime, selectedAddons]);
+
+  // Load available DJs when event details change
+  useEffect(() => {
+    const loadDJs = async () => {
+      if (!bookingType || !eventDate || !startTime || !endTime) {
+        setDjs([]);
+        return;
+      }
+
+      setIsLoadingDjs(true);
+      try {
+        const response = await fetch(
+          `/api/djs?eventType=${bookingType}&date=${eventDate}&startTime=${startTime}&endTime=${endTime}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setDjs(data.djs || []);
+        }
+      } catch (error) {
+        console.error("Error loading DJs:", error);
+      } finally {
+        setIsLoadingDjs(false);
+      }
+    };
+
+    loadDJs();
+  }, [bookingType, eventDate, startTime, endTime]);
 
   // Initialize form data from URL parameters (for refund recovery)
   useEffect(() => {
@@ -265,7 +349,7 @@ function BookPageContent() {
   const filteredDjs = djs.filter((dj) => {
     // Filter by search term
     if (djSearchTerm) {
-      const searchMatch = 
+      const searchMatch =
         dj.stageName.toLowerCase().includes(djSearchTerm.toLowerCase()) ||
         (dj.genres || []).some((genre) =>
           genre.toLowerCase().includes(djSearchTerm.toLowerCase())
@@ -275,19 +359,20 @@ function BookPageContent() {
           dj.specialties.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
         (dj.location &&
           dj.location.toLowerCase().includes(djSearchTerm.toLowerCase()));
-      
+
       if (!searchMatch) return false;
     }
 
     // Filter by preferred genres
     if (preferredGenres.length > 0) {
       const hasMatchingGenre = (dj.genres || []).some((djGenre) =>
-        preferredGenres.some((preferredGenre) =>
-          djGenre.toLowerCase().includes(preferredGenre.toLowerCase()) ||
-          preferredGenre.toLowerCase().includes(djGenre.toLowerCase())
+        preferredGenres.some(
+          (preferredGenre) =>
+            djGenre.toLowerCase().includes(preferredGenre.toLowerCase()) ||
+            preferredGenre.toLowerCase().includes(djGenre.toLowerCase())
         )
       );
-      
+
       if (!hasMatchingGenre) return false;
     }
 
@@ -473,136 +558,7 @@ function BookPageContent() {
     return segments;
   };
 
-  // Add DJ to selection with smart time management
-  const addDj = async (dj: (typeof djs)[0]) => {
-    if (selectedDjs.some((sd) => sd.djId === dj.id)) {
-      toast.error("This DJ is already selected");
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      toast.error("Please set event start and end times first");
-      return;
-    }
-
-    // Check if DJ offers this event type
-    if (
-      bookingType &&
-      dj.eventsOffered &&
-      !dj.eventsOffered.includes(bookingType)
-    ) {
-      toast.error(`${dj.stageName} does not offer ${bookingType} events`);
-      return;
-    }
-
-    const newDjCount = selectedDjs.length + 1;
-    const timeSegments = splitTimeEvenly(startTime, endTime, newDjCount);
-
-    // Check if any time segment would be less than 1 hour or more than 8 hours
-    const totalDuration =
-      getAdjustedEndTime(startTime, endTime) - parseTime(startTime);
-    const segmentDuration = totalDuration / newDjCount;
-
-    if (segmentDuration < 60) {
-      // Less than 1 hour
-      toast.error(
-        `Cannot add more DJs. Each DJ would get less than 1 hour (${Math.round(
-          segmentDuration
-        )} minutes). Maximum ${Math.floor(
-          totalDuration / 60
-        )} DJs allowed for this event duration.`
-      );
-      return;
-    }
-
-    if (segmentDuration > 480) {
-      // More than 8 hours
-      toast.error(
-        `Cannot add more DJs. Each DJ would get more than 8 hours (${Math.round(
-          segmentDuration / 60
-        )} hours). Minimum ${Math.ceil(
-          totalDuration / 480
-        )} DJs required for this event duration.`
-      );
-      return;
-    }
-
-    // Update existing DJs with new time segments
-    const updatedSelectedDjs = selectedDjs.map((selectedDj, index) => ({
-      ...selectedDj,
-      startTime: timeSegments[index].startTime,
-      endTime: timeSegments[index].endTime,
-    }));
-
-    // Add new DJ with the last time segment
-    const newDj = {
-      djId: dj.id,
-      startTime: timeSegments[newDjCount - 1].startTime,
-      endTime: timeSegments[newDjCount - 1].endTime,
-      dj: dj,
-    };
-
-    setSelectedDjs([...updatedSelectedDjs, newDj]);
-
-    // Fetch this DJ's add-ons
-    const fetchedAddons = await fetchDjAddons(dj.id);
-    if (fetchedAddons.length > 0) {
-      setDjAddons((prev) => ({
-        ...prev,
-        [dj.id]: fetchedAddons,
-      }));
-      // Initialize selected add-ons for this DJ
-      setSelectedDjAddons((prev) => ({
-        ...prev,
-        [dj.id]: [],
-      }));
-    }
-
-    // Show time distribution info
-    if (newDjCount > 1) {
-      toast.success(`Time distributed evenly among ${newDjCount} DJs`);
-    }
-  };
-
-  // Remove DJ from selection with time redistribution
-  const removeDj = (djId: string) => {
-    const remainingDjs = selectedDjs.filter((sd) => sd.djId !== djId);
-
-    if (remainingDjs.length > 0 && startTime && endTime) {
-      // Redistribute time among remaining DJs
-      const timeSegments = splitTimeEvenly(
-        startTime,
-        endTime,
-        remainingDjs.length
-      );
-      const updatedDjs = remainingDjs.map((dj, index) => ({
-        ...dj,
-        startTime: timeSegments[index].startTime,
-        endTime: timeSegments[index].endTime,
-      }));
-      setSelectedDjs(updatedDjs);
-
-      if (remainingDjs.length > 1) {
-        toast.success(
-          `Time redistributed among ${remainingDjs.length} remaining DJs`
-        );
-      }
-    } else {
-      setSelectedDjs(remainingDjs);
-    }
-
-    // Remove DJ's add-ons from state
-    setDjAddons((prev) => {
-      const newState = { ...prev };
-      delete newState[djId];
-      return newState;
-    });
-    setSelectedDjAddons((prev) => {
-      const newState = { ...prev };
-      delete newState[djId];
-      return newState;
-    });
-  };
+  // Pro-DJ model: Single DJ preference selection (old marketplace addDj function removed)
 
   // Check for partial booking conditions
   const checkPartialBooking = () => {
@@ -693,34 +649,16 @@ function BookPageContent() {
   const [isAddonsExpanded, setIsAddonsExpanded] = useState(false);
 
   // Update DJ time slot
+  // Pro-DJ model: Time adjustment handled at event level, not individual DJ level
   const updateDjTime = (
     djId: string,
     newStartTime: string,
     newEndTime: string
   ) => {
-    // Calculate duration for this DJ
-    const startMinutes = parseTime(newStartTime);
-    const endMinutes = getAdjustedEndTime(newStartTime, newEndTime);
-    const durationMinutes = endMinutes - startMinutes;
-
-    // Validate time limits (1 hour minimum, 8 hours maximum)
-    if (durationMinutes < 60) {
-      toast.error("DJ time slot must be at least 1 hour");
-      return;
-    }
-
-    if (durationMinutes > 480) {
-      toast.error("DJ time slot cannot exceed 8 hours");
-      return;
-    }
-
-    setSelectedDjs((prev) =>
-      prev.map((dj) =>
-        dj.djId === djId
-          ? { ...dj, startTime: newStartTime, endTime: newEndTime }
-          : dj
-      )
-    );
+    // In Pro-DJ model, we update the main event times instead of individual DJ times
+    setStartTime(newStartTime);
+    setEndTime(newEndTime);
+    // This will trigger pricing recalculation automatically
   };
 
   // Handle partial booking confirmation
@@ -744,7 +682,7 @@ function BookPageContent() {
               contactEmail,
               clientEquipment,
               ...extra,
-              selectedAddons: selectedDjAddons[djBooking.djId]?.join(",") || "",
+              selectedAddons: selectedAddons.join(",") || "",
             },
             preferredGenres,
             musicStyle,
@@ -772,124 +710,96 @@ function BookPageContent() {
     }
   };
 
-  // Redistribute time evenly
-  const redistributeTime = () => {
-    if (selectedDjs.length > 1 && startTime && endTime) {
-      const timeSegments = splitTimeEvenly(
-        startTime,
-        endTime,
-        selectedDjs.length
-      );
-      const updatedDjs = selectedDjs.map((dj, index) => ({
-        ...dj,
-        startTime: timeSegments[index].startTime,
-        endTime: timeSegments[index].endTime,
-      }));
-      setSelectedDjs(updatedDjs);
-      toast.success("Time redistributed evenly among all DJs");
+  // Toggle Pro-DJ standardized add-on selection
+  const toggleProDjAddon = (addonId: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(addonId)
+        ? prev.filter((id) => id !== addonId)
+        : [...prev, addonId]
+    );
+  };
+
+  // Select preferred DJ (Pro-DJ model)
+  const selectPreferredDj = (dj: { id: string; stageName: string }) => {
+    // Check if this DJ is already selected
+    if (preferredDj?.djId === dj.id) {
+      // Deselect if clicking the same DJ
+      setPreferredDj(null);
+      return;
     }
-  };
 
-  // Toggle addon selection for a specific DJ
-  const toggleDjAddon = (djId: string, addonKey: string) => {
-    setSelectedDjAddons((prev) => {
-      const currentAddons = prev[djId] || [];
-      const newAddons = currentAddons.includes(addonKey)
-        ? currentAddons.filter((key) => key !== addonKey)
-        : [...currentAddons, addonKey];
-
-      return {
-        ...prev,
-        [djId]: newAddons,
-      };
+    // Select the new DJ (replacing any previous selection)
+    setPreferredDj({
+      djId: dj.id,
+      stageName: dj.stageName,
     });
+
+    // Show confirmation toast
+    toast.success(`${dj.stageName} selected as preferred DJ`);
   };
 
-  // Submit booking
+  // Calculate DJ total price (Pro-DJ model uses centralized pricing)
+  const calculateDjTotalPrice = () => {
+    // In Pro-DJ model, we use centralized pricing
+    return proDjPricing ? proDjPricing.totalPriceCents : 0;
+  };
+
+  // Submit Pro-DJ booking request
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMsg("");
 
-    if (selectedDjs.length === 0) {
-      setMsg("Please select at least one DJ for your event.");
-      setLoading(false);
-      return;
-    }
-
-    // Check for time conflicts before submitting
-    const timeWarnings = getTimeWarnings();
-    const hasOverlaps = timeWarnings.some((warning) =>
-      warning.includes("overlap")
-    );
-
-    if (hasOverlaps) {
-      setMsg(
-        "Cannot submit booking with time overlaps. Please fix the time conflicts first."
-      );
-      setLoading(false);
-      return;
-    }
-
-    // Check for partial booking - if detected, show modal and return
-    const partialBooking = checkPartialBooking();
-    if (partialBooking) {
-      setPartialBookingDetails(partialBooking);
-      setShowPartialBookingModal(true);
+    // Validate Pro-DJ pricing is calculated
+    if (!proDjPricing) {
+      setMsg("Please wait for pricing to load before submitting.");
       setLoading(false);
       return;
     }
 
     try {
-      const bookingPromises = selectedDjs.map((djBooking) =>
-        fetch("/api/bookings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            bookingType,
-            eventDate,
-            startTime: `${eventDate}T${djBooking.startTime}`,
-            endTime: `${eventDate}T${djBooking.endTime}`,
-            message,
-            djId: djBooking.djId,
-            extra: {
-              contactEmail,
-              clientEquipment,
-              ...extra,
-              selectedAddons: selectedDjAddons[djBooking.djId]?.join(",") || "",
-            },
-            preferredGenres,
-            musicStyle,
-          }),
-        })
-      );
+      // For Pro-DJ model, we submit one booking request with optional DJ preference
+      const preferredDjId = preferredDj ? preferredDj.djId : null;
 
-      const responses = await Promise.all(bookingPromises);
-      const results = await Promise.all(responses.map((res) => res.json()));
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingType,
+          eventDate,
+          startTime: `${eventDate}T${startTime}`,
+          endTime: `${eventDate}T${endTime}`,
+          message,
+          djId: preferredDjId, // Optional preference - admin will make final assignment
+          extra: {
+            contactEmail,
+            clientEquipment,
+            ...extra,
+            selectedAddons: selectedAddons.join(","), // Pro-DJ standardized add-ons
+          },
+          preferredGenres,
+          musicStyle,
+        }),
+      });
 
-      const successCount = results.filter((result) => result.ok).length;
-      const failureCount = results.length - successCount;
+      const result = await response.json();
 
-      if (failureCount === 0) {
+      if (result.ok) {
         setMsg(
-          "🎉 All booking requests sent successfully! Redirecting to your bookings..."
+          "🎉 Booking request submitted successfully! Our team will review and assign the perfect DJ for your event. Redirecting to your bookings..."
         );
         setTimeout(() => {
           router.push("/dashboard/bookings");
         }, 1500);
       } else {
-        const failedBookings = results.filter((result) => !result.ok);
-        const errorMessages = failedBookings.map((result, index) => {
-          const dj = selectedDjs[index];
-          const djName = dj.dj.stageName;
-          return `${djName}: ${result.error || "Booking request failed"}`;
-        });
-        setMsg(`⚠️ Some booking requests failed:\n${errorMessages.join("\n")}`);
+        setMsg(
+          `⚠️ Booking request failed: ${result.error || "Please try again"}`
+        );
       }
     } catch (error) {
-      console.error("Error submitting bookings:", error);
+      console.error("Error submitting booking:", error);
       setMsg(
-        "❌ Unable to submit booking requests at this time. Please try again."
+        "❌ Unable to submit booking request at this time. Please try again."
       );
     } finally {
       setLoading(false);
@@ -923,9 +833,10 @@ function BookPageContent() {
         <div className="max-w-4xl mx-auto p-6">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">Book Your Event</h1>
+            <h1 className="text-4xl font-bold mb-2">Book Pro-DJ Service</h1>
             <p className="text-xl text-gray-300">
-              Let&apos;s create something amazing together
+              Professional DJ service with standardized pricing and expert team
+              selection
             </p>
           </div>
 
@@ -1035,10 +946,24 @@ function BookPageContent() {
                       ? "Venue Name"
                       : field === "guestCount"
                       ? "Expected Guest Count"
-                      : field === "clubName"
-                      ? "Club Name"
+                      : field === "ceremonyTime"
+                      ? "Ceremony Start Time"
+                      : field === "receptionTime"
+                      ? "Reception Start Time"
                       : field === "companyName"
                       ? "Company Name"
+                      : field === "eventPurpose"
+                      ? "Event Purpose"
+                      : field === "attendeeCount"
+                      ? "Expected Attendee Count"
+                      : field === "partyType"
+                      ? "Party Type"
+                      : field === "venueType"
+                      ? "Venue Type"
+                      : field === "partyTheme"
+                      ? "Party Theme"
+                      : field === "clubName"
+                      ? "Club Name"
                       : field}
                   </label>
                   <input
@@ -1054,10 +979,24 @@ function BookPageContent() {
                         ? "e.g., Grand Hotel Ballroom"
                         : field === "guestCount"
                         ? "e.g., 150"
-                        : field === "clubName"
-                        ? "e.g., Club XYZ"
+                        : field === "ceremonyTime"
+                        ? "e.g., 2:00 PM"
+                        : field === "receptionTime"
+                        ? "e.g., 6:00 PM"
                         : field === "companyName"
                         ? "e.g., ABC Corporation"
+                        : field === "eventPurpose"
+                        ? "e.g., Annual Conference, Holiday Party"
+                        : field === "attendeeCount"
+                        ? "e.g., 200"
+                        : field === "partyType"
+                        ? "e.g., Anniversary, Graduation"
+                        : field === "venueType"
+                        ? "e.g., Hotel, Restaurant, Private Home"
+                        : field === "partyTheme"
+                        ? "e.g., 80s, Tropical, Superhero"
+                        : field === "clubName"
+                        ? "e.g., Club XYZ"
                         : field
                     }
                     value={extra[field] ?? ""}
@@ -1207,7 +1146,7 @@ function BookPageContent() {
                           const isSelected = selectedDjs.some(
                             (sd) => sd.djId === dj.id
                           );
-                          const totalPrice = calculateDjTotalPrice(dj.id);
+                          const totalPrice = calculateDjTotalPrice();
                           const offersEventType =
                             !bookingType ||
                             !dj.eventsOffered ||
@@ -1223,9 +1162,7 @@ function BookPageContent() {
                                   ? "border-red-500/50 bg-red-900/10 opacity-60"
                                   : "border-blue-600/50 bg-blue-900/10 hover:border-blue-400"
                               }`}
-                              onClick={() =>
-                                isSelected ? removeDj(dj.id) : addDj(dj)
-                              }
+                              onClick={() => selectPreferredDj(dj)}
                             >
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
@@ -1254,11 +1191,7 @@ function BookPageContent() {
                                     {(dj.genres || []).length > 3 && "..."}
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    Base Rate: $
-                                    {(
-                                      getDjHourlyRate(dj, bookingType) / 100
-                                    ).toFixed(2)}
-                                    /hr
+                                    Professional DJ Service
                                   </div>
                                   {!offersEventType && bookingType && (
                                     <div className="text-xs text-red-400 mt-1">
@@ -1318,10 +1251,8 @@ function BookPageContent() {
                     </div>
                   ) : (
                     filteredDjs.map((dj) => {
-                      const isSelected = selectedDjs.some(
-                        (sd) => sd.djId === dj.id
-                      );
-                      const totalPrice = calculateDjTotalPrice(dj.id);
+                      const isSelected = preferredDj?.djId === dj.id;
+                      const totalPrice = calculateDjTotalPrice();
                       const offersEventType =
                         !bookingType ||
                         !dj.eventsOffered ||
@@ -1337,9 +1268,7 @@ function BookPageContent() {
                               ? "border-red-500/50 bg-red-900/10 opacity-60"
                               : "border-gray-600 bg-gray-700 hover:border-gray-500"
                           }`}
-                          onClick={() =>
-                            isSelected ? removeDj(dj.id) : addDj(dj)
-                          }
+                          onClick={() => selectPreferredDj(dj)}
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
@@ -1358,11 +1287,7 @@ function BookPageContent() {
                                 {(dj.genres || []).length > 3 && "..."}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Base Rate: $
-                                {(
-                                  getDjHourlyRate(dj, bookingType) / 100
-                                ).toFixed(2)}
-                                /hr
+                                Professional DJ Service
                               </div>
                               {!offersEventType && bookingType && (
                                 <div className="text-xs text-red-400 mt-1">
@@ -1423,78 +1348,11 @@ function BookPageContent() {
                       </div>
                     </div>
                   ))}
-
-                  {/* Time Distribution Info */}
-                  {selectedDjs.length > 1 && (
-                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                      <div className="flex items-start gap-2">
-                        <div className="text-blue-400 text-lg">⏰</div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="text-blue-200 font-semibold">
-                              Time Distribution
-                            </div>
-                            <button
-                              onClick={redistributeTime}
-                              className="text-blue-300 hover:text-blue-200 text-xs underline"
-                            >
-                              Redistribute Evenly
-                            </button>
-                          </div>
-                          <div className="text-blue-300 text-sm">
-                            Event time has been automatically distributed among{" "}
-                            {selectedDjs.length} DJs:
-                          </div>
-                          <div className="mt-2 space-y-3">
-                            {selectedDjs.map((dj, index) => (
-                              <div
-                                key={dj.djId}
-                                className="flex items-center gap-3"
-                              >
-                                <div className="text-blue-300 text-sm font-medium min-w-[80px]">
-                                  {dj.dj.stageName}:
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="time"
-                                    value={dj.startTime}
-                                    onChange={(e) =>
-                                      updateDjTime(
-                                        dj.djId,
-                                        e.target.value,
-                                        dj.endTime
-                                      )
-                                    }
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                  />
-                                  <span className="text-blue-300 text-sm">
-                                    to
-                                  </span>
-                                  <input
-                                    type="time"
-                                    value={dj.endTime}
-                                    onChange={(e) =>
-                                      updateDjTime(
-                                        dj.djId,
-                                        dj.startTime,
-                                        e.target.value
-                                      )
-                                    }
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Add-ons Selection */}
-              {selectedDjs.length > 0 && (
+              {bookingType && startTime && endTime && (
                 <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700/30">
                   <button
                     type="button"
@@ -1507,9 +1365,9 @@ function BookPageContent() {
                     </h3>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-400">
-                        {Object.keys(djAddons).length > 0
-                          ? `${Object.keys(djAddons).length} DJ(s) with add-ons`
-                          : "No add-ons available"}
+                        {proDjAddons.length > 0
+                          ? `${proDjAddons.length} professional add-ons available`
+                          : "Loading add-ons..."}
                       </span>
                       <div
                         className={`transform transition-transform ${
@@ -1529,9 +1387,23 @@ function BookPageContent() {
                         : "max-h-0 opacity-0"
                     }`}
                   >
-                    {/* Event-specific add-on information */}
+                    {/* Pro-DJ add-on information */}
                     <div className="mb-4">
-                      {bookingType === "Wedding" ? (
+                      <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-violet-400">🎵</div>
+                          <h4 className="text-violet-200 font-semibold">
+                            Professional Pro-DJ Add-ons
+                          </h4>
+                        </div>
+                        <p className="text-violet-300 text-sm">
+                          Enhance your event with our standardized professional
+                          add-ons. All add-ons include premium equipment and
+                          expert setup by our Pro-DJ team.
+                        </p>
+                      </div>
+                      {/* Old event-specific content for reference (commented out) */}
+                      {false && bookingType === "Wedding" ? (
                         <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 mb-4">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="text-amber-400">✨</div>
@@ -1611,294 +1483,272 @@ function BookPageContent() {
                             to make your private party unforgettable.
                           </p>
                         </div>
-                      ) : (
-                        <p className="text-gray-300 text-sm mb-4">
-                          Enhance your event with these professional add-ons:
-                        </p>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="space-y-6">
-                      {Object.keys(djAddons).length === 0 ? (
+                      {proDjAddons.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
-                          <p>No DJs selected or no add-ons available</p>
+                          <p>Loading professional add-ons...</p>
                         </div>
                       ) : (
-                        selectedDjs.map((selectedDj) => {
-                          const djAddonsForDj = djAddons[selectedDj.djId] || [];
-                          const selectedAddonsForDj =
-                            selectedDjAddons[selectedDj.djId] || [];
-
-                          if (djAddonsForDj.length === 0) {
-                            return null;
-                          }
-
-                          return (
-                            <div key={selectedDj.djId} className="space-y-3">
-                              {/* DJ Add-ons Header */}
-                              <div className="flex items-center gap-2 mb-3">
-                                <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
-                                <h4 className="font-semibold text-violet-300">
-                                  Add-ons for {selectedDj.dj.stageName}
-                                </h4>
-                              </div>
-
-                              {/* Add-ons for this specific DJ */}
-                              {djAddonsForDj.map((addon) => {
-                                const isRecommended =
-                                  (
-                                    typeConfig?.recommendedAddons as readonly AddonType[]
-                                  )?.includes(addon.addonKey as AddonType) ??
-                                  false;
-                                const isWeddingEssential =
-                                  bookingType === "Wedding" && isRecommended;
-
-                                return (
-                                  <label
-                                    key={`${selectedDj.djId}-${addon.addonKey}`}
-                                    className={`flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors ${
-                                      isWeddingEssential
-                                        ? "border-amber-500 bg-amber-900/10 hover:border-amber-400"
-                                        : isRecommended
-                                        ? "border-blue-500 bg-blue-900/10 hover:border-blue-400"
-                                        : "border-gray-600 hover:border-violet-500"
-                                    }`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedAddonsForDj.includes(
-                                        addon.addonKey
-                                      )}
-                                      onChange={() =>
-                                        toggleDjAddon(
-                                          selectedDj.djId,
-                                          addon.addonKey
-                                        )
-                                      }
-                                      className="mt-1 rounded border-gray-600 bg-gray-700 text-violet-500 focus:ring-violet-500"
-                                    />
-                                    <div className="flex-1">
-                                      <div className="flex justify-between items-start">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <div className="font-medium text-white">
-                                              {addon.label}
-                                            </div>
-                                            {addon.isCustom && (
-                                              <span className="text-xs bg-purple-600 text-purple-100 px-2 py-0.5 rounded-full font-medium">
-                                                Custom
-                                              </span>
-                                            )}
-                                            {isWeddingEssential && (
-                                              <span className="text-xs bg-amber-600 text-amber-100 px-2 py-0.5 rounded-full font-medium">
-                                                Wedding Essential
-                                              </span>
-                                            )}
-                                            {isRecommended &&
-                                              !isWeddingEssential && (
-                                                <span className="text-xs bg-blue-600 text-blue-100 px-2 py-0.5 rounded-full font-medium">
-                                                  Recommended
-                                                </span>
-                                              )}
-                                          </div>
-                                          <div className="text-sm text-gray-400">
-                                            {addon.description}
-                                          </div>
-                                        </div>
-                                        <div
-                                          className={`font-semibold ${
-                                            isWeddingEssential
-                                              ? "text-amber-400"
-                                              : "text-violet-400"
-                                          }`}
-                                        >
-                                          ${(addon.priceCents / 100).toFixed(2)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </label>
-                                );
-                              })}
+                        /* Group add-ons by category */
+                        Object.entries(
+                          proDjAddons.reduce((acc, addon) => {
+                            if (!acc[addon.category]) acc[addon.category] = [];
+                            acc[addon.category].push(addon);
+                            return acc;
+                          }, {} as Record<string, typeof proDjAddons>)
+                        ).map(([category, addons]) => (
+                          <div key={category} className="space-y-3">
+                            {/* Category Header */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
+                              <h4 className="font-semibold text-violet-300">
+                                {category}
+                              </h4>
                             </div>
-                          );
-                        })
+
+                            {/* Add-ons in this category */}
+                            {addons.map((addon) => (
+                              <label
+                                key={addon.id}
+                                className={`flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors ${
+                                  selectedAddons.includes(addon.id)
+                                    ? "border-violet-500 bg-violet-900/20"
+                                    : "border-gray-600 hover:border-violet-500"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedAddons.includes(addon.id)}
+                                  onChange={() => toggleProDjAddon(addon.id)}
+                                  className="mt-1 rounded border-gray-600 bg-gray-700 text-violet-500 focus:ring-violet-500"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="font-medium text-white">
+                                          {addon.name}
+                                        </div>
+                                        {addon.requiresSpecialEquipment && (
+                                          <span className="text-xs bg-orange-600 text-orange-100 px-2 py-0.5 rounded-full font-medium">
+                                            Special Equipment
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-gray-300 text-sm mt-1">
+                                        {addon.description}
+                                      </p>
+                                    </div>
+                                    <div className="text-right ml-3">
+                                      <div className="font-semibold text-violet-400">
+                                        ${(addon.totalPrice / 100).toFixed(2)}
+                                      </div>
+                                      {addon.pricePerHour && (
+                                        <div className="text-xs text-gray-400">
+                                          $
+                                          {(addon.pricePerHour / 100).toFixed(
+                                            2
+                                          )}
+                                          /hour
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Detailed Total Calculation */}
-              {selectedDjs.length > 0 && (
-                <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-violet-300 mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    Detailed Booking Summary
-                  </h3>
+              {/* Pro-DJ Pricing Summary */}
+              {proDjPricing && (
+                <>
+                  <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-violet-300 mb-4 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      Pro-DJ Service Package
+                    </h3>
 
-                  {/* Event Details */}
-                  <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-gray-400">Event Type</div>
-                        <div className="font-medium text-white">
-                          {bookingType}
+                    {/* Package Details */}
+                    <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="text-gray-400">Event Type</div>
+                          <div className="font-medium text-white">
+                            {bookingType}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Package Duration</div>
+                          <div className="font-medium text-white">
+                            {proDjPricing.durationHours || 5} hours
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Package Type</div>
+                          <div className="font-medium text-white">
+                            {bookingType === "Wedding"
+                              ? "Basic Package"
+                              : "Standard Package"}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-400">Duration</div>
-                        <div className="font-medium text-white">
-                          {totalEventDuration} hours
+
+                      {/* Package Includes */}
+                      <div className="mt-4 pt-4 border-t border-gray-600/30">
+                        <div className="text-gray-400 text-sm mb-2">
+                          Package Includes:
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-gray-300">
+                          {bookingType === "Wedding" ? (
+                            <>
+                              <div>• Ceremony, cocktail hour & reception</div>
+                              <div>• Microphones for officiant & toasts</div>
+                              <div>• Reception coordination as MC</div>
+                              <div>• Planning consultation</div>
+                              <div>• Professional sound system</div>
+                              <div>• Basic lighting setup</div>
+                            </>
+                          ) : (
+                            <>
+                              <div>• Professional DJ service</div>
+                              <div>• Premium sound system</div>
+                              <div>• Microphones included</div>
+                              <div>• Event coordination</div>
+                              <div>• Music consultation</div>
+                              <div>• Setup & breakdown</div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* DJ Breakdown */}
-                  <div className="space-y-4 mb-4">
-                    {selectedDjs.map((selectedDj) => {
-                      const djDuration = calculateDjDuration(
-                        selectedDj.startTime,
-                        selectedDj.endTime
-                      );
-                      const hourlyRate = getDjHourlyRate(
-                        selectedDj.dj,
-                        bookingType
-                      );
-                      const basePrice = hourlyRate * djDuration;
-                      const selectedAddonsForDj =
-                        selectedDjAddons[selectedDj.djId] || [];
-                      const availableAddonsForDj =
-                        djAddons[selectedDj.djId] || [];
-                      const selectedAddonsList = availableAddonsForDj.filter(
-                        (addon) => selectedAddonsForDj.includes(addon.addonKey)
-                      );
-                      const addonPrice = selectedAddonsList.reduce(
-                        (total, addon) => total + addon.priceCents,
-                        0
-                      );
-                      const djTotal = basePrice + addonPrice;
-
-                      return (
-                        <div
-                          key={selectedDj.djId}
-                          className="bg-gray-800/50 rounded-lg p-4"
-                        >
-                          {/* DJ Header */}
-                          <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-600/30">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
-                              <div className="font-semibold text-violet-300">
-                                {selectedDj.dj.stageName}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm text-gray-400">
-                                Base Rate
-                              </div>
-                              <div className="text-violet-400 font-semibold">
-                                $
-                                {(
-                                  getDjHourlyRate(selectedDj.dj, bookingType) /
-                                  100
-                                ).toFixed(2)}
-                                /hr
-                              </div>
+                    {/* Pro-DJ Pricing Breakdown */}
+                    <div className="space-y-4 mb-4">
+                      {/* Pro-DJ Service Details */}
+                      <div className="bg-gray-800/50 rounded-lg p-4">
+                        {/* Service Header */}
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-600/30">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
+                            <div className="font-semibold text-violet-300">
+                              Pro-DJ Service
+                              {preferredDj && (
+                                <span className="text-sm text-gray-400 ml-2">
+                                  (Preferred: {preferredDj.stageName})
+                                </span>
+                              )}
                             </div>
                           </div>
-
-                          {/* Base Price Calculation */}
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="text-sm text-gray-300">
-                              Base Performance ({djDuration} hours)
+                          <div className="text-right">
+                            <div className="text-sm text-gray-400">
+                              Package Price
                             </div>
-                            <div className="text-sm text-violet-400">
-                              ${(basePrice / 100).toFixed(2)}
+                            <div className="text-violet-400 font-semibold">
+                              $
+                              {(
+                                (proDjPricing.totalPriceCents ||
+                                  proDjPricing.basePriceCents ||
+                                  0) / 100
+                              ).toFixed(2)}
                             </div>
                           </div>
+                        </div>
 
-                          {/* Selected Add-ons for this DJ */}
-                          {selectedAddonsList.length > 0 && (
-                            <div className="space-y-2 mb-3">
-                              <div className="text-sm text-gray-400 font-medium">
-                                Selected Add-ons:
-                              </div>
-                              {selectedAddonsList.map((addon) => (
+                        {/* Package Price */}
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="text-sm text-gray-300">
+                            {bookingType === "Wedding"
+                              ? "Wedding Basic Package"
+                              : `${bookingType} Standard Package`}
+                            <div className="text-xs text-gray-400">
+                              ({proDjPricing.durationHours || 5} hours coverage)
+                            </div>
+                          </div>
+                          <div className="text-sm text-violet-400">
+                            $
+                            {((proDjPricing.basePriceCents || 0) / 100).toFixed(
+                              2
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Selected Pro-DJ Add-ons */}
+                        {selectedAddons.length > 0 && (
+                          <div className="space-y-2 mb-3">
+                            <div className="text-sm text-gray-400 font-medium">
+                              Selected Add-ons:
+                            </div>
+                            {proDjAddons
+                              .filter((addon) =>
+                                selectedAddons.includes(addon.id)
+                              )
+                              .map((addon) => (
                                 <div
-                                  key={addon.addonKey}
+                                  key={addon.id}
                                   className="flex justify-between items-center text-sm"
                                 >
                                   <div className="flex items-center gap-2">
                                     <span className="text-gray-300">
-                                      {addon.label}
+                                      {addon.name}
                                     </span>
-                                    {addon.isCustom && (
-                                      <span className="text-xs bg-purple-600 text-purple-100 px-1.5 py-0.5 rounded-full">
-                                        Custom
+                                    <span className="text-xs bg-violet-600 text-violet-100 px-1.5 py-0.5 rounded-full">
+                                      {addon.category}
+                                    </span>
+                                    {addon.requiresSpecialEquipment && (
+                                      <span className="text-xs bg-orange-600 text-orange-100 px-1.5 py-0.5 rounded-full">
+                                        Special Equipment
                                       </span>
                                     )}
                                   </div>
                                   <span className="text-violet-400">
-                                    ${(addon.priceCents / 100).toFixed(2)}
+                                    ${(addon.totalPrice / 100).toFixed(2)}
                                   </span>
                                 </div>
                               ))}
-                            </div>
-                          )}
-
-                          {/* DJ Subtotal */}
-                          <div className="pt-3 border-t border-gray-600/30 flex justify-between items-center">
-                            <span className="font-semibold text-white">
-                              {selectedDj.dj.stageName} Subtotal:
-                            </span>
-                            <span className="text-violet-400 font-bold text-lg">
-                              ${(djTotal / 100).toFixed(2)}
-                            </span>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        )}
 
-                  {/* Grand Total */}
-                  <div className="pt-4 border-t-2 border-violet-500/50">
-                    <div className="flex justify-between items-center text-xl font-bold">
-                      <span className="text-white">Total Amount:</span>
-                      <span className="text-violet-400 text-2xl">
-                        $
-                        {(
-                          selectedDjs.reduce((total, sd) => {
-                            const djDuration = calculateDjDuration(
-                              sd.startTime,
-                              sd.endTime
-                            );
-                            const hourlyRate = getDjHourlyRate(
-                              sd.dj,
-                              bookingType
-                            );
-                            const basePrice = hourlyRate * djDuration;
-                            const selectedAddonsForDj =
-                              selectedDjAddons[sd.djId] || [];
-                            const availableAddonsForDj =
-                              djAddons[sd.djId] || [];
-                            const addonPrice = availableAddonsForDj
-                              .filter((addon) =>
-                                selectedAddonsForDj.includes(addon.addonKey)
-                              )
-                              .reduce(
-                                (sum, addon) => sum + addon.priceCents,
-                                0
-                              );
-                            return total + basePrice + addonPrice;
-                          }, 0) / 100
-                        ).toFixed(2)}
-                      </span>
+                        {/* Service Total */}
+                        <div className="pt-3 border-t border-gray-600/30 flex justify-between items-center">
+                          <span className="font-semibold text-white">
+                            Pro-DJ Service Total:
+                          </span>
+                          <span className="text-violet-400 font-bold text-lg">
+                            $
+                            {(
+                              (proDjPricing.totalPriceCents || 0) / 100
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-400 mt-1 text-center">
-                      This includes all DJ performances and selected add-ons
+
+                    {/* Grand Total */}
+                    <div className="pt-4 border-t-2 border-violet-500/50">
+                      <div className="flex justify-between items-center text-xl font-bold">
+                        <span className="text-white">Total Amount:</span>
+                        <span className="text-violet-400 text-2xl">
+                          $
+                          {((proDjPricing.totalPriceCents || 0) / 100).toFixed(
+                            2
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-400 mt-1 text-center">
+                        Professional Pro-DJ service with standardized pricing
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Status Message */}
@@ -1917,20 +1767,18 @@ function BookPageContent() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading || selectedDjs.length === 0}
+                disabled={loading || priceLoading || !proDjPricing}
                 className={`w-full font-semibold py-4 px-6 rounded-lg transition-colors text-lg ${
-                  loading
+                  loading || priceLoading
                     ? "bg-gray-600 cursor-not-allowed"
-                    : checkPartialBooking()
-                    ? "bg-yellow-600 hover:bg-yellow-700"
                     : "bg-violet-600 hover:bg-violet-700"
                 } disabled:cursor-not-allowed text-white`}
               >
                 {loading
                   ? "Submitting..."
-                  : checkPartialBooking()
-                  ? "Submit Partial Booking"
-                  : "Submit Booking Request"}
+                  : priceLoading
+                  ? "Loading Pricing..."
+                  : "Submit Pro-DJ Booking Request"}
               </button>
             </form>
           </div>

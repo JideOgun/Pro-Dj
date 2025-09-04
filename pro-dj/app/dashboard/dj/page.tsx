@@ -19,12 +19,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import SocialMediaManager from "@/components/SocialMediaManager";
-import SubscriptionDashboard from "@/components/SubscriptionDashboard";
 import PaymentSetupModal from "@/components/PaymentSetupModal";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { useSubscription } from "@/hooks/useSubscription";
-import { SubscriptionGuard } from "@/components/SubscriptionGuard";
 
 interface DashboardStats {
   totalMixes: number;
@@ -64,7 +61,7 @@ interface SocialLinks {
 export default function DjDashboard() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const { refreshSubscriptionStatus } = useSubscription();
+
   const [stats, setStats] = useState<DashboardStats>({
     totalMixes: 0,
     totalBookings: 0,
@@ -78,52 +75,18 @@ export default function DjDashboard() {
   const [loading, setLoading] = useState(true);
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
   const [paymentSetupLoading, setPaymentSetupLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [hasCompletedPaymentSetup, setHasCompletedPaymentSetup] =
     useState(false);
   const [businessType, setBusinessType] = useState<
     "SOLE_PROPRIETOR" | "CORPORATION"
   >("SOLE_PROPRIETOR");
-  const hasHandledParams = useRef(false);
 
   useEffect(() => {
     if (session?.user) {
       fetchDashboardData();
     }
   }, [session?.user?.id]);
-
-  // Handle success/cancel messages from Stripe checkout
-  useEffect(() => {
-    const success = searchParams.get("success");
-    const canceled = searchParams.get("canceled");
-
-    // Only handle params if we haven't already and if they exist
-    if (
-      !hasHandledParams.current &&
-      (success === "true" || canceled === "true")
-    ) {
-      hasHandledParams.current = true;
-
-      if (success === "true") {
-        toast.success(
-          "Subscription created successfully! Welcome to Pro-DJ Premium!"
-        );
-        // Refresh subscription status after successful checkout
-        setTimeout(() => {
-          refreshSubscriptionStatus();
-        }, 1000);
-        // Clear the success parameter from URL to prevent repeated toasts
-        const url = new URL(window.location.href);
-        url.searchParams.delete("success");
-        window.history.replaceState({}, "", url.toString());
-      } else if (canceled === "true") {
-        toast.error("Subscription was canceled. You can try again anytime.");
-        // Clear the canceled parameter from URL to prevent repeated toasts
-        const url = new URL(window.location.href);
-        url.searchParams.delete("canceled");
-        window.history.replaceState({}, "", url.toString());
-      }
-    }
-  }, [searchParams, refreshSubscriptionStatus]);
 
   const fetchDashboardData = async () => {
     try {
@@ -135,6 +98,7 @@ export default function DjDashboard() {
         const statsData = await statsResponse.json();
         setStats(statsData.stats);
         setProfile(statsData.profile);
+        setImageError(false); // Reset image error when profile is updated
       }
 
       // Fetch social links (no djId needed, uses session user)
@@ -263,7 +227,7 @@ export default function DjDashboard() {
         {/* Header with Profile Info */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            {profile?.profileImage ? (
+            {profile?.profileImage && !imageError ? (
               <div className="relative w-16 h-16">
                 <Image
                   src={profile.profileImage}
@@ -271,6 +235,8 @@ export default function DjDashboard() {
                   fill
                   className="rounded-full object-cover"
                   sizes="64px"
+                  onError={() => setImageError(true)}
+                  unoptimized
                 />
               </div>
             ) : (
@@ -526,14 +492,6 @@ export default function DjDashboard() {
         </div>
 
         {/* Subscription Dashboard */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mb-8"
-        >
-          <SubscriptionDashboard />
-        </motion.div>
 
         {/* Quick Actions */}
         <motion.div
@@ -578,15 +536,13 @@ export default function DjDashboard() {
               </svg>
               <span>Social Media</span>
             </Link> */}
-            <SubscriptionGuard feature="bookings">
-              <Link
-                href="/dashboard/bookings?view=dj"
-                className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <Calendar className="w-6 h-6 mr-3 text-blue-500" />
-                <span>View Bookings</span>
-              </Link>
-            </SubscriptionGuard>
+            <Link
+              href="/dashboard/bookings?view=dj"
+              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Calendar className="w-6 h-6 mr-3 text-blue-500" />
+              <span>View Bookings</span>
+            </Link>
             <Link
               href="/dashboard/earnings"
               className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
@@ -601,30 +557,21 @@ export default function DjDashboard() {
               <Users className="w-6 h-6 mr-3 text-orange-500" />
               <span>Profile</span>
             </Link>
-            <Link
-              href="/dashboard/dj/pricing"
-              className="flex items-center p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              <DollarSign className="w-6 h-6 mr-3 text-green-500" />
-              <span>Pricing & Add-ons</span>
-            </Link>
           </div>
         </motion.div>
 
         {/* Social Media Management */}
-        <SubscriptionGuard feature="advanced_profile">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-          >
-            <SocialMediaManager
-              djId={session?.user?.id || ""}
-              initialSocialLinks={socialLinks}
-              onUpdate={handleSocialLinksUpdate}
-            />
-          </motion.div>
-        </SubscriptionGuard>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          <SocialMediaManager
+            djId={session?.user?.id || ""}
+            initialSocialLinks={socialLinks}
+            onUpdate={handleSocialLinksUpdate}
+          />
+        </motion.div>
       </div>
 
       {/* Payment Setup Modal */}

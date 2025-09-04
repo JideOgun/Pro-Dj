@@ -308,8 +308,8 @@ export default function PaymentSetupModal({
               <div className="p-4">
                 <p className="text-gray-300 text-sm">
                   {taxInfo.isSoleProprietor
-                    ? "For sole proprietors, we only need your SSN for tax reporting. We'll use your personal information from your profile."
-                    : "This information is required for tax reporting purposes. We will issue 1099 forms for payments exceeding $600 annually."}
+                    ? "As a subcontractor, we need your SSN for tax reporting. We'll issue Form 1099-NEC for payments exceeding $600 annually."
+                    : "This information is required for subcontractor tax reporting. We will issue Form 1099-NEC for payments exceeding $600 annually."}
                 </p>
               </div>
             </div>

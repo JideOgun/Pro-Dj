@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "../app/generated/prisma";
+import { PrismaClient, Role } from "../app/generated/prisma/index.js";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -84,30 +84,7 @@ async function main() {
     role: admin.role,
   });
 
-  // Grant subscription to admin DJ
-  const adminExpirationDate = new Date();
-  adminExpirationDate.setFullYear(adminExpirationDate.getFullYear() + 1);
-
-  await prisma.subscription.create({
-    data: {
-      userId: admin.id,
-      planType: "DJ_BASIC",
-      status: "ACTIVE",
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: adminExpirationDate,
-      amountCents: 0, // Free for admin
-      currency: "usd",
-      isInTrial: false,
-      cancelAtPeriodEnd: false,
-      stripeSubscriptionId: `admin_seeded_${admin.id}_${Date.now()}`,
-      stripeCustomerId: `admin_seeded_customer_${admin.id}`,
-      stripePriceId:
-        process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
-        "admin_seeded_price",
-    },
-  });
-
-  console.log("✅ Admin DJ subscription granted");
+  console.log(`✅ Admin user created: ${admin.name} (${admin.email})`);
 
   // Create test client user
   const CLIENT_PASSWORD = "password";
@@ -252,213 +229,29 @@ async function main() {
     },
   });
 
-  for (const dj of seededDjs) {
-    // Calculate expiration date (1 year from now)
-    const expirationDate = new Date();
-    expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-
-    await prisma.subscription.create({
-      data: {
-        userId: dj.id,
-        planType: "DJ_BASIC",
-        status: "ACTIVE",
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: expirationDate,
-        amountCents: 0, // Free for seeded DJs
-        currency: "usd",
-        isInTrial: false,
-        cancelAtPeriodEnd: false,
-        stripeSubscriptionId: `seeded_${dj.id}_${Date.now()}`,
-        stripeCustomerId: `seeded_customer_${dj.id}`,
-        stripePriceId:
-          process.env.STRIPE_DJ_BASIC_PRICE_ID?.replace(/"/g, "") ||
-          "seeded_price",
-      },
-    });
-
-    console.log(`✅ Subscription granted to ${dj.email}`);
-  }
-
-  // Create event-specific pricing for all test DJs
-  console.log("💰 Creating event-specific pricing for test DJs...");
-
-  // OSEAN pricing
-  const oseanProfile = await prisma.djProfile.findFirst({
-    where: { stageName: "OSEAN" },
-  });
-  if (oseanProfile) {
-    await prisma.djEventPricing.createMany({
-      data: [
-        { djId: oseanProfile.id, eventType: "Wedding", hourlyRateCents: 25000 },
-        { djId: oseanProfile.id, eventType: "Club", hourlyRateCents: 20000 },
-        {
-          djId: oseanProfile.id,
-          eventType: "Corporate",
-          hourlyRateCents: 22000,
-        },
-        {
-          djId: oseanProfile.id,
-          eventType: "Birthday",
-          hourlyRateCents: 18000,
-        },
-        {
-          djId: oseanProfile.id,
-          eventType: "Private Party",
-          hourlyRateCents: 20000,
-        },
-      ],
-    });
-  }
-
-  // DJ SB pricing
-  const djsbProfile = await prisma.djProfile.findFirst({
-    where: { stageName: "DJ SB" },
-  });
-  if (djsbProfile) {
-    await prisma.djEventPricing.createMany({
-      data: [
-        { djId: djsbProfile.id, eventType: "Club", hourlyRateCents: 30000 },
-        {
-          djId: djsbProfile.id,
-          eventType: "Corporate",
-          hourlyRateCents: 35000,
-        },
-        {
-          djId: djsbProfile.id,
-          eventType: "Private Party",
-          hourlyRateCents: 28000,
-        },
-      ],
-    });
-  }
-
-  // JAMIE DRED pricing
-  const jamieProfile = await prisma.djProfile.findFirst({
-    where: { stageName: "JAMIE DRED" },
-  });
-  if (jamieProfile) {
-    await prisma.djEventPricing.createMany({
-      data: [
-        { djId: jamieProfile.id, eventType: "Club", hourlyRateCents: 40000 },
-        {
-          djId: jamieProfile.id,
-          eventType: "Corporate",
-          hourlyRateCents: 45000,
-        },
-        {
-          djId: jamieProfile.id,
-          eventType: "Private Party",
-          hourlyRateCents: 38000,
-        },
-      ],
-    });
-  }
-
-  // DJ T.O pricing
-  const djtoProfile = await prisma.djProfile.findFirst({
-    where: { stageName: "DJ T.O" },
-  });
-  if (djtoProfile) {
-    await prisma.djEventPricing.createMany({
-      data: [
-        { djId: djtoProfile.id, eventType: "Wedding", hourlyRateCents: 28000 },
-        { djId: djtoProfile.id, eventType: "Birthday", hourlyRateCents: 22000 },
-        {
-          djId: djtoProfile.id,
-          eventType: "Private Party",
-          hourlyRateCents: 25000,
-        },
-        {
-          djId: djtoProfile.id,
-          eventType: "Corporate",
-          hourlyRateCents: 32000,
-        },
-      ],
-    });
-  }
-
-  // Create some sample event pricing for the admin DJ
-  const adminDjProfile = await prisma.djProfile.findFirst({
-    where: { stageName: "JAY BABA" },
-  });
-
-  if (adminDjProfile) {
-    await prisma.djEventPricing.createMany({
-      data: [
-        {
-          djId: adminDjProfile.id,
-          eventType: "Wedding",
-          hourlyRateCents: 45000, // $450/hour for weddings
-        },
-        {
-          djId: adminDjProfile.id,
-          eventType: "Club",
-          hourlyRateCents: 35000, // $350/hour for clubs
-        },
-        {
-          djId: adminDjProfile.id,
-          eventType: "Corporate",
-          hourlyRateCents: 40000, // $400/hour for corporate
-        },
-        {
-          djId: adminDjProfile.id,
-          eventType: "Birthday",
-          hourlyRateCents: 30000, // $300/hour for birthdays
-        },
-        {
-          djId: adminDjProfile.id,
-          eventType: "Private Party",
-          hourlyRateCents: 35000, // $350/hour for private parties
-        },
-      ],
-    });
-
-    // Create some sample add-ons for the admin DJ
-    await prisma.djAddon.createMany({
-      data: [
-        {
-          djId: adminDjProfile.id,
-          addonKey: "lighting",
-          label: "Professional Lighting Setup",
-          description:
-            "Advanced lighting system with moving heads, lasers, and fog effects",
-          priceCents: 15000, // $150
-          isActive: true,
-        },
-        {
-          djId: adminDjProfile.id,
-          addonKey: "mc",
-          label: "MC Services",
-          description:
-            "Professional MC services for announcements and crowd engagement",
-          priceCents: 10000, // $100
-          isActive: true,
-        },
-        {
-          djId: adminDjProfile.id,
-          addonKey: "extended_set",
-          label: "Extended Set",
-          description: "Additional hour of performance time",
-          priceCents: 35000, // $350
-          isActive: true,
-        },
-      ],
-    });
-  }
+  console.log(`✅ Created ${seededDjs.length} DJ users with profiles`);
 
   console.log("🎉 Database seeding completed successfully!");
   console.log("📊 Summary:");
   console.log(`   - Admin: ${admin.email} (${admin.name}) - Stage: JAY BABA`);
-  console.log(`   - Client: ${client.email}`);
-  console.log(`   - Test DJs: ${testDjs.map((dj) => dj.stageName).join(", ")}`);
+  console.log(`   - Client: ${client.email} (${client.name})`);
+  console.log(`   - Test DJs: ${seededDjs.length} users created`);
   console.log(
-    `   - All seeded DJs have been granted 1-year free subscriptions`
+    "   - DJs: OSEAN, DJ Sarah Spins, DJ MikeR, DJ Alex Beats, DJ T.O"
+  );
+  console.log();
+  console.log("🔑 Login credentials:");
+  console.log("   - Admin: Use your ADMIN_EMAIL and ADMIN_PASSWORD from .env");
+  console.log("   - All test users: password is 'password'");
+  console.log();
+  console.log(
+    "💡 Note: Use Pro-DJ centralized pricing instead of individual DJ rates"
   );
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seeding failed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

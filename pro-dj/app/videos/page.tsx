@@ -32,8 +32,6 @@ import {
 import toast from "react-hot-toast";
 import YouTubeVideoUpload from "@/components/YouTubeVideoUpload";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { SubscriptionGuard } from "@/components/SubscriptionGuard";
-import { FreeUploadCounter } from "@/components/FreeUploadCounter";
 
 interface YouTubeVideo {
   id: string;
@@ -310,8 +308,7 @@ function VideosPageContent() {
 
             {/* Upload Controls */}
             {canUpload() && (
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <FreeUploadCounter />
+              <div className="mt-8 flex items-center justify-center">
                 <YouTubeVideoUpload />
               </div>
             )}

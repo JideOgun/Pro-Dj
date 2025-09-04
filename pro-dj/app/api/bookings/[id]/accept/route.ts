@@ -109,24 +109,24 @@ export async function PATCH(
     );
   }
 
-  // Get DJ details to determine employment type and fee structure
+  // Get DJ details for subcontractor model (all DJs are now subcontractors)
   let djConnectAccountId = null;
   let platformFeeCents: number;
   let djPayoutCents: number;
-  let isEmployee = false;
 
   if (djId) {
     const djProfile = await prisma.djProfile.findUnique({
       where: { id: djId },
-      select: { 
-        stripeConnectAccountId: true, 
+      select: {
+        stripeConnectAccountId: true,
         stripeConnectAccountEnabled: true,
-        employmentType: true,
-        hourlyRate: true,
-        eventBonus: true,
+        contractorType: true,
+        contractorStatus: true,
+        platformSplitPercentage: true,
+        contractorSplitPercentage: true,
       },
     });
-    
+
     if (!djProfile) {
       return NextResponse.json(
         { ok: false, error: "DJ not found" },
@@ -134,33 +134,36 @@ export async function PATCH(
       );
     }
 
-    isEmployee = ["PART_TIME_W2", "FULL_TIME_W2"].includes(djProfile.employmentType);
+    // All DJs are subcontractors: 70% Pro-DJ, 30% subcontractor
+    const platformSplit = djProfile.platformSplitPercentage || 70; // Default 70%
+    const contractorSplit = djProfile.contractorSplitPercentage || 30; // Default 30%
 
-    if (isEmployee) {
-      // Employee: Higher platform fee (60% to Pro-DJ, 40% to DJ)
-      platformFeeCents = Math.round(booking.quotedPriceCents * 0.60); // 60% for Pro-DJ
-      djPayoutCents = booking.quotedPriceCents - platformFeeCents;
-      
-      // Employees don't need Stripe Connect for immediate payouts (handled via payroll)
-      djConnectAccountId = null;
-    } else {
-      // Contractor: Lower platform fee (10%)
-      platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
-      djPayoutCents = booking.quotedPriceCents - platformFeeCents;
-      
-      // Contractors need Stripe Connect for direct payouts
-      if (!djProfile?.stripeConnectAccountId || !djProfile.stripeConnectAccountEnabled) {
-        return NextResponse.json(
-          { ok: false, error: "DJ must complete Stripe Connect onboarding to accept bookings" },
-          { status: 400 }
-        );
-      }
-      djConnectAccountId = djProfile.stripeConnectAccountId;
+    platformFeeCents = Math.round(
+      booking.quotedPriceCents * (platformSplit.toNumber() / 100)
+    );
+    djPayoutCents = Math.round(
+      booking.quotedPriceCents * (contractorSplit.toNumber() / 100)
+    );
+
+    // All subcontractors need Stripe Connect for direct payouts
+    if (
+      !djProfile?.stripeConnectAccountId ||
+      !djProfile.stripeConnectAccountEnabled
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "DJ must complete Stripe Connect onboarding to accept bookings",
+        },
+        { status: 400 }
+      );
     }
+    djConnectAccountId = djProfile.stripeConnectAccountId;
   } else {
-    // Default contractor rates if no DJ assigned yet
-    platformFeeCents = Math.round(booking.quotedPriceCents * 0.1);
-    djPayoutCents = booking.quotedPriceCents - platformFeeCents;
+    // Default subcontractor rates if no DJ assigned yet: 70% Pro-DJ, 30% DJ
+    platformFeeCents = Math.round(booking.quotedPriceCents * 0.7);
+    djPayoutCents = Math.round(booking.quotedPriceCents * 0.3);
   }
 
   // Create a Checkout Session for the quoted amount with application fee
@@ -188,14 +191,16 @@ export async function PATCH(
       djId: djId || "",
       platformFeeCents: platformFeeCents.toString(),
       djPayoutCents: djPayoutCents.toString(),
-      isEmployee: isEmployee.toString(),
+      isSubcontractor: "true", // All DJs are now subcontractors
     },
-    payment_intent_data: djConnectAccountId ? {
-      application_fee_amount: platformFeeCents,
-      transfer_data: {
-        destination: djConnectAccountId,
-      },
-    } : undefined,
+    payment_intent_data: djConnectAccountId
+      ? {
+          application_fee_amount: platformFeeCents,
+          transfer_data: {
+            destination: djConnectAccountId,
+          },
+        }
+      : undefined,
     success_url: `${process.env.APP_URL}/book/success?bid=${booking.id}`,
     cancel_url: `${process.env.APP_URL}/book/cancel?bid=${booking.id}`,
     // optional: expires_at to limit how long they can pay

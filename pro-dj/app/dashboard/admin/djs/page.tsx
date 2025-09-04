@@ -17,6 +17,7 @@ interface DJ {
     stageName?: string;
     location?: string;
     isApprovedByAdmin?: boolean;
+    isAcceptingBookings?: boolean;
   };
   bookings: Array<{
     id: string;

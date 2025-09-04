@@ -198,57 +198,71 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get DJ's pricing for this event type
+    // Get Pro-DJ standardized pricing for this event type
     let quotedPriceCents = 0;
-    if (djId) {
-      const djPricing = await prisma.djEventPricing.findUnique({
-        where: { djId_eventType: { djId, eventType: bookingType } },
-        select: { hourlyRateCents: true },
-      });
+    let proDjServicePricingId: string | null = null;
+    let selectedAddons: string[] = [];
 
-      if (djPricing) {
-        // Calculate duration in hours
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        const durationHours =
-          (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const servicePricing = await prisma.proDjServicePricing.findUnique({
+      where: { eventType: bookingType },
+    });
 
-        // Base price = hourly rate × duration
-        quotedPriceCents = Math.round(
-          djPricing.hourlyRateCents * durationHours
-        );
-
-        // Add add-on prices if any
-        if (extra?.selectedAddons) {
-          const selectedAddons = String(extra.selectedAddons).split(",");
-          const addonPrices = await prisma.djAddon.findMany({
-            where: {
-              djId,
-              addonKey: { in: selectedAddons },
-              isActive: true,
-            },
-            select: { priceCents: true },
-          });
-
-          const totalAddonPrice = addonPrices.reduce(
-            (sum, addon) => sum + addon.priceCents,
-            0
-          );
-          quotedPriceCents += totalAddonPrice;
-        }
-      }
-    }
-
-    // Validate that we have a DJ selected
-    if (!djId) {
+    if (!servicePricing || !servicePricing.isActive) {
       return NextResponse.json(
         {
           ok: false,
-          error: "🎵 Please select a DJ for your booking.",
+          error: `🎵 Sorry, we don't currently offer Pro-DJ services for ${bookingType} events. Please contact us for custom pricing.`,
         },
         { status: 400 }
       );
     }
+
+    proDjServicePricingId = servicePricing.id;
+
+    // Calculate duration in hours
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const billableHours = Math.max(durationHours, servicePricing.minimumHours);
+
+    // Base price = Pro-DJ hourly rate × billable hours × region multiplier
+    const regionalRate = Math.round(
+      servicePricing.basePricePerHour * servicePricing.regionMultiplier
+    );
+    quotedPriceCents = regionalRate * billableHours;
+
+    // Add Pro-DJ add-on prices if any
+    if (extra?.selectedAddons) {
+      selectedAddons = Array.isArray(extra.selectedAddons)
+        ? extra.selectedAddons
+        : String(extra.selectedAddons).split(",").filter(Boolean);
+
+      if (selectedAddons.length > 0) {
+        const addonPrices = await prisma.proDjAddon.findMany({
+          where: {
+            id: { in: selectedAddons },
+            isActive: true,
+          },
+          select: {
+            id: true,
+            priceFixed: true,
+            pricePerHour: true,
+          },
+        });
+
+        const totalAddonPrice = addonPrices.reduce((sum, addon) => {
+          const addonPrice =
+            addon.priceFixed ||
+            (addon.pricePerHour ? addon.pricePerHour * billableHours : 0);
+          return sum + addonPrice;
+        }, 0);
+
+        quotedPriceCents += totalAddonPrice;
+      }
+    }
+
+    // Note: DJ selection is now optional - client can express preference
+    // Admin will review and assign the final DJ
 
     // Parse and validate times
     const eventDateTime = new Date(eventDate + "T00:00:00");
@@ -430,7 +444,7 @@ export async function POST(req: Request) {
     const booking = await prisma.booking.create({
       data: {
         userId: String(session.user?.id),
-        djId,
+        preferredDjId: djId, // Client's DJ preference (optional)
         eventType: bookingType,
         eventDate: eventDateTime,
         startTime: startDateTime,
@@ -438,6 +452,10 @@ export async function POST(req: Request) {
         message,
         quotedPriceCents,
         details: bookingDetails,
+        proDjServicePricingId, // Link to standardized pricing
+        selectedAddons, // Array of Pro-DJ addon IDs
+        // Default to PENDING_ADMIN_REVIEW status for new premium model
+        status: "PENDING_ADMIN_REVIEW",
       },
     });
 

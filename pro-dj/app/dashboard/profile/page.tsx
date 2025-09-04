@@ -1042,11 +1042,27 @@ export default function ProfilePage() {
                 <div className="relative inline-block">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-700 mx-auto mb-4">
                     {profile?.profileImage ? (
-                      <img
-                        src={profile.profileImage}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={profile.profileImage}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.nextElementSibling?.classList?.remove(
+                              "hidden"
+                            );
+                          }}
+                        />
+                        <div className="w-full h-full flex items-center justify-center hidden">
+                          <span className="text-3xl text-gray-300 font-bold">
+                            {profile?.name?.charAt(0) ||
+                              session?.user?.name?.charAt(0) ||
+                              session?.user?.email?.charAt(0) ||
+                              "U"}
+                          </span>
+                        </div>
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="text-3xl text-gray-300 font-bold">

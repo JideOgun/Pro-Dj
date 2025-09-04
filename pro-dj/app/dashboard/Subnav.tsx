@@ -38,17 +38,6 @@ export default function Subnav() {
       >
         Posts
       </Link>
-
-      {isAdmin && !is("/dashboard/dj") && (
-        <Link
-          href="/dashboard/pricing"
-          className={`${styles.tab} ${
-            is("/dashboard/pricing") ? styles.active : ""
-          }`}
-        >
-          Pricing
-        </Link>
-      )}
     </div>
   );
 }

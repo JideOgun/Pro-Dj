@@ -18,8 +18,6 @@ import FollowButton from "@/components/FollowButton";
 import { useSocketContext } from "@/components/SocketProvider";
 import { Upload, Plus, ChevronDown, Filter, Search } from "lucide-react";
 import toast from "react-hot-toast";
-import { SubscriptionGuard } from "@/components/SubscriptionGuard";
-import { FreeUploadCounter } from "@/components/FreeUploadCounter";
 
 // Predefined list of genres for filtering
 const GENRES = [
@@ -352,7 +350,9 @@ function MixesPageContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {/* Title Section */}
           <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">DJ Mixes</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">
+              DJ Mixes
+            </h1>
             <p className="text-gray-300 text-sm sm:text-base lg:text-lg">
               Discover amazing mixes from talented DJs
             </p>
@@ -476,16 +476,13 @@ function MixesPageContent() {
               {/* Upload Button and Free Upload Counter */}
               {(session?.user?.role === "DJ" ||
                 session?.user?.role === "ADMIN") && (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <FreeUploadCounter />
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="flex items-center justify-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors text-sm sm:text-base"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Mix
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center justify-center px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors text-sm sm:text-base"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Mix
+                </button>
               )}
             </div>
           </div>
@@ -565,11 +562,24 @@ function MixesPageContent() {
                     >
                       <div className="flex items-center space-x-2">
                         {mix.dj.userProfileImage ? (
-                          <img
-                            src={mix.dj.userProfileImage}
-                            alt={mix.dj.stageName}
-                            className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
-                          />
+                          <>
+                            <img
+                              src={mix.dj.userProfileImage}
+                              alt={mix.dj.stageName}
+                              className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextElementSibling?.classList?.remove(
+                                  "hidden"
+                                );
+                              }}
+                            />
+                            <div className="w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 hidden">
+                              <span className="text-xs text-gray-300 font-medium">
+                                {mix.dj.stageName.charAt(0)}
+                              </span>
+                            </div>
+                          </>
                         ) : (
                           <div className="w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-xs text-gray-300 font-medium">
@@ -617,7 +627,9 @@ function MixesPageContent() {
 
             {mixes.length === 0 && !loading && (
               <div className="text-center py-8 sm:py-12 px-4">
-                <div className="text-gray-400 text-base sm:text-lg mb-2">No mixes found</div>
+                <div className="text-gray-400 text-base sm:text-lg mb-2">
+                  No mixes found
+                </div>
                 <p className="text-gray-500 mb-4 text-sm sm:text-base">
                   {session?.user?.role === "DJ" ||
                   session?.user?.role === "ADMIN"

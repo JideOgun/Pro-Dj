@@ -264,11 +264,24 @@ export default function MixDetailPage() {
                 <div className="flex items-center space-x-4 text-sm text-gray-400">
                   <div className="flex items-center">
                     {mix.dj.userProfileImage ? (
-                      <img
-                        src={mix.dj.userProfileImage}
-                        alt={mix.dj.stageName}
-                        className="w-5 h-5 rounded-full mr-2 object-cover"
-                      />
+                      <>
+                        <img
+                          src={mix.dj.userProfileImage}
+                          alt={mix.dj.stageName}
+                          className="w-5 h-5 rounded-full mr-2 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.nextElementSibling?.classList?.remove(
+                              "hidden"
+                            );
+                          }}
+                        />
+                        <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center mr-2 hidden">
+                          <span className="text-xs text-gray-300 font-medium">
+                            {mix.dj.stageName.charAt(0)}
+                          </span>
+                        </div>
+                      </>
                     ) : (
                       <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center mr-2">
                         <span className="text-xs text-gray-300 font-medium">
@@ -345,11 +358,24 @@ export default function MixDetailPage() {
                   <div className="text-sm text-gray-400 mb-2">DJ</div>
                   <div className="flex items-center space-x-3">
                     {mix.dj.userProfileImage ? (
-                      <img
-                        src={mix.dj.userProfileImage}
-                        alt={mix.dj.stageName}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={mix.dj.userProfileImage}
+                          alt={mix.dj.stageName}
+                          className="w-12 h-12 rounded-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.nextElementSibling?.classList?.remove(
+                              "hidden"
+                            );
+                          }}
+                        />
+                        <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center hidden">
+                          <span className="text-lg text-gray-300 font-medium">
+                            {mix.dj.stageName.charAt(0)}
+                          </span>
+                        </div>
+                      </>
                     ) : (
                       <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center">
                         <span className="text-lg text-gray-300 font-medium">

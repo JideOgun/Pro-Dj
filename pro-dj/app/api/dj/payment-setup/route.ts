@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!taxId || taxId.replace(/\D/g, "").length !== 9) {
       return NextResponse.json(
-        { error: "Valid tax ID (SSN or EIN) is required" },
+        {
+          error:
+            "Valid tax ID (SSN or EIN) is required for subcontractor payments",
+        },
         { status: 400 }
       );
     }

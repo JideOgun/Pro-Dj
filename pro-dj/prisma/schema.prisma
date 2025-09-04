@@ -48,6 +48,7 @@ maxFreeUploads Int @default(1)
 resetToken String?
 resetTokenExpiry DateTime?
 bookings Booking[]
+adminApprovedBookings Booking[] @relation("AdminApprovedBookings")
 comments Comment[] @relation("UserComments")
 commentDislikes CommentDislike[]
 commentLikes CommentLike[]
@@ -59,9 +60,11 @@ notifications Notification[] @relation("UserNotifications")
 reposts Repost[]
 reviews Review[] @relation("UserReviews")
 securityClearance SecurityClearance?
-subscription Subscription?
+
 userMedia UserMedia[]
-promoCodeRedemptions PromoCodeRedemption[]
+
+adminBookingActions AdminBookingAction[]
+clientPreferences ClientDjPreference[] @relation("ClientPreferences")
 }
 
 model Booking {
@@ -76,7 +79,7 @@ details Json?
 quotedPriceCents Int?
 checkoutSessionId String?
 paidAt DateTime?
-status BookingStatus @default(PENDING)
+status BookingStatus @default(PENDING_ADMIN_REVIEW)
 djId String?
 endTime DateTime
 startTime DateTime
@@ -88,30 +91,48 @@ refundId String?
 refundedAt DateTime?
 totalAmount Int?
 // Escrow and fee fields
-platformFeeCents Int? // 10% platform fee
+platformFeeCents Int? // 70% platform fee for subcontractor model
 escrowStatus EscrowStatus @default(PENDING)
 clientConfirmed Boolean @default(false)
 djConfirmed Boolean @default(false)
 eventCompletedAt DateTime?
 payoutStatus PayoutStatus @default(PENDING)
-payoutAmountCents Int? // Amount DJ receives after fee
+payoutAmountCents Int? // Amount DJ receives after fee (30%)
 payoutId String? // Stripe transfer ID
 payoutAt DateTime?
 disputeStatus DisputeStatus @default(NONE)
 disputeReason String?
 disputeCreatedAt DateTime?
 disputeResolvedAt DateTime?
+// NEW: Admin-controlled booking fields
+preferredDjId String? // Client's DJ preference (optional)
+adminAssignedDjId String? // Admin's actual DJ assignment
+adminNotes String? // Admin reasoning for assignment
+adminApprovedAt DateTime? // When admin approved booking
+adminApprovedBy String? // Which admin approved
+proDjServicePricingId String? // Links to standardized pricing
+selectedAddons String[] // Array of ProDjAddon IDs
+proDjAddons ProDjAddon[] // Many-to-many relation with add-ons
+// Relations
 dj DjProfile? @relation(fields: [djId], references: [id])
+preferredDj DjProfile? @relation("PreferredDjBookings", fields: [preferredDjId], references: [id])
+adminAssignedDj DjProfile? @relation("AdminAssignedBookings", fields: [adminAssignedDjId], references: [id])
+adminApprover User? @relation("AdminApprovedBookings", fields: [adminApprovedBy], references: [id])
+proDjServicePricing ProDjServicePricing? @relation(fields: [proDjServicePricingId], references: [id])
 user User @relation(fields: [userId], references: [id])
 recovery BookingRecovery[] @relation("OriginalBooking")
 review Review?
 equipmentAssignments EquipmentAssignment[]
 performanceMetrics DjPerformanceMetric[]
+adminActions AdminBookingAction[]
 
 @@index([status])
 @@index([djId])
+@@index([preferredDjId])
+@@index([adminAssignedDjId])
 @@index([escrowStatus])
 @@index([payoutStatus])
+@@index([adminApprovedBy])
 }
 
 model Post {
@@ -204,6 +225,37 @@ dj DjProfile? @relation(fields: [djId], references: [id])
 @@index([djId])
 }
 
+model ProDjServicePricing {
+id String @id @default(uuid())
+eventType String
+basePricePerHour Int
+regionMultiplier Float @default(1.0)
+minimumHours Int @default(4)
+description String?
+isActive Boolean @default(true)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+bookings Booking[]
+
+@@unique([eventType])
+@@index([eventType, isActive])
+}
+
+model ProDjAddon {
+id String @id @default(uuid())
+name String
+description String
+priceFixed Int?
+pricePerHour Int?
+category String
+isActive Boolean @default(true)
+requiresSpecialEquipment Boolean @default(false)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@index([category, isActive])
+}
+
 model DjProfile {
 id String @id @default(uuid())
 userId String @unique
@@ -219,7 +271,6 @@ rating Float @default(0)
 reviewCount Int @default(0)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
-availability String?
 customGenres String?
 equipment String?
 languages String[]
@@ -234,21 +285,28 @@ stripeConnectAccountId String? // Stripe Connect account ID for payouts
 stripeConnectAccountStatus String? // Status of Connect account (pending, active, restricted)
 stripeConnectAccountEnabled Boolean @default(false) // Whether Connect account is ready for payouts
 stripeConnectAccountCreatedAt DateTime? // When Connect account was created
-// Employment fields
-employmentType DjEmploymentType @default(CONTRACTOR)
-employmentStartDate DateTime?
-employmentEndDate DateTime?
-hourlyRate Decimal? // Hourly rate for part-time employees
-eventBonus Decimal? // Bonus per completed event
-maxWeeklyHours Int @default(25) // Maximum hours per week (stay under ACA threshold)
+// Subcontractor fields
+contractorType DjContractorType @default(SUBCONTRACTOR)
+contractStartDate DateTime?
+contractEndDate DateTime?
+contractorAgreementSigned Boolean @default(false)
+contractorAgreementDate DateTime?
 backgroundCheckCompleted Boolean @default(false)
 backgroundCheckDate DateTime?
 equipmentTrainingCompleted Boolean @default(false)
 equipmentTrainingDate DateTime?
+prodjBrandingTrainingCompleted Boolean @default(false)
+prodjBrandingTrainingDate DateTime?
 performanceRating Decimal @default(0) // 0-5 star rating
 totalEventsCompleted Int @default(0)
 lastActiveDate DateTime?
+contractorStatus ContractorStatus @default(PENDING)
+// Revenue split - can be customized per contractor (default 70-30)
+contractorSplitPercentage Decimal @default(30) // Percentage DJ gets (30%)
+platformSplitPercentage Decimal @default(70) // Percentage Pro-DJ gets (70%)
 bookings Booking[]
+preferredBookings Booking[] @relation("PreferredDjBookings")
+adminAssignedBookings Booking[] @relation("AdminAssignedBookings")
 recoverySuggestions BookingRecovery[] @relation("SuggestedDj")
 djAddons DjAddon[]
 djEventPricing DjEventPricing[]
@@ -260,8 +318,8 @@ pricing Pricing[]
 reviews Review[]
 availability DjAvailability[]
 equipmentAssignments EquipmentAssignment[]
-payrollRecords PayrollRecord[]
 performanceMetrics DjPerformanceMetric[]
+djPreferences ClientDjPreference[] @relation("DjPreferences")
 }
 
 model Review {
@@ -555,100 +613,6 @@ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 @@index([dataRetentionDate])
 }
 
-model Subscription {
-id String @id @default(uuid())
-userId String @unique
-stripeSubscriptionId String @unique
-stripeCustomerId String
-stripePriceId String
-planType SubscriptionTier
-status SubscriptionStatus @default(ACTIVE)
-currentPeriodStart DateTime
-currentPeriodEnd DateTime
-amountCents Int
-currency String @default("usd")
-interval String @default("month")
-intervalCount Int @default(1)
-trialStart DateTime?
-trialEnd DateTime?
-isInTrial Boolean @default(false)
-cancelAtPeriodEnd Boolean @default(false)
-cancelledAt DateTime?
-cancelReason String?
-lastPaymentDate DateTime?
-nextPaymentDate DateTime?
-paymentMethodId String?
-platformFeePercentage Int @default(10)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-usage SubscriptionUsage[]
-promoCodeRedemptions PromoCodeRedemption[]
-
-@@index([userId])
-@@index([stripeSubscriptionId])
-@@index([stripeCustomerId])
-@@index([status])
-@@index([currentPeriodEnd])
-}
-
-model SubscriptionPlan {
-id String @id @default(uuid())
-name String @unique
-displayName String
-description String?
-priceCents Int
-currency String @default("usd")
-interval String @default("month")
-intervalCount Int @default(1)
-features Json?
-isActive Boolean @default(true)
-isDefault Boolean @default(false)
-stripePriceId String?
-stripeProductId String?
-trialDays Int @default(30)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-@@index([name])
-@@index([isActive])
-@@index([stripePriceId])
-}
-
-model SubscriptionUsage {
-id String @id @default(uuid())
-subscriptionId String
-bookingsCount Int @default(0)
-revenueGenerated Int @default(0)
-platformFeesCollected Int @default(0)
-periodStart DateTime
-periodEnd DateTime
-isCurrentPeriod Boolean @default(false)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-@@index([subscriptionId])
-@@index([periodStart])
-@@index([periodEnd])
-@@index([isCurrentPeriod])
-}
-
-model PromoCodeRedemption {
-id String @id @default(uuid())
-userId String
-promoCode String
-redeemedAt DateTime @default(now())
-subscriptionId String
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-@@unique([userId, promoCode])
-@@index([userId])
-@@index([promoCode])
-@@index([subscriptionId])
-}
-
 model DjAvailability {
 id String @id @default(uuid())
 djId String
@@ -707,39 +671,6 @@ booking Booking? @relation(fields: [bookingId], references: [id])
 @@index([assignedDate])
 }
 
-model PayrollRecord {
-id String @id @default(uuid())
-djId String
-payPeriodStart DateTime
-payPeriodEnd DateTime
-hoursWorked Decimal
-eventsCompleted Int @default(0)
-hourlyPay Decimal
-eventBonuses Decimal @default(0)
-grossPay Decimal
-federalTax Decimal @default(0)
-stateTax Decimal @default(0)
-socialSecurity Decimal @default(0)
-medicare Decimal @default(0)
-employerSSN Decimal @default(0) // Employer portion of Social Security
-employerMedicare Decimal @default(0) // Employer portion of Medicare
-employerFUTA Decimal @default(0) // Federal unemployment tax
-employerSUTA Decimal @default(0) // State unemployment tax
-workersComp Decimal @default(0) // Workers compensation
-totalEmployerTax Decimal @default(0)
-netPay Decimal
-payDate DateTime?
-status PayrollStatus @default(PENDING)
-notes String?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-dj DjProfile @relation(fields: [djId], references: [id])
-
-@@index([djId])
-@@index([payPeriodStart])
-@@index([status])
-}
-
 model DjPerformanceMetric {
 id String @id @default(uuid())
 djId String
@@ -765,32 +696,61 @@ CLIENT
 DJ
 }
 
+model ProDjServicePricing {
+id String @id @default(uuid())
+eventType String
+packageType String // "BASIC", "PREMIUM", "CUSTOM"
+packageName String
+basePriceCents Int
+regionMultiplier Float @default(1.0)
+durationHours Int
+description String
+includes String[] // Array of included services
+isActive Boolean @default(true)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+// Relations
+bookings Booking[]
+
+@@unique([eventType, packageType])
+@@index([eventType])
+@@index([isActive])
+}
+
+model ProDjAddon {
+id String @id @default(uuid())
+name String
+description String
+priceFixed Int? // Fixed price in cents
+pricePerHour Int? // Hourly price in cents
+category String
+requiresSpecialEquipment Boolean @default(false)
+isActive Boolean @default(true)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+// Relations
+bookings Booking[]
+
+@@index([category])
+@@index([isActive])
+}
+
 enum BookingStatus {
-PENDING
-ACCEPTED
-DECLINED
+PENDING_ADMIN_REVIEW
+ADMIN_REVIEWING
+DJ_ASSIGNED
 CONFIRMED
+COMPLETED
 CANCELLED
+DISPUTED
 }
 
 enum UserStatus {
 ACTIVE
 SUSPENDED
 PENDING
-}
-
-enum SubscriptionStatus {
-ACTIVE
-CANCELLED
-PAST_DUE
-UNPAID
-TRIAL
-}
-
-enum SubscriptionTier {
-DJ_BASIC
-DJ_PRO
-DJ_PREMIUM
 }
 
 enum UploadStatus {
@@ -824,16 +784,53 @@ RESOLVED
 ESCALATED
 }
 
-enum DjEmploymentType {
-CONTRACTOR
-PART_TIME_W2
-FULL_TIME_W2
+enum DjContractorType {
+SUBCONTRACTOR
+PREMIUM_SUBCONTRACTOR
 TERMINATED
 }
 
-enum PayrollStatus {
+enum ContractorStatus {
 PENDING
-PROCESSED
-PAID
-CANCELLED
+TRAINING
+ACTIVE
+SUSPENDED
+TERMINATED
+}
+
+model AdminBookingAction {
+id String @id @default(uuid())
+bookingId String
+adminId String
+action String // "APPROVED", "REJECTED", "REASSIGNED", "REVIEWED"
+reason String?
+previousDjId String?
+newDjId String?
+createdAt DateTime @default(now())
+
+booking Booking @relation(fields: [bookingId], references: [id])
+admin User @relation(fields: [adminId], references: [id])
+
+@@index([bookingId])
+@@index([adminId])
+@@index([action])
+@@index([createdAt])
+}
+
+model ClientDjPreference {
+id String @id @default(uuid())
+clientId String
+djId String
+preferenceType String // "PREFERRED", "AVOIDED", "NEUTRAL"
+reason String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+client User @relation("ClientPreferences", fields: [clientId], references: [id])
+dj DjProfile @relation("DjPreferences", fields: [djId], references: [id])
+
+@@unique([clientId, djId])
+@@index([clientId])
+@@index([djId])
+@@index([preferenceType])
 }
