@@ -53,7 +53,7 @@ export async function PATCH(
 
   const updated = await prisma.booking.update({
     where: { id },
-    data: { status: "DECLINED" },
+    data: { status: "CANCELLED" },
   });
 
   // Trigger recovery system

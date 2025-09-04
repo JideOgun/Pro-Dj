@@ -248,7 +248,7 @@ function RecoveryPageContent() {
                       ✓ Recovery action has been processed successfully
                     </p>
                   )}
-                  {recovery.status === "DECLINED" && (
+                  {recovery.status === "CANCELLED" && (
                     <p className="text-red-400 mt-1">
                       ✗ Recovery suggestion was declined
                     </p>

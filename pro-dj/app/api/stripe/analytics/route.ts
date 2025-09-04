@@ -152,7 +152,7 @@ export async function GET() {
       (b) => b.status === "ACCEPTED"
     ).length;
     const declinedBookings = bookings.filter(
-      (b) => b.status === "DECLINED"
+      (b) => b.status === "CANCELLED"
     ).length;
 
     const conversionRate =

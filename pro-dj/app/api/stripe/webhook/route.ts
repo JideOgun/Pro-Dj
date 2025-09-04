@@ -150,7 +150,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
       await prisma.booking.update({
         where: { id: bookingId },
         data: {
-          status: "DECLINED",
+          status: "CANCELLED",
           isPaid: false,
         },
       });

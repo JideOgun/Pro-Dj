@@ -126,7 +126,7 @@ export async function POST(
         cancellationReason: reason,
         cancelledAt: new Date(),
         cancelledBy: session.user.id,
-        status: "DECLINED", // Mark as declined after refund
+        status: "CANCELLED", // Mark as cancelled after refund
       },
       include: {
         user: { select: { email: true, name: true } },
@@ -135,7 +135,7 @@ export async function POST(
     });
 
     // Emit WebSocket event for real-time updates
-    emitBookingUpdate(booking.id, "DECLINED", false);
+    emitBookingUpdate(booking.id, "CANCELLED", false);
 
     // Send email notification to client
     if (booking.user?.email) {

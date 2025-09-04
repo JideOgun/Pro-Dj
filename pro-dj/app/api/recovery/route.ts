@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       await prisma.bookingRecovery.update({
         where: { id: recoveryId },
         data: {
-          status: "DECLINED",
+          status: "CANCELLED",
           clientResponse: response || "",
         },
       });

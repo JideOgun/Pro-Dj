@@ -86,11 +86,11 @@ export async function handleBookingTimeout(bookingId: string): Promise<void> {
       return;
     }
 
-    // Update booking status to DECLINED
+    // Update booking status to CANCELLED
     await prisma.booking.update({
       where: { id: bookingId },
       data: {
-        status: "DECLINED",
+        status: "CANCELLED",
         cancellationReason:
           "DJ did not respond within the required time period",
         cancelledAt: new Date(),

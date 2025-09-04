@@ -33,7 +33,6 @@ export async function PATCH(
       "PENDING",
       "ACCEPTED",
       "CONFIRMED",
-      "DECLINED",
       "CANCELLED",
     ];
     if (!validStatuses.includes(status)) {
@@ -63,7 +62,6 @@ export async function PATCH(
           | "PENDING"
           | "ACCEPTED"
           | "CONFIRMED"
-          | "DECLINED"
           | "CANCELLED",
       },
     });
