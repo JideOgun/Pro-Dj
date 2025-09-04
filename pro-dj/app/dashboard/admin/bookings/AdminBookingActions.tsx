@@ -71,7 +71,6 @@ export default function AdminBookingActions({
       { value: "PENDING", label: "Pending" },
       { value: "ACCEPTED", label: "Accepted" },
       { value: "CONFIRMED", label: "Confirmed" },
-      { value: "DECLINED", label: "Declined" },
       { value: "CANCELLED", label: "Cancelled" },
     ];
     return options.filter((option) => option.value !== booking.status);

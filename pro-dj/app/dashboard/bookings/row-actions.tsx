@@ -344,7 +344,7 @@ export default function Actions({
     // Optimistic update - happens immediately
     if (onStatusChange) {
       if (kind === "accept") onStatusChange(id, "ACCEPTED");
-      if (kind === "decline") onStatusChange(id, "DECLINED");
+      if (kind === "decline") onStatusChange(id, "CANCELLED");
     }
 
     // Show success message immediately
@@ -365,7 +365,7 @@ export default function Actions({
     }
 
     // Emit WebSocket event for real-time updates
-    const newStatus = kind === "accept" ? "ACCEPTED" : "DECLINED";
+    const newStatus = kind === "accept" ? "ACCEPTED" : "CANCELLED";
     emitBookingUpdate(id, newStatus);
   }
 
@@ -541,10 +541,10 @@ export default function Actions({
                 Booking confirmed
               </span>
             )}
-            {status === "DECLINED" && (
+            {status === "CANCELLED" && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-900/40 text-red-200 border border-red-700/30">
                 <XCircle size={10} />
-                Booking declined
+                Booking cancelled
               </span>
             )}
           </div>

@@ -63,7 +63,7 @@ export default async function BookingDetailPage({
         return "bg-blue-900/40 text-blue-200 border-blue-500";
       case "CONFIRMED":
         return "bg-green-900/40 text-green-200 border-green-500";
-      case "DECLINED":
+      case "CANCELLED":
         return "bg-red-900/40 text-red-200 border-red-500";
       default:
         return "bg-gray-900/40 text-gray-200 border-gray-500";

@@ -69,7 +69,7 @@ export default function BookingCalendar({ bookings }: BookingCalendarProps) {
           backgroundColor = "#10b981"; // Green
           borderColor = "#059669";
           break;
-        case "DECLINED":
+        case "CANCELLED":
           backgroundColor = "#ef4444"; // Red
           borderColor = "#dc2626";
           break;

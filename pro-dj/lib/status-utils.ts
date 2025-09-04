@@ -8,7 +8,7 @@ export const getStatusColor = (status: string) => {
       return "bg-blue-900/40 text-blue-200 border-blue-700/30";
     case "CONFIRMED":
       return "bg-green-900/40 text-green-200 border-green-700/30";
-    case "DECLINED":
+    case "CANCELLED":
       return "bg-red-900/40 text-red-200 border-red-700/30";
     default:
       return "bg-gray-800 text-gray-200 border-gray-600/30";
@@ -23,8 +23,8 @@ export const getStatusText = (status: string) => {
       return "ACCEPTED";
     case "CONFIRMED":
       return "CONFIRMED";
-    case "DECLINED":
-      return "DECLINED";
+    case "CANCELLED":
+      return "CANCELLED";
     default:
       return status;
   }
@@ -38,7 +38,7 @@ export const getPaymentStatusText = (status: string) => {
       return "NOT PAID";
     case "CONFIRMED":
       return "PAID";
-    case "DECLINED":
+    case "CANCELLED":
       return "NOT PAID";
     default:
       return "NOT PAID";
@@ -54,7 +54,7 @@ export const getStatusIcon = (status: string) => {
       return "✅";
     case "CONFIRMED":
       return "💰";
-    case "DECLINED":
+    case "CANCELLED":
       return "❌";
     default:
       return "•";
@@ -70,7 +70,7 @@ export const getPaymentStatusIcon = (status: string) => {
       return "❌"; // Red X for NOT PAID
     case "CONFIRMED":
       return "✅"; // Green checkmark for PAID
-    case "DECLINED":
+    case "CANCELLED":
       return "❌"; // Red X for NOT PAID
     default:
       return "❌"; // Red X for NOT PAID
@@ -117,7 +117,7 @@ export const getClientPaymentStatusText = (
       return "NOT PAID";
     case "CONFIRMED":
       return "PAID";
-    case "DECLINED":
+    case "CANCELLED":
       return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
     default:
       return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
@@ -136,7 +136,7 @@ export const getClientPaymentStatusColor = (
       return "bg-red-900/40 text-red-200 border-red-700/30";
     case "CONFIRMED":
       return "bg-green-900/40 text-green-200 border-green-700/30";
-    case "DECLINED":
+    case "CANCELLED":
       return refundId
         ? "bg-orange-900/40 text-orange-200 border-orange-700/30"
         : "bg-red-900/40 text-red-200 border-red-700/30";
@@ -159,7 +159,7 @@ export const getClientPaymentStatusIcon = (
       return "❌";
     case "CONFIRMED":
       return "✅";
-    case "DECLINED":
+    case "CANCELLED":
       return refundId ? "🔄" : "❌";
     default:
       return refundId ? "🔄" : "❌";

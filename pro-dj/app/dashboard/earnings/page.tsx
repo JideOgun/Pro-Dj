@@ -129,7 +129,7 @@ export default async function EarningsPage() {
       (b) => b.status === "CONFIRMED"
     ).length;
     const declinedBookings = monthBookings.filter(
-      (b) => b.status === "DECLINED"
+      (b) => b.status === "CANCELLED"
     ).length;
 
     bookingTrends.push({
