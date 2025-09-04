@@ -16,13 +16,15 @@ import {
   MapPin,
 } from "lucide-react";
 
-interface ServicePricing {
+interface ProDjServicePricing {
   id: string;
   eventType: string;
-  basePricePerHour: number;
-  regionMultiplier: number;
-  minimumHours: number;
+  packageType: string;
+  packageName: string;
+  basePriceCents: number;
+  durationHours: number | null;
   description: string | null;
+  includes: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +51,7 @@ export default function AdminPricingPage() {
     redirect("/");
   }
 
-  const [servicePricing, setServicePricing] = useState<ServicePricing[]>([]);
+  const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>([]);
   const [proDjAddons, setProDjAddons] = useState<ProDjAddon[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pricing");
@@ -57,7 +59,7 @@ export default function AdminPricingPage() {
   // Modal states
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showAddonModal, setShowAddonModal] = useState(false);
-  const [editingPricing, setEditingPricing] = useState<ServicePricing | null>(
+  const [editingPricing, setEditingPricing] = useState<ProDjServicePricing | null>(
     null
   );
   const [editingAddon, setEditingAddon] = useState<ProDjAddon | null>(null);
@@ -65,10 +67,12 @@ export default function AdminPricingPage() {
   // Form states
   const [pricingForm, setPricingForm] = useState({
     eventType: "",
-    basePricePerHour: "",
-    regionMultiplier: "1.0",
-    minimumHours: "4",
+    packageType: "",
+    packageName: "",
+    basePriceCents: "",
+    durationHours: "",
     description: "",
+    includes: "",
   });
 
   const [addonForm, setAddonForm] = useState({
@@ -86,9 +90,13 @@ export default function AdminPricingPage() {
     "Birthday",
     "Private Party",
     "Club",
-    "Graduation",
-    "Anniversary",
-    "Holiday Party",
+  ];
+
+  const packageTypes = [
+    "BASIC",
+    "STANDARD", 
+    "PREMIUM",
+    "HOURLY",
   ];
 
   const addonCategories = [
@@ -136,22 +144,26 @@ export default function AdminPricingPage() {
   const handleCreatePricing = () => {
     setPricingForm({
       eventType: "",
-      basePricePerHour: "",
-      regionMultiplier: "1.0",
-      minimumHours: "4",
+      packageType: "",
+      packageName: "",
+      basePriceCents: "",
+      durationHours: "",
       description: "",
+      includes: "",
     });
     setEditingPricing(null);
     setShowPricingModal(true);
   };
 
-  const handleEditPricing = (pricing: ServicePricing) => {
+  const handleEditPricing = (pricing: ProDjServicePricing) => {
     setPricingForm({
       eventType: pricing.eventType,
-      basePricePerHour: (pricing.basePricePerHour / 100).toString(),
-      regionMultiplier: pricing.regionMultiplier.toString(),
-      minimumHours: pricing.minimumHours.toString(),
+      packageType: pricing.packageType,
+      packageName: pricing.packageName,
+      basePriceCents: (pricing.basePriceCents / 100).toString(),
+      durationHours: pricing.durationHours?.toString() || "",
       description: pricing.description || "",
+      includes: pricing.includes.join(", "),
     });
     setEditingPricing(pricing);
     setShowPricingModal(true);
@@ -161,12 +173,14 @@ export default function AdminPricingPage() {
     try {
       const body = {
         eventType: pricingForm.eventType,
-        basePricePerHour: Math.round(
-          parseFloat(pricingForm.basePricePerHour) * 100
+        packageType: pricingForm.packageType,
+        packageName: pricingForm.packageName,
+        basePriceCents: Math.round(
+          parseFloat(pricingForm.basePriceCents) * 100
         ),
-        regionMultiplier: parseFloat(pricingForm.regionMultiplier),
-        minimumHours: parseInt(pricingForm.minimumHours),
+        durationHours: pricingForm.durationHours ? parseInt(pricingForm.durationHours) : null,
         description: pricingForm.description || null,
+        includes: pricingForm.includes.split(",").map(s => s.trim()).filter(Boolean),
       };
 
       const response = await fetch("/api/admin/pricing/service-pricing", {
@@ -188,12 +202,12 @@ export default function AdminPricingPage() {
     }
   };
 
-  const handleDeletePricing = async (eventType: string) => {
+  const handleDeletePricing = async (id: string) => {
     if (!confirm("Are you sure you want to delete this pricing?")) return;
 
     try {
       const response = await fetch(
-        `/api/admin/pricing/service-pricing?eventType=${eventType}`,
+        `/api/admin/pricing/service-pricing/${id}`,
         { method: "DELETE" }
       );
 
@@ -390,28 +404,45 @@ export default function AdminPricingPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-semibold">
-                          {pricing.eventType}
+                          {pricing.eventType} - {pricing.packageName}
                         </h3>
                         <span className="bg-violet-600 text-violet-100 px-2 py-1 rounded text-sm">
-                          {formatPrice(pricing.basePricePerHour)}/hour
+                          {formatPrice(pricing.basePriceCents)}
                         </span>
-                        {pricing.regionMultiplier !== 1 && (
-                          <span className="bg-orange-600 text-orange-100 px-2 py-1 rounded text-sm">
-                            {pricing.regionMultiplier}x region
+                        <span className="bg-blue-600 text-blue-100 px-2 py-1 rounded text-sm">
+                          {pricing.packageType}
+                        </span>
+                        {pricing.durationHours && (
+                          <span className="bg-green-600 text-green-100 px-2 py-1 rounded text-sm">
+                            {pricing.durationHours}h package
                           </span>
                         )}
                       </div>
                       <p className="text-gray-300 mb-3">
                         {pricing.description}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>Min {pricing.minimumHours}h</span>
+                      {pricing.includes.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-sm text-gray-400 mb-1">Package includes:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {pricing.includes.map((item, index) => (
+                              <span key={index} className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
                         </div>
+                      )}
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        {pricing.durationHours && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{pricing.durationHours} hours</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>Base rate × {pricing.regionMultiplier}</span>
+                          <Package className="w-4 h-4" />
+                          <span>{pricing.packageType} package</span>
                         </div>
                       </div>
                     </div>
@@ -423,7 +454,7 @@ export default function AdminPricingPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeletePricing(pricing.eventType)}
+                        onClick={() => handleDeletePricing(pricing.id)}
                         className="bg-red-600 hover:bg-red-700 p-2 rounded-lg"
                       >
                         <Trash className="w-4 h-4" />
@@ -563,54 +594,78 @@ export default function AdminPricingPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Base Price Per Hour ($)
+                    Package Type
                   </label>
-                  <input
-                    type="number"
-                    value={pricingForm.basePricePerHour}
+                  <select
+                    value={pricingForm.packageType}
                     onChange={(e) =>
                       setPricingForm({
                         ...pricingForm,
-                        basePricePerHour: e.target.value,
+                        packageType: e.target.value,
                       })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                    placeholder="250"
+                  >
+                    <option value="">Select package type</option>
+                    {packageTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Package Name
+                  </label>
+                  <input
+                    type="text"
+                    value={pricingForm.packageName}
+                    onChange={(e) =>
+                      setPricingForm({
+                        ...pricingForm,
+                        packageName: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                    placeholder="Basic Wedding Package"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Region Multiplier
+                    Base Price ($)
                   </label>
                   <input
                     type="number"
-                    step="0.1"
-                    value={pricingForm.regionMultiplier}
+                    value={pricingForm.basePriceCents}
                     onChange={(e) =>
                       setPricingForm({
                         ...pricingForm,
-                        regionMultiplier: e.target.value,
+                        basePriceCents: e.target.value,
                       })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                    placeholder="2500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Minimum Hours
+                    Duration Hours (optional)
                   </label>
                   <input
                     type="number"
-                    value={pricingForm.minimumHours}
+                    value={pricingForm.durationHours}
                     onChange={(e) =>
                       setPricingForm({
                         ...pricingForm,
-                        minimumHours: e.target.value,
+                        durationHours: e.target.value,
                       })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                    placeholder="5"
                   />
                 </div>
 
@@ -628,6 +683,24 @@ export default function AdminPricingPage() {
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
                     rows={3}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Package Includes (comma-separated)
+                  </label>
+                  <textarea
+                    value={pricingForm.includes}
+                    onChange={(e) =>
+                      setPricingForm({
+                        ...pricingForm,
+                        includes: e.target.value,
+                      })
+                    }
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                    rows={3}
+                    placeholder="Professional sound system, Basic lighting, Microphones, Event coordination"
                   />
                 </div>
               </div>
