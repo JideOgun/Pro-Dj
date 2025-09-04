@@ -473,14 +473,34 @@ export async function POST(req: Request) {
     );
   } catch (error: unknown) {
     console.error("POST /api/bookings error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Server error";
+    
+    // Provide user-friendly error messages
+    let errorMessage = "Unable to submit booking request. Please try again.";
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      // Handle specific Prisma errors
+      if (error.message.includes("Invalid value for argument")) {
+        errorMessage = "There was an issue with the booking data. Please check your event details and try again.";
+        statusCode = 400;
+      } else if (error.message.includes("Unique constraint")) {
+        errorMessage = "A booking already exists for this time slot. Please choose a different time.";
+        statusCode = 409;
+      } else if (error.message.includes("Required field")) {
+        errorMessage = "Please fill in all required fields and try again.";
+        statusCode = 400;
+      } else {
+        // Log the actual error for debugging
+        console.error("Detailed error:", error.message);
+      }
+    }
+    
     return NextResponse.json(
       {
         ok: false,
         error: errorMessage,
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }

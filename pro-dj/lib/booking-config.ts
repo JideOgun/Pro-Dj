@@ -56,7 +56,7 @@ export const AVAILABLE_ADDONS: Addon[] = [
 
 export const BOOKING_CONFIG = {
   Wedding: {
-    extraFields: ["venueName", "guestCount", "ceremonyTime", "receptionTime"],
+    extraFields: ["venueName", "guestCount"],
     recommendedAddons: [
       "lighting",
       "setup",

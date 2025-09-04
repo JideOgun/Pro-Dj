@@ -38,7 +38,7 @@ export async function handleBookingRejection(
       where: {
         userId: booking.userId,
         eventDate: booking.eventDate,
-        status: { in: ["PENDING", "ACCEPTED", "CONFIRMED"] },
+        status: { in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"] },
       },
       include: {
         dj: true,

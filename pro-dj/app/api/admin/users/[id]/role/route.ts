@@ -63,7 +63,7 @@ export async function PATCH(
           where: {
             djId: user.djProfile.id,
             status: {
-              in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+              in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
             },
           },
         });

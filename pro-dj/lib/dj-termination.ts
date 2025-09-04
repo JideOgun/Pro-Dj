@@ -48,7 +48,7 @@ export async function handleDjTermination(
       where: {
         djId: dj.djProfile.id,
         status: {
-          in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+          in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
         },
       },
       include: {

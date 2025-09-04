@@ -228,16 +228,21 @@ dj DjProfile? @relation(fields: [djId], references: [id])
 model ProDjServicePricing {
 id String @id @default(uuid())
 eventType String
-basePricePerHour Int
+packageType String @default("BASIC") // "BASIC", "PREMIUM", "CUSTOM"
+packageName String?
+basePricePerHour Int? // For backward compatibility
+basePriceCents Int? // Package-based pricing
 regionMultiplier Float @default(1.0)
 minimumHours Int @default(4)
+durationHours Int? // Package duration
 description String?
+includes String[] // Array of included services
 isActive Boolean @default(true)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 bookings Booking[]
 
-@@unique([eventType])
+@@unique([eventType, packageType])
 @@index([eventType, isActive])
 }
 
@@ -252,6 +257,9 @@ isActive Boolean @default(true)
 requiresSpecialEquipment Boolean @default(false)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
+
+// Relations
+bookings Booking[]
 
 @@index([category, isActive])
 }
@@ -696,46 +704,6 @@ CLIENT
 DJ
 }
 
-model ProDjServicePricing {
-id String @id @default(uuid())
-eventType String
-packageType String // "BASIC", "PREMIUM", "CUSTOM"
-packageName String
-basePriceCents Int
-regionMultiplier Float @default(1.0)
-durationHours Int
-description String
-includes String[] // Array of included services
-isActive Boolean @default(true)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-// Relations
-bookings Booking[]
-
-@@unique([eventType, packageType])
-@@index([eventType])
-@@index([isActive])
-}
-
-model ProDjAddon {
-id String @id @default(uuid())
-name String
-description String
-priceFixed Int? // Fixed price in cents
-pricePerHour Int? // Hourly price in cents
-category String
-requiresSpecialEquipment Boolean @default(false)
-isActive Boolean @default(true)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-// Relations
-bookings Booking[]
-
-@@index([category])
-@@index([isActive])
-}
 
 enum BookingStatus {
 PENDING_ADMIN_REVIEW

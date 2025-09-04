@@ -157,7 +157,7 @@ export async function DELETE(req: NextRequest) {
       where: {
         userId: session.user.id,
         status: {
-          in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+          in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
         },
       },
     });
@@ -287,7 +287,7 @@ export async function GET(req: NextRequest) {
       where: {
         userId: user.id,
         status: {
-          in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+          in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
         },
       },
     });

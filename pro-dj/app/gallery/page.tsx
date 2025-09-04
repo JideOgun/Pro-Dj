@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -36,7 +36,7 @@ interface DJ {
   events: Event[];
 }
 
-export default function GalleryPage() {
+function GalleryContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [djs, setDjs] = useState<DJ[]>([]);
@@ -509,5 +509,13 @@ export default function GalleryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function GalleryPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading gallery..." />}>
+      <GalleryContent />
+    </Suspense>
   );
 }

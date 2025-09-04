@@ -32,7 +32,7 @@ export async function isDjAvailable(
     where: {
       djId,
       status: {
-        in: ["PENDING", "ACCEPTED", "CONFIRMED"], // Only check active bookings
+        in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"], // Only check active bookings
       },
       ...(excludeBookingId && { id: { not: excludeBookingId } }),
       OR: [
@@ -101,7 +101,7 @@ export async function checkEventTimeConflicts(
         ),
       },
       status: {
-        in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+        in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
       },
       ...(excludeBookingId && { id: { not: excludeBookingId } }),
       OR: [

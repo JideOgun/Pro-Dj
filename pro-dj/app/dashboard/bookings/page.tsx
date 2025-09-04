@@ -33,7 +33,7 @@ export default async function BookingsPage({
   let whereClause: {
     djId?: string | null;
     userId?: string;
-    status?: "PENDING" | "ACCEPTED" | "CONFIRMED" | "DECLINED";
+    status?: "PENDING_ADMIN_REVIEW" | "ADMIN_REVIEWING" | "DJ_ASSIGNED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "DISPUTED";
   } = {};
 
   // Check if user is a DJ (including admin users who are also DJs)
@@ -67,15 +67,18 @@ export default async function BookingsPage({
   // Add status filter if provided
   if (
     searchParams.status &&
-    ["PENDING", "ACCEPTED", "CONFIRMED", "DECLINED"].includes(
+    ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED", "COMPLETED", "CANCELLED", "DISPUTED"].includes(
       searchParams.status
     )
   ) {
     whereClause.status = searchParams.status as
-      | "PENDING"
-      | "ACCEPTED"
+      | "PENDING_ADMIN_REVIEW"
+      | "ADMIN_REVIEWING"
+      | "DJ_ASSIGNED"
       | "CONFIRMED"
-      | "DECLINED";
+      | "COMPLETED"
+      | "CANCELLED"
+      | "DISPUTED";
   }
 
   const bookings = await prisma.booking.findMany({

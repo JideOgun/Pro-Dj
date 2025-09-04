@@ -50,11 +50,22 @@ async function seedPremiumPricing() {
     },
     {
       eventType: "Corporate",
+      packageType: "BASIC",
+      packageName: "Corporate Standard Package",
       basePricePerHour: 35000, // $350/hour - Competitive corporate pricing
       regionMultiplier: 1.2, // Higher multiplier for corporate clients
       minimumHours: 4,
+      durationHours: 4,
       description:
         "Premium corporate event DJ service for meetings, conferences, and company parties with professional presentation and coordination",
+      includes: [
+        "4 hours of coverage",
+        "Professional sound system",
+        "Microphones included",
+        "Event coordination",
+        "Music consultation",
+        "Setup & breakdown"
+      ]
     },
     {
       eventType: "Birthday",
@@ -286,11 +297,16 @@ async function seedPremiumPricing() {
   try {
     // Seed service pricing
     for (const pricing of servicePricing) {
-      await prisma.proDjServicePricing.upsert({
-        where: { eventType: pricing.eventType },
-        update: pricing,
-        create: pricing,
-      });
+          await prisma.proDjServicePricing.upsert({
+      where: { 
+        eventType_packageType: {
+          eventType: pricing.eventType,
+          packageType: pricing.packageType
+        }
+      },
+      update: pricing,
+      create: pricing,
+    });
     }
 
     console.log(`✅ Created ${servicePricing.length} service pricing entries`);

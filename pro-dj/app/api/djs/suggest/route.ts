@@ -56,7 +56,7 @@ export async function POST(req: Request) {
             djId: profile.id,
             eventDate: new Date(eventDate),
             status: {
-              in: ["PENDING", "ACCEPTED", "CONFIRMED"],
+              in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
             },
             OR: [
               {
