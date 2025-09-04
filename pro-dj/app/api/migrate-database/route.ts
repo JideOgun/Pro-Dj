@@ -92,6 +92,11 @@ export async function POST(req: NextRequest) {
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "payoutStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeStatus" TEXT NOT NULL DEFAULT 'NONE';`,
       
+      // Add missing columns to ProDjServicePricing table
+      `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "basePricePerHour" INTEGER;`,
+      `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "regionMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1.0;`,
+      `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "minimumHours" INTEGER NOT NULL DEFAULT 4;`,
+      
       // Create ProDjAddon table if it doesn't exist
       `CREATE TABLE IF NOT EXISTS "ProDjAddon" (
         "id" TEXT NOT NULL,
