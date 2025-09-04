@@ -86,16 +86,29 @@ export async function POST(req: NextRequest) {
     // Create add-ons
     const createdAddons = [];
     for (const addon of addonData) {
-      const created = await prisma.proDjAddon.upsert({
-        where: { name: addon.name },
-        update: addon,
-        create: {
-          ...addon,
-          id: crypto.randomUUID(),
-          requiresSpecialEquipment: addon.category === "Special Effects",
-        },
+      // Check if addon already exists
+      const existing = await prisma.proDjAddon.findFirst({
+        where: { name: addon.name }
       });
-      createdAddons.push(created);
+      
+      if (existing) {
+        // Update existing addon
+        const updated = await prisma.proDjAddon.update({
+          where: { id: existing.id },
+          data: addon,
+        });
+        createdAddons.push(updated);
+      } else {
+        // Create new addon
+        const created = await prisma.proDjAddon.create({
+          data: {
+            ...addon,
+            id: crypto.randomUUID(),
+            requiresSpecialEquipment: addon.category === "Special Effects",
+          },
+        });
+        createdAddons.push(created);
+      }
     }
 
     // Create service pricing packages
