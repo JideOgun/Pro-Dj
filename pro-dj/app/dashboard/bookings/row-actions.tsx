@@ -343,7 +343,7 @@ export default function Actions({
   async function run(kind: "accept" | "decline") {
     // Optimistic update - happens immediately
     if (onStatusChange) {
-      if (kind === "accept") onStatusChange(id, "ACCEPTED");
+      if (kind === "accept") onStatusChange(id, "DJ_ASSIGNED");
       if (kind === "decline") onStatusChange(id, "CANCELLED");
     }
 
@@ -357,15 +357,15 @@ export default function Actions({
     if (!res.ok) {
       // Revert optimistic update on error
       if (onStatusChange) {
-        if (kind === "accept") onStatusChange(id, "PENDING");
-        if (kind === "decline") onStatusChange(id, "PENDING");
+        if (kind === "accept") onStatusChange(id, "PENDING_ADMIN_REVIEW_ADMIN_REVIEW");
+        if (kind === "decline") onStatusChange(id, "PENDING_ADMIN_REVIEW_ADMIN_REVIEW");
       }
       toast.error(j?.error ?? `Failed to ${kind}`);
       return;
     }
 
     // Emit WebSocket event for real-time updates
-    const newStatus = kind === "accept" ? "ACCEPTED" : "CANCELLED";
+    const newStatus = kind === "accept" ? "DJ_ASSIGNED" : "CANCELLED";
     emitBookingUpdate(id, newStatus);
   }
 
@@ -373,7 +373,7 @@ export default function Actions({
     <>
       <div className="flex flex-col sm:flex-row gap-1 justify-end">
         {/* Show accept/decline for DJs and admins with active subscriptions */}
-        {status === "PENDING" &&
+        {status === "PENDING_ADMIN_REVIEW" &&
           (userRole === "DJ" || userRole === "ADMIN") && (
             <>
               <>
@@ -395,7 +395,7 @@ export default function Actions({
             </>
           )}
         {/* Show payment link for DJs and admins when accepted */}
-        {status === "ACCEPTED" &&
+        {status === "DJ_ASSIGNED" &&
           (userRole === "DJ" || userRole === "ADMIN") && (
             <button
               onClick={showPaymentLinkModal}
@@ -486,13 +486,13 @@ export default function Actions({
         {/* Show action info for clients */}
         {userRole === "CLIENT" && (
           <div className="text-xs px-2 py-1">
-            {status === "PENDING" && (
+            {status === "PENDING_ADMIN_REVIEW" && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-yellow-900/40 text-yellow-200 border border-yellow-700/30">
                 <Clock size={10} />
                 Waiting for DJ
               </span>
             )}
-            {status === "ACCEPTED" && (
+            {status === "DJ_ASSIGNED" && (
               <div className="flex flex-col gap-1">
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-900/40 text-blue-200 border border-blue-700/30">
                   <CreditCard size={10} />

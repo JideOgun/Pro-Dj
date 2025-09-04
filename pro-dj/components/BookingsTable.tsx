@@ -517,7 +517,7 @@ function BookingsTableContent({
                         ? getClientPaymentStatusText(b.status, b.refundId)
                         : getStatusText(b.status)}
                     </span>
-                    {b.status === "PENDING" && b.createdAt && (
+                    {b.status === "PENDING_ADMIN_REVIEW" && b.createdAt && (
                       <div className="flex items-center gap-1 text-xs">
                         <Clock className="w-3 h-3" />
                         <span
@@ -629,7 +629,7 @@ function BookingsTableContent({
                     ? getClientPaymentStatusText(b.status, b.refundId)
                     : getStatusText(b.status)}
                 </span>
-                {b.status === "PENDING" && b.createdAt && (
+                {b.status === "PENDING_ADMIN_REVIEW" && b.createdAt && (
                   <div className="flex items-center justify-end gap-1 text-xs mt-1">
                     <Clock className="w-3 h-3" />
                     <span

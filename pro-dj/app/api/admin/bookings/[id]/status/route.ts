@@ -30,8 +30,9 @@ export async function PATCH(
 
     // Validate status
     const validStatuses = [
-      "PENDING",
-      "ACCEPTED",
+      "PENDING_ADMIN_REVIEW",
+      "ADMIN_REVIEWING",
+      "DJ_ASSIGNED",
       "CONFIRMED",
       "CANCELLED",
     ];
@@ -59,8 +60,9 @@ export async function PATCH(
       where: { id: id },
       data: {
         status: status as
-          | "PENDING"
-          | "ACCEPTED"
+          | "PENDING_ADMIN_REVIEW"
+          | "ADMIN_REVIEWING"
+          | "DJ_ASSIGNED"
           | "CONFIRMED"
           | "CANCELLED",
       },

@@ -207,9 +207,9 @@ function RecoveryPageContent() {
                 <div className="text-right">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      recovery.status === "PENDING"
+                      recovery.status === "PENDING_ADMIN_REVIEW"
                         ? "bg-yellow-900 text-yellow-300"
-                        : recovery.status === "ACCEPTED"
+                        : recovery.status === "DJ_ASSIGNED"
                         ? "bg-green-900 text-green-300"
                         : "bg-red-900 text-red-300"
                     }`}
@@ -219,7 +219,7 @@ function RecoveryPageContent() {
                 </div>
               </div>
 
-              {recovery.status === "PENDING" && (
+              {recovery.status === "PENDING_ADMIN_REVIEW" && (
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleRecoveryAction(recovery.id, "accept")}
@@ -238,12 +238,12 @@ function RecoveryPageContent() {
                 </div>
               )}
 
-              {recovery.status !== "PENDING" && (
+              {recovery.status !== "PENDING_ADMIN_REVIEW" && (
                 <div className="text-sm text-gray-400">
                   <p>
                     <strong>Status:</strong> {recovery.status}
                   </p>
-                  {recovery.status === "ACCEPTED" && (
+                  {recovery.status === "DJ_ASSIGNED" && (
                     <p className="text-green-400 mt-1">
                       ✓ Recovery action has been processed successfully
                     </p>

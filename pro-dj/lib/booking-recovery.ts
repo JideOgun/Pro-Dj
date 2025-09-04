@@ -81,7 +81,7 @@ export async function handleBookingRejection(
           originalBookingId: bookingId,
           recoveryType: suggestion.type,
           suggestedDjId: suggestion.suggestedDjId,
-          status: "PENDING",
+          status: "PENDING_ADMIN_REVIEW",
         },
       });
     }
@@ -249,7 +249,7 @@ export async function acceptRecoverySuggestion(
     await prisma.bookingRecovery.update({
       where: { id: recoveryId },
       data: {
-        status: "ACCEPTED",
+        status: "DJ_ASSIGNED",
         clientResponse,
       },
     });
@@ -366,7 +366,7 @@ async function createNewDjBooking(recovery: NewDjRecovery): Promise<void> {
       quotedPriceCents: recovery.originalBooking.quotedPriceCents,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       details: recovery.originalBooking.details as any,
-      status: "PENDING",
+      status: "PENDING_ADMIN_REVIEW",
     },
   });
 }

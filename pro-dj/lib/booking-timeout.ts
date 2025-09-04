@@ -44,7 +44,7 @@ export async function getExpiredPendingBookings() {
   // Get all pending bookings
   const pendingBookings = await prisma.booking.findMany({
     where: {
-      status: "PENDING",
+      status: "PENDING_ADMIN_REVIEW",
     },
     include: {
       user: true,
@@ -79,7 +79,7 @@ export async function handleBookingTimeout(bookingId: string): Promise<void> {
       return;
     }
 
-    if (booking.status !== "PENDING") {
+    if (booking.status !== "PENDING_ADMIN_REVIEW") {
       console.log(
         `Booking ${bookingId} is no longer pending, skipping timeout`
       );

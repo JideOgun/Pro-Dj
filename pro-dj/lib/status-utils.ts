@@ -2,9 +2,11 @@
 
 export const getStatusColor = (status: string) => {
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW_ADMIN_REVIEW":
       return "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
-    case "ACCEPTED":
+    case "ADMIN_REVIEWING":
+      return "bg-orange-900/40 text-orange-200 border-orange-700/30";
+    case "DJ_ASSIGNED":
       return "bg-blue-900/40 text-blue-200 border-blue-700/30";
     case "CONFIRMED":
       return "bg-green-900/40 text-green-200 border-green-700/30";
@@ -17,10 +19,12 @@ export const getStatusColor = (status: string) => {
 
 export const getStatusText = (status: string) => {
   switch (status) {
-    case "PENDING":
-      return "PENDING";
-    case "ACCEPTED":
-      return "ACCEPTED";
+    case "PENDING_ADMIN_REVIEW_ADMIN_REVIEW":
+      return "PENDING_ADMIN_REVIEW_ADMIN_REVIEW";
+    case "ADMIN_REVIEWING":
+      return "ADMIN_REVIEWING";
+    case "DJ_ASSIGNED":
+      return "DJ_ASSIGNED";
     case "CONFIRMED":
       return "CONFIRMED";
     case "CANCELLED":
@@ -32,9 +36,9 @@ export const getStatusText = (status: string) => {
 
 export const getPaymentStatusText = (status: string) => {
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "NOT PAID";
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "NOT PAID";
     case "CONFIRMED":
       return "PAID";
@@ -48,9 +52,9 @@ export const getPaymentStatusText = (status: string) => {
 // Status icons for consistent display
 export const getStatusIcon = (status: string) => {
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "⏳";
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "✅";
     case "CONFIRMED":
       return "💰";
@@ -64,9 +68,9 @@ export const getStatusIcon = (status: string) => {
 // Payment status icons for client view
 export const getPaymentStatusIcon = (status: string) => {
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "❌"; // Red X for NOT PAID
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "❌"; // Red X for NOT PAID
     case "CONFIRMED":
       return "✅"; // Green checkmark for PAID
@@ -111,9 +115,9 @@ export const getClientPaymentStatusText = (
 ) => {
   if (refundId) return "PAYMENT REFUNDED";
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "NOT PAID";
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "NOT PAID";
     case "CONFIRMED":
       return "PAID";
@@ -130,9 +134,9 @@ export const getClientPaymentStatusColor = (
 ) => {
   if (refundId) return "bg-orange-900/40 text-orange-200 border-orange-700/30";
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "bg-red-900/40 text-red-200 border-red-700/30";
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "bg-red-900/40 text-red-200 border-red-700/30";
     case "CONFIRMED":
       return "bg-green-900/40 text-green-200 border-green-700/30";
@@ -153,9 +157,9 @@ export const getClientPaymentStatusIcon = (
 ) => {
   if (refundId) return "🔄";
   switch (status) {
-    case "PENDING":
+    case "PENDING_ADMIN_REVIEW":
       return "❌";
-    case "ACCEPTED":
+    case "DJ_ASSIGNED":
       return "❌";
     case "CONFIRMED":
       return "✅";

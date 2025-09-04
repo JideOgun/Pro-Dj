@@ -170,13 +170,13 @@ export default async function BookingsPage({
             </div>
           </Link>
           <Link
-            href="/dashboard/bookings?status=PENDING"
+            href="/dashboard/bookings?status=PENDING_ADMIN_REVIEW"
             className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
-              searchParams.status === "PENDING" ? "ring-2 ring-yellow-500" : ""
+              searchParams.status === "PENDING_ADMIN_REVIEW" ? "ring-2 ring-yellow-500" : ""
             }`}
           >
             <div className="text-2xl font-bold text-yellow-400 group-hover:text-yellow-300">
-              {bookings.filter((b) => b.status === "PENDING").length}
+              {bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW").length}
             </div>
             <div className="text-gray-400 text-sm group-hover:text-gray-300">
               Pending

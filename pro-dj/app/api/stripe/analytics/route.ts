@@ -146,10 +146,10 @@ export async function GET() {
       (b) => b.status === "CONFIRMED"
     ).length;
     const pendingBookings = bookings.filter(
-      (b) => b.status === "PENDING"
+      (b) => b.status === "PENDING_ADMIN_REVIEW"
     ).length;
     const acceptedBookings = bookings.filter(
-      (b) => b.status === "ACCEPTED"
+      (b) => b.status === "DJ_ASSIGNED"
     ).length;
     const declinedBookings = bookings.filter(
       (b) => b.status === "CANCELLED"

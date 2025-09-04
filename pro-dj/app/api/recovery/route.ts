@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const recoveries = await prisma.bookingRecovery.findMany({
       where: {
         originalBookingId: bookingId,
-        status: "PENDING",
+        status: "PENDING_ADMIN_REVIEW",
       },
       include: {
         suggestedDj: true,

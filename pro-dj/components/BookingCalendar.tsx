@@ -61,9 +61,17 @@ export default function BookingCalendar({ bookings }: BookingCalendarProps) {
       let borderColor = "#2563eb";
 
       switch (booking.status) {
-        case "PENDING":
+        case "PENDING_ADMIN_REVIEW":
           backgroundColor = "#f59e0b"; // Yellow
           borderColor = "#d97706";
+          break;
+        case "ADMIN_REVIEWING":
+          backgroundColor = "#f97316"; // Orange
+          borderColor = "#ea580c";
+          break;
+        case "DJ_ASSIGNED":
+          backgroundColor = "#3b82f6"; // Blue
+          borderColor = "#2563eb";
           break;
         case "CONFIRMED":
           backgroundColor = "#10b981"; // Green
@@ -72,10 +80,6 @@ export default function BookingCalendar({ bookings }: BookingCalendarProps) {
         case "CANCELLED":
           backgroundColor = "#ef4444"; // Red
           borderColor = "#dc2626";
-          break;
-        case "ACCEPTED":
-          backgroundColor = "#3b82f6"; // Blue
-          borderColor = "#2563eb";
           break;
       }
 

@@ -146,7 +146,7 @@ export async function handleDjTermination(
             userId: booking.user.id,
             originalBookingId: booking.id,
             type: "DJ_TERMINATED",
-            status: "PENDING",
+            status: "PENDING_ADMIN_REVIEW",
             suggestions: {
               message:
                 "Your DJ has been terminated from the platform. We can help you find a replacement DJ.",

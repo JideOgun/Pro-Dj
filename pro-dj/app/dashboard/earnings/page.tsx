@@ -120,10 +120,10 @@ export default async function EarningsPage() {
     });
 
     const pendingBookings = monthBookings.filter(
-      (b) => b.status === "PENDING"
+      (b) => b.status === "PENDING_ADMIN_REVIEW"
     ).length;
     const acceptedBookings = monthBookings.filter(
-      (b) => b.status === "ACCEPTED"
+      (b) => b.status === "DJ_ASSIGNED"
     ).length;
     const confirmedBookings = monthBookings.filter(
       (b) => b.status === "CONFIRMED"
