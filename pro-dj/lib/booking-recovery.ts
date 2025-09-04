@@ -318,7 +318,7 @@ async function extendDjBooking(recovery: ExtendDjRecovery): Promise<void> {
       djId: recovery.suggestedDjId,
       userId: recovery.originalBooking.userId,
       eventDate: recovery.originalBooking.eventDate,
-      status: { in: ["CONFIRMED", "ACCEPTED"] },
+      status: { in: ["CONFIRMED", "DJ_ASSIGNED"] },
     },
   });
 

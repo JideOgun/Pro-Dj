@@ -449,7 +449,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="flex items-center bg-gray-700/50 px-3 py-2 rounded-lg">
               <div className="w-4 h-4 bg-red-500 rounded-full mr-3 shadow-lg"></div>
-              <span className="font-medium">Declined</span>
+              <span className="font-medium">Cancelled</span>
             </div>
           </div>
         </div>
