@@ -233,7 +233,7 @@ export default async function UserManagementPage({ params }: PageProps) {
                           className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                             booking.status === "CONFIRMED"
                               ? "bg-green-900/40 text-green-200"
-                              : booking.status === "PENDING"
+                              : booking.status === "PENDING_ADMIN_REVIEW"
                               ? "bg-yellow-900/40 text-yellow-200"
                               : "bg-gray-800 text-gray-200"
                           }`}

@@ -38,9 +38,11 @@ export default async function AdminBookingsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "PENDING":
+      case "PENDING_ADMIN_REVIEW":
         return "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
-      case "ACCEPTED":
+      case "ADMIN_REVIEWING":
+        return "bg-orange-900/40 text-orange-200 border-orange-700/30";
+      case "DJ_ASSIGNED":
         return "bg-blue-900/40 text-blue-200 border-blue-700/30";
       case "CONFIRMED":
         return "bg-green-900/40 text-green-200 border-green-700/30";
@@ -90,7 +92,7 @@ export default async function AdminBookingsPage() {
           </div>
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="text-2xl font-bold text-yellow-400">
-              {bookings.filter((b) => b.status === "PENDING").length}
+              {bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW").length}
             </div>
             <div className="text-gray-400 text-sm">Pending</div>
           </div>

@@ -68,8 +68,9 @@ export default function AdminBookingActions({
 
   const getStatusOptions = () => {
     const options = [
-      { value: "PENDING", label: "Pending" },
-      { value: "ACCEPTED", label: "Accepted" },
+      { value: "PENDING_ADMIN_REVIEW", label: "Pending Review" },
+      { value: "ADMIN_REVIEWING", label: "In Review" },
+      { value: "DJ_ASSIGNED", label: "DJ Assigned" },
       { value: "CONFIRMED", label: "Confirmed" },
       { value: "CANCELLED", label: "Cancelled" },
     ];
