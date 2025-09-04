@@ -81,7 +81,7 @@ export default function AdminDjsPage() {
         return "bg-green-900/40 text-green-200 border-green-700/30";
       case "SUSPENDED":
         return "bg-red-900/40 text-red-200 border-red-700/30";
-      case "PENDING":
+      case "PENDING_ADMIN_REVIEW":
         return "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
       default:
         return "bg-gray-800 text-gray-200 border-gray-600/30";
@@ -293,7 +293,7 @@ export default function AdminDjsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {dj.status === "PENDING" ? (
+                        {dj.status === "PENDING_ADMIN_REVIEW" ? (
                           <>
                             <button
                               type="button"

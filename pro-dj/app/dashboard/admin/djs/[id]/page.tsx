@@ -63,7 +63,7 @@ export default async function DjManagementPage({ params }: PageProps) {
         return "bg-green-900/40 text-green-200 border-green-700/30";
       case "SUSPENDED":
         return "bg-red-900/40 text-red-200 border-red-700/30";
-      case "PENDING":
+      case "PENDING_ADMIN_REVIEW":
         return "bg-yellow-900/40 text-yellow-200 border-yellow-700/30";
       default:
         return "bg-gray-800 text-gray-200 border-gray-600/30";
@@ -196,7 +196,7 @@ export default async function DjManagementPage({ params }: PageProps) {
         <UserManagementActions user={user} currentAdminId={session.user.id} />
 
         {/* Approval Actions - Only show for pending DJs */}
-        {user.status === "PENDING" && (
+        {user.status === "PENDING_ADMIN_REVIEW" && (
           <DjApprovalActions user={user} currentAdminId={session.user.id} />
         )}
 
