@@ -1,63 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { exec } from "child_process";
+import { promisify } from "util";
 
-export async function POST(request: NextRequest) {
+const execAsync = promisify(exec);
+
+export async function POST(req: NextRequest) {
   try {
-    console.log("🔧 Running database migration...");
-
-    // Check if resetToken column exists
-    const tableInfo = await prisma.$queryRaw`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'User' 
-      AND column_name IN ('resetToken', 'resetTokenExpiry')
-    `;
-
-    console.log("Current User table columns:", tableInfo);
-
-    // Add resetToken column if it doesn't exist
-    try {
-      await prisma.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "resetToken" TEXT`;
-      console.log("✅ Added resetToken column");
-    } catch (error) {
-      console.log("resetToken column already exists or error:", error);
+    // Only allow admin users to run migrations
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
     }
 
-    // Add resetTokenExpiry column if it doesn't exist
-    try {
-      await prisma.$executeRaw`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "resetTokenExpiry" TIMESTAMP`;
-      console.log("✅ Added resetTokenExpiry column");
-    } catch (error) {
-      console.log("resetTokenExpiry column already exists or error:", error);
+    // Check for secret token to prevent unauthorized access
+    const { token } = await req.json();
+    const expectedToken = process.env.MIGRATION_SECRET_TOKEN;
+    
+    if (!expectedToken || token !== expectedToken) {
+      return NextResponse.json(
+        { error: "Invalid migration token." },
+        { status: 401 }
+      );
     }
 
-    // Verify the columns exist
-    const updatedTableInfo = await prisma.$queryRaw`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'User' 
-      AND column_name IN ('resetToken', 'resetTokenExpiry')
-    `;
-
-    console.log("Updated User table columns:", updatedTableInfo);
-
-    // Test a simple query to make sure everything works
-    const userCount = await prisma.user.count();
-    console.log("✅ Database migration completed. User count:", userCount);
+    console.log("Starting database migration...");
+    
+    // Run Prisma migrate deploy
+    const { stdout, stderr } = await execAsync("npx prisma migrate deploy");
+    
+    console.log("Migration output:", stdout);
+    if (stderr) {
+      console.error("Migration stderr:", stderr);
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Database migration completed successfully",
-      userCount,
-      columnsAdded: updatedTableInfo,
+      message: "Database migrations completed successfully",
+      output: stdout,
+      error: stderr || null,
     });
+
   } catch (error) {
-    console.error("❌ Error in database migration:", error);
+    console.error("Migration error:", error);
+    
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        details: error instanceof Error ? error.stack : undefined,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
       },
       { status: 500 }
     );
