@@ -1,66 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Fetch Pro-DJ pricing for booking (client-facing)
+// GET - Fetch Pro-DJ packages and add-ons for booking (client-facing)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const eventType = searchParams.get("eventType");
     const startTime = searchParams.get("startTime");
     const endTime = searchParams.get("endTime");
-    const region = searchParams.get("region"); // For future regional pricing
 
-    if (!eventType || !startTime || !endTime) {
+    if (!eventType) {
       return NextResponse.json(
-        { error: "Event type, start time, and end time are required" },
+        { error: "Event type is required" },
         { status: 400 }
       );
     }
 
-    // Get Pro-DJ standardized pricing for this event type
-    const servicePricing = await prisma.proDjServicePricing.findUnique({
-      where: { eventType },
+    // Get all available packages for this event type
+    const packages = await prisma.proDjServicePricing.findMany({
+      where: { 
+        eventType,
+        isActive: true 
+      },
+      include: {
+        proDjAddons: true
+      },
+      orderBy: [
+        { packageType: "asc" },
+        { durationHours: "asc" }
+      ]
     });
 
-    if (!servicePricing || !servicePricing.isActive) {
+    if (packages.length === 0) {
       return NextResponse.json(
-        { error: "Pricing not available for this event type" },
+        { error: "No packages available for this event type" },
         { status: 404 }
       );
     }
 
-    // Calculate duration in hours
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-
-    // Ensure minimum hours requirement
-    const billableHours = Math.max(durationHours, servicePricing.minimumHours);
-
-    // Calculate base price with regional multiplier
-    const regionalRate = Math.round(
-      servicePricing.basePricePerHour * servicePricing.regionMultiplier
-    );
-    const basePriceCents = regionalRate * billableHours;
-
-    // Get available add-ons
+    // Get all available add-ons
     const addons = await prisma.proDjAddon.findMany({
       where: { isActive: true },
       orderBy: [{ category: "asc" }, { name: "asc" }],
     });
 
+    // Calculate duration if provided
+    let durationHours = 0;
+    if (startTime && endTime) {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    }
+
     return NextResponse.json({
       success: true,
-      pricing: {
-        eventType,
-        basePricePerHour: regionalRate,
-        durationHours,
-        billableHours,
-        minimumHours: servicePricing.minimumHours,
-        basePriceCents,
-        regionMultiplier: servicePricing.regionMultiplier,
-        description: servicePricing.description,
-      },
+      packages: packages.map(pkg => ({
+        id: pkg.id,
+        packageType: pkg.packageType,
+        packageName: pkg.packageName,
+        basePriceCents: pkg.basePriceCents || (pkg.basePricePerHour ? pkg.basePricePerHour * (pkg.durationHours || pkg.minimumHours) : 0),
+        durationHours: pkg.durationHours || pkg.minimumHours,
+        description: pkg.description,
+        includedAddons: pkg.proDjAddons.map(addon => addon.id),
+        regionMultiplier: pkg.regionMultiplier,
+      })),
       addons: addons.map((addon) => ({
         id: addon.id,
         name: addon.name,
@@ -72,7 +75,7 @@ export async function GET(req: NextRequest) {
         // Calculate total price for this booking duration
         totalPrice:
           addon.priceFixed ||
-          (addon.pricePerHour ? addon.pricePerHour * billableHours : 0),
+          (addon.pricePerHour && durationHours > 0 ? addon.pricePerHour * durationHours : 0),
       })),
     });
   } catch (error) {
@@ -84,32 +87,36 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Calculate total pricing with selected add-ons
+// POST - Calculate total pricing with selected package and add-ons
 export async function POST(req: NextRequest) {
   try {
     const {
       eventType,
+      packageId,
       startTime,
       endTime,
       selectedAddons = [],
       region,
     } = await req.json();
 
-    if (!eventType || !startTime || !endTime) {
+    if (!eventType || !packageId || !startTime || !endTime) {
       return NextResponse.json(
-        { error: "Event type, start time, and end time are required" },
+        { error: "Event type, package ID, start time, and end time are required" },
         { status: 400 }
       );
     }
 
-    // Get Pro-DJ standardized pricing
+    // Get the selected package
     const servicePricing = await prisma.proDjServicePricing.findUnique({
-      where: { eventType },
+      where: { id: packageId },
+      include: {
+        proDjAddons: true
+      }
     });
 
     if (!servicePricing || !servicePricing.isActive) {
       return NextResponse.json(
-        { error: "Pricing not available for this event type" },
+        { error: "Package not found or not available" },
         { status: 404 }
       );
     }
@@ -118,15 +125,12 @@ export async function POST(req: NextRequest) {
     const start = new Date(startTime);
     const end = new Date(endTime);
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const billableHours = Math.max(durationHours, servicePricing.minimumHours);
 
-    // Calculate base price
-    const regionalRate = Math.round(
-      servicePricing.basePricePerHour * servicePricing.regionMultiplier
-    );
-    const basePriceCents = regionalRate * billableHours;
+    // For package-based pricing, use the package price directly
+    const basePriceCents = servicePricing.basePriceCents || 
+      (servicePricing.basePricePerHour ? servicePricing.basePricePerHour * (servicePricing.durationHours || servicePricing.minimumHours) : 0);
 
-    // Calculate add-on prices
+    // Calculate additional add-on prices (beyond what's included in the package)
     let addonPriceCents = 0;
     let addonDetails = [];
 
@@ -141,7 +145,7 @@ export async function POST(req: NextRequest) {
       addonDetails = addons.map((addon) => {
         const totalPrice =
           addon.priceFixed ||
-          (addon.pricePerHour ? addon.pricePerHour * billableHours : 0);
+          (addon.pricePerHour ? addon.pricePerHour * durationHours : 0);
         addonPriceCents += totalPrice;
 
         return {
@@ -162,15 +166,22 @@ export async function POST(req: NextRequest) {
       calculation: {
         eventType,
         durationHours,
-        billableHours,
+        billableHours: servicePricing.durationHours || servicePricing.minimumHours,
         minimumHours: servicePricing.minimumHours,
-        basePricePerHour: regionalRate,
+        basePricePerHour: servicePricing.basePricePerHour,
         basePriceCents,
         addonPriceCents,
         totalPriceCents,
         regionMultiplier: servicePricing.regionMultiplier,
+        packageName: servicePricing.packageName,
+        packageType: servicePricing.packageType,
       },
       selectedAddons: addonDetails,
+      includedAddons: servicePricing.proDjAddons.map(addon => ({
+        id: addon.id,
+        name: addon.name,
+        category: addon.category,
+      })),
     });
   } catch (error) {
     console.error("Error calculating Pro-DJ pricing:", error);

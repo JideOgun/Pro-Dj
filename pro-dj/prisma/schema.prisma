@@ -241,6 +241,7 @@ isActive Boolean @default(true)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 bookings Booking[]
+proDjAddons ProDjAddon[] // Many-to-many relation with add-ons
 
 @@unique([eventType, packageType])
 @@index([eventType, isActive])
@@ -260,6 +261,7 @@ updatedAt DateTime @updatedAt
 
 // Relations
 bookings Booking[]
+proDjServicePricing ProDjServicePricing[] // Many-to-many relation with pricing packages
 
 @@index([category, isActive])
 }
@@ -703,7 +705,6 @@ ADMIN
 CLIENT
 DJ
 }
-
 
 enum BookingStatus {
 PENDING_ADMIN_REVIEW

@@ -61,6 +61,26 @@ function BookPageContent() {
   } | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
+  // Package selection state
+  const [selectedPackage, setSelectedPackage] = useState<{
+    id: string;
+    packageType: string;
+    packageName: string;
+    basePriceCents: number;
+    durationHours: number;
+    description: string;
+    includedAddons: string[];
+  } | null>(null);
+  const [availablePackages, setAvailablePackages] = useState<Array<{
+    id: string;
+    packageType: string;
+    packageName: string;
+    basePriceCents: number;
+    durationHours: number;
+    description: string;
+    includedAddons: string[];
+  }>>([]);
+
   // DJ preference (optional) - client can express preference but admin assigns
   const [preferredDj, setPreferredDj] = useState<{
     djId: string;
@@ -188,9 +208,33 @@ function BookPageContent() {
     return eventPricing?.hourlyRateCents || 0;
   };
 
+  // Load available packages for the selected event type
+  const loadAvailablePackages = async () => {
+    if (!bookingType) {
+      setAvailablePackages([]);
+      setSelectedPackage(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/pricing/pro-dj?eventType=${bookingType}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailablePackages(data.packages || []);
+        
+        // Auto-select the first package if none selected
+        if (data.packages && data.packages.length > 0 && !selectedPackage) {
+          setSelectedPackage(data.packages[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading packages:", error);
+    }
+  };
+
   // Calculate Pro-DJ standardized pricing
   const calculateProDjPricing = async () => {
-    if (!bookingType || !startTime || !endTime) {
+    if (!bookingType || !selectedPackage) {
       setProDjPricing(null);
       return;
     }
@@ -208,6 +252,7 @@ function BookPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventType: bookingType,
+          packageId: selectedPackage.id,
           startTime: startDateTime,
           endTime: endDateTime,
           selectedAddons,
@@ -228,6 +273,11 @@ function BookPageContent() {
       setPriceLoading(false);
     }
   };
+
+  // Load available packages when booking type changes
+  useEffect(() => {
+    loadAvailablePackages();
+  }, [bookingType]);
 
   // Load Pro-DJ add-ons when booking type and time changes
   useEffect(() => {
@@ -250,10 +300,17 @@ function BookPageContent() {
     loadProDjAddons();
   }, [bookingType, startTime, endTime]);
 
-  // Calculate pricing when form details or add-ons change
+  // Calculate pricing when form details, package, or add-ons change
   useEffect(() => {
     calculateProDjPricing();
-  }, [bookingType, startTime, endTime, selectedAddons]);
+  }, [bookingType, startTime, endTime, selectedPackage, selectedAddons]);
+
+  // Auto-select included add-ons when package changes
+  useEffect(() => {
+    if (selectedPackage && selectedPackage.includedAddons) {
+      setSelectedAddons(selectedPackage.includedAddons);
+    }
+  }, [selectedPackage]);
 
   // Load available DJs when event details change
   useEffect(() => {
@@ -880,6 +937,62 @@ function BookPageContent() {
                   <option value="Private Party">Private Party</option>
                 </select>
               </div>
+
+              {/* Package Selection */}
+              {bookingType && availablePackages.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Package *
+                  </label>
+                  <div className="space-y-3">
+                    {availablePackages.map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedPackage?.id === pkg.id
+                            ? "border-violet-500 bg-violet-900/20"
+                            : "border-gray-600 bg-gray-700 hover:border-gray-500"
+                        }`}
+                        onClick={() => setSelectedPackage(pkg)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="font-semibold text-white">
+                                {pkg.packageName}
+                              </div>
+                              <span className="text-xs bg-violet-600 text-violet-100 px-2 py-1 rounded-full font-medium">
+                                {pkg.packageType}
+                              </span>
+                            </div>
+                            <p className="text-gray-300 text-sm mb-3">
+                              {pkg.description}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-gray-400">
+                              <div className="flex items-center gap-1">
+                                <span>⏱️</span>
+                                <span>{pkg.durationHours} hours</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span>🎵</span>
+                                <span>{pkg.includedAddons.length} included services</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right ml-4">
+                            <div className="text-2xl font-bold text-violet-400">
+                              ${(pkg.basePriceCents / 100).toFixed(0)}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              package price
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Event Date */}
               <div>
