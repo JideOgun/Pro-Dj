@@ -91,6 +91,38 @@ export async function POST(req: NextRequest) {
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "escrowStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "payoutStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeStatus" TEXT NOT NULL DEFAULT 'NONE';`,
+      
+      // Create ProDjAddon table if it doesn't exist
+      `CREATE TABLE IF NOT EXISTS "ProDjAddon" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "description" TEXT NOT NULL,
+        "category" TEXT NOT NULL,
+        "priceFixed" INTEGER,
+        "pricePerHour" INTEGER,
+        "requiresSpecialEquipment" BOOLEAN NOT NULL DEFAULT false,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "ProDjAddon_pkey" PRIMARY KEY ("id")
+      );`,
+      
+      // Create ProDjServicePricing table if it doesn't exist
+      `CREATE TABLE IF NOT EXISTS "ProDjServicePricing" (
+        "id" TEXT NOT NULL,
+        "eventType" TEXT NOT NULL,
+        "packageType" TEXT NOT NULL,
+        "packageName" TEXT NOT NULL,
+        "basePriceCents" INTEGER NOT NULL,
+        "durationHours" INTEGER,
+        "description" TEXT,
+        "includes" TEXT[],
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "ProDjServicePricing_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "ProDjServicePricing_eventType_packageType_key" UNIQUE ("eventType", "packageType")
+      );`,
     ];
 
     const results = [];
