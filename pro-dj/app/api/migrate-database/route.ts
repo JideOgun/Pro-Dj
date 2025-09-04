@@ -108,6 +108,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Update existing bookings with old status values
+    const dataMigrations = [
+      `UPDATE "Booking" SET status = 'CANCELLED' WHERE status = 'DECLINED';`,
+      `UPDATE "Booking" SET status = 'PENDING_ADMIN_REVIEW' WHERE status = 'PENDING';`,
+      `UPDATE "Booking" SET status = 'DJ_ASSIGNED' WHERE status = 'ACCEPTED';`,
+    ];
+
+    for (const migration of dataMigrations) {
+      try {
+        const result = await prisma.$executeRawUnsafe(migration);
+        results.push(`✅ ${migration} (${result} rows updated)`);
+      } catch (error) {
+        results.push(`❌ ${migration}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
     console.log("Migration results:", results);
 
     return NextResponse.json({

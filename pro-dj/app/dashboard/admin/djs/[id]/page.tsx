@@ -172,11 +172,7 @@ export default async function DjManagementPage({ params }: PageProps) {
                 <div>
                   <span className="text-gray-400">Base Price:</span>
                   <span className="ml-2 text-white">
-                    {user.djProfile?.basePriceCents
-                      ? `$${(user.djProfile.basePriceCents / 100).toFixed(
-                          2
-                        )}/hr`
-                      : "Not set"}
+                    Not set (Pro-DJ standardized pricing)
                   </span>
                 </div>
               </div>
@@ -196,7 +192,7 @@ export default async function DjManagementPage({ params }: PageProps) {
         <UserManagementActions user={user} currentAdminId={session.user.id} />
 
         {/* Approval Actions - Only show for pending DJs */}
-        {user.status === "PENDING_ADMIN_REVIEW" && (
+        {user.status === "PENDING" && (
           <DjApprovalActions user={user} currentAdminId={session.user.id} />
         )}
 

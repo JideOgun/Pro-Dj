@@ -241,7 +241,9 @@ function BookPageContent() {
     id: string;
     packageType: string;
     packageName: string;
+    basePriceCents: number;
     durationHours: number;
+    description: string;
     includedAddons: string[];
   }) => {
     console.log("Package selected:", pkg);
@@ -260,7 +262,9 @@ function BookPageContent() {
       id: string;
       packageType: string;
       packageName: string;
+      basePriceCents: number;
       durationHours: number;
+      description: string;
       includedAddons: string[];
     }
   ) => {
