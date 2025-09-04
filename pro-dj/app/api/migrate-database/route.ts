@@ -8,16 +8,6 @@ const execAsync = promisify(exec);
 
 export async function POST(req: NextRequest) {
   try {
-    // Only allow admin users to run migrations
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized. Admin access required." },
-        { status: 403 }
-      );
-    }
-
     // Check for secret token to prevent unauthorized access
     const { token } = await req.json();
     const expectedToken = process.env.MIGRATION_SECRET_TOKEN;
