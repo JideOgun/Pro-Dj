@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
@@ -88,18 +88,8 @@ function BookPageContent() {
     djId: string;
     stageName: string;
   } | null>(null);
-  const [availableDjs, setAvailableDjs] = useState<
-    Array<{
-      id: string;
-      stageName: string;
-      user: { name: string };
-      rating: number;
-      totalBookings: number;
-      bio?: string;
-      specialties?: string;
-      genres?: string[];
-    }>
-  >([]);
+  // Note: availableDjs state removed as it's not currently used
+  // const [availableDjs, setAvailableDjs] = useState<...>([]);
 
   // Simple selectedDjs array for backward compatibility (Pro-DJ model)
   const selectedDjs = preferredDj
@@ -178,40 +168,35 @@ function BookPageContent() {
     return Math.round(duration * 100) / 100;
   };
 
-  // Calculate individual DJ duration
-  const calculateDjDuration = (
-    djStartTime: string,
-    djEndTime: string
-  ): number => {
-    if (!djStartTime || !djEndTime) return 0;
-    const start = new Date(`2000-01-01T${djStartTime}`);
-    const end = new Date(`2000-01-01T${djEndTime}`);
-    let duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    if (duration < 0) duration += 24; // Handle overnight events
-    return Math.round(duration * 100) / 100;
-  };
+  // Note: calculateDjDuration function removed as it's not currently used
+  // const calculateDjDuration = (djStartTime: string, djEndTime: string): number => { ... };
 
   const totalEventDuration = calculateDuration(startTime, endTime);
 
-  // Get the hourly rate for a DJ for a specific event type
-  const getDjHourlyRate = (
-    dj: {
-      eventPricing?: Array<{
-        eventType: string;
-        hourlyRateCents: number;
-        description: string | null;
-      }>;
-    },
-    eventType: string
-  ): number => {
-    const eventPricing = dj.eventPricing?.find(
-      (pricing) => pricing.eventType === eventType
-    );
-    return eventPricing?.hourlyRateCents || 0;
-  };
+  // Note: getDjHourlyRate function removed as it's not currently used
+  // const getDjHourlyRate = (dj: {...}, eventType: string): number => { ... };
+
+  // Handle package selection with end time calculation
+  const handlePackageSelection = useCallback((pkg: {
+    id: string;
+    packageType: string;
+    packageName: string;
+    basePriceCents: number;
+    durationHours: number;
+    description: string;
+    includedAddons: string[];
+  }) => {
+    console.log("Package selected:", pkg);
+    setSelectedPackage(pkg);
+
+    // If start time is already set and this is a package-based event, calculate end time
+    if (startTime && pkg.durationHours) {
+      calculateEndTimeFromPackage(startTime, pkg);
+    }
+  }, [startTime]);
 
   // Load available packages for the selected event type
-  const loadAvailablePackages = async () => {
+  const loadAvailablePackages = useCallback(async () => {
     if (!bookingType) {
       setAvailablePackages([]);
       setSelectedPackage(null);
@@ -234,26 +219,7 @@ function BookPageContent() {
     } catch (error) {
       console.error("Error loading packages:", error);
     }
-  };
-
-  // Handle package selection with end time calculation
-  const handlePackageSelection = (pkg: {
-    id: string;
-    packageType: string;
-    packageName: string;
-    basePriceCents: number;
-    durationHours: number;
-    description: string;
-    includedAddons: string[];
-  }) => {
-    console.log("Package selected:", pkg);
-    setSelectedPackage(pkg);
-
-    // If start time is already set and this is a package-based event, calculate end time
-    if (startTime && pkg.durationHours) {
-      calculateEndTimeFromPackage(startTime, pkg);
-    }
-  };
+  }, [bookingType, selectedPackage, handlePackageSelection]);
 
   // Calculate end time based on start time and package duration
   const calculateEndTimeFromPackage = (
@@ -301,7 +267,7 @@ function BookPageContent() {
   };
 
   // Calculate Pro-DJ standardized pricing
-  const calculateProDjPricing = async () => {
+  const calculateProDjPricing = useCallback(async () => {
     if (!bookingType || !selectedPackage) {
       setProDjPricing(null);
       return;
@@ -340,12 +306,12 @@ function BookPageContent() {
     } finally {
       setPriceLoading(false);
     }
-  };
+  }, [bookingType, selectedPackage, eventDate, startTime, endTime, selectedAddons]);
 
   // Load available packages when booking type changes
   useEffect(() => {
     loadAvailablePackages();
-  }, [bookingType]);
+  }, [loadAvailablePackages]);
 
   // Load Pro-DJ add-ons when booking type and time changes
   useEffect(() => {
@@ -371,7 +337,7 @@ function BookPageContent() {
   // Calculate pricing when form details, package, or add-ons change
   useEffect(() => {
     calculateProDjPricing();
-  }, [bookingType, startTime, endTime, selectedPackage, selectedAddons]);
+  }, [calculateProDjPricing]);
 
   // Auto-select included add-ons when package changes
   useEffect(() => {
@@ -570,22 +536,8 @@ function BookPageContent() {
   const suggestedDjs = getSuggestedDjs();
 
   // Fetch DJ add-ons
-  const fetchDjAddons = async (djId: string) => {
-    try {
-      const response = await fetch(`/api/djs/${djId}/addons`);
-      const data = await response.json();
-
-      if (response.ok) {
-        return data.addons;
-      } else {
-        console.error("Failed to fetch DJ add-ons:", data.error);
-        return [];
-      }
-    } catch (error) {
-      console.error("Error fetching DJ add-ons:", error);
-      return [];
-    }
-  };
+  // Note: fetchDjAddons function removed as it's not currently used
+  // const fetchDjAddons = async (djId: string) => { ... };
 
   // Time management utilities
   const parseTime = (timeStr: string): number => {
@@ -593,20 +545,12 @@ function BookPageContent() {
     return hours * 60 + minutes;
   };
 
-  const formatTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, "0")}:${mins
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  // Note: formatTime function removed as it's not currently used
+  // const formatTime = (minutes: number): string => { ... };
 
   // Handle overnight events (events that span midnight)
-  const isOvernightEvent = (startTime: string, endTime: string): boolean => {
-    const startMinutes = parseTime(startTime);
-    const endMinutes = parseTime(endTime);
-    return endMinutes < startMinutes;
-  };
+  // Note: isOvernightEvent function removed as it's not currently used
+  // const isOvernightEvent = (startTime: string, endTime: string): boolean => { ... };
 
   const getAdjustedEndTime = (startTime: string, endTime: string): number => {
     const startMinutes = parseTime(startTime);
@@ -632,112 +576,17 @@ function BookPageContent() {
     return s1 < e2 && s2 < e1;
   };
 
-  const checkTimeGaps = (
-    times: Array<{ startTime: string; endTime: string }>
-  ): Array<{ start: string; end: string }> => {
-    const sortedTimes = [...times].sort(
-      (a, b) => parseTime(a.startTime) - parseTime(b.startTime)
-    );
-    const gaps: Array<{ start: string; end: string }> = [];
+  // Note: checkTimeGaps function removed as it's not currently used
+  // const checkTimeGaps = (times: Array<{ startTime: string; endTime: string }>) => { ... };
 
-    for (let i = 0; i < sortedTimes.length - 1; i++) {
-      const currentEnd = getAdjustedEndTime(
-        sortedTimes[i].startTime,
-        sortedTimes[i].endTime
-      );
-      const nextStart = parseTime(sortedTimes[i + 1].startTime);
-
-      if (nextStart > currentEnd) {
-        gaps.push({
-          start: formatTime(currentEnd % (24 * 60)), // Convert back to 24-hour format
-          end: formatTime(nextStart),
-        });
-      }
-    }
-
-    return gaps;
-  };
-
-  const splitTimeEvenly = (
-    startTime: string,
-    endTime: string,
-    djCount: number
-  ): Array<{ startTime: string; endTime: string }> => {
-    if (djCount <= 1) {
-      return [{ startTime, endTime }];
-    }
-
-    const startMinutes = parseTime(startTime);
-    const endMinutes = getAdjustedEndTime(startTime, endTime);
-    const totalDuration = endMinutes - startMinutes;
-    const segmentDuration = Math.floor(totalDuration / djCount);
-
-    const segments: Array<{ startTime: string; endTime: string }> = [];
-
-    for (let i = 0; i < djCount; i++) {
-      const segmentStart = startMinutes + i * segmentDuration;
-      const segmentEnd =
-        i === djCount - 1
-          ? endMinutes
-          : startMinutes + (i + 1) * segmentDuration;
-
-      segments.push({
-        startTime: formatTime(segmentStart % (24 * 60)), // Convert back to 24-hour format
-        endTime: formatTime(segmentEnd % (24 * 60)), // Convert back to 24-hour format
-      });
-    }
-
-    return segments;
-  };
+  // Note: splitTimeEvenly function removed as it's not currently used
+  // const splitTimeEvenly = (startTime: string, endTime: string, djCount: number) => { ... };
 
   // Pro-DJ model: Single DJ preference selection (old marketplace addDj function removed)
 
   // Check for partial booking conditions
-  const checkPartialBooking = () => {
-    if (selectedDjs.length === 0) return null;
-
-    const gaps = checkTimeGaps(
-      selectedDjs.map((dj) => ({
-        startTime: dj.startTime,
-        endTime: dj.endTime,
-      }))
-    );
-
-    const sortedDjs = [...selectedDjs].sort(
-      (a, b) => parseTime(a.startTime) - parseTime(b.startTime)
-    );
-    const eventStart = parseTime(startTime);
-    const eventEnd = getAdjustedEndTime(startTime, endTime);
-
-    let uncoveredStart: string | undefined;
-    let uncoveredEnd: string | undefined;
-
-    if (sortedDjs.length > 0) {
-      const firstDjStart = parseTime(sortedDjs[0].startTime);
-      const lastDjEnd = getAdjustedEndTime(
-        sortedDjs[sortedDjs.length - 1].startTime,
-        sortedDjs[sortedDjs.length - 1].endTime
-      );
-
-      if (firstDjStart > eventStart) {
-        uncoveredStart = `${formatTime(eventStart)} to ${formatTime(
-          firstDjStart
-        )}`;
-      }
-
-      if (lastDjEnd < eventEnd) {
-        uncoveredEnd = `${formatTime(lastDjEnd % (24 * 60))} to ${formatTime(
-          eventEnd % (24 * 60)
-        )}`;
-      }
-    }
-
-    if (gaps.length > 0 || uncoveredStart || uncoveredEnd) {
-      return { gaps, uncoveredStart, uncoveredEnd };
-    }
-
-    return null;
-  };
+  // Note: checkPartialBooking function removed as it's not currently used
+  // const checkPartialBooking = () => { ... };
 
   // Time validation and warnings (only for overlaps)
   const getTimeWarnings = () => {
@@ -771,27 +620,16 @@ function BookPageContent() {
 
   // Partial booking confirmation state
   const [showPartialBookingModal, setShowPartialBookingModal] = useState(false);
-  const [partialBookingDetails, setPartialBookingDetails] = useState<{
-    gaps: Array<{ start: string; end: string }>;
-    uncoveredStart?: string;
-    uncoveredEnd?: string;
-  }>({ gaps: [] });
+  // Note: partialBookingDetails state removed as it's not currently used
+  // const [partialBookingDetails, setPartialBookingDetails] = useState<{...}>({ gaps: [] });
 
   // Add-ons collapsible state
   const [isAddonsExpanded, setIsAddonsExpanded] = useState(false);
 
   // Update DJ time slot
   // Pro-DJ model: Time adjustment handled at event level, not individual DJ level
-  const updateDjTime = (
-    djId: string,
-    newStartTime: string,
-    newEndTime: string
-  ) => {
-    // In Pro-DJ model, we update the main event times instead of individual DJ times
-    setStartTime(newStartTime);
-    setEndTime(newEndTime);
-    // This will trigger pricing recalculation automatically
-  };
+  // Note: updateDjTime function removed as it's not currently used
+  // const updateDjTime = (djId: string, newStartTime: string, newEndTime: string) => { ... };
 
   // Handle partial booking confirmation
   const confirmPartialBooking = async () => {
@@ -871,10 +709,8 @@ function BookPageContent() {
   };
 
   // Calculate DJ total price (Pro-DJ model uses centralized pricing)
-  const calculateDjTotalPrice = () => {
-    // In Pro-DJ model, we use centralized pricing
-    return proDjPricing ? proDjPricing.totalPriceCents : 0;
-  };
+  // Note: calculateDjTotalPrice function removed as it's not currently used
+  // const calculateDjTotalPrice = () => { ... };
 
   // Submit Pro-DJ booking request
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1389,7 +1225,8 @@ function BookPageContent() {
                           const isSelected = selectedDjs.some(
                             (sd) => sd.djId === dj.id
                           );
-                          const totalPrice = calculateDjTotalPrice();
+                          // Note: totalPrice variable removed as it's not currently used
+                          // const totalPrice = calculateDjTotalPrice();
                           const offersEventType =
                             !bookingType ||
                             !dj.eventsOffered ||
@@ -1495,7 +1332,8 @@ function BookPageContent() {
                   ) : (
                     filteredDjs.map((dj) => {
                       const isSelected = preferredDj?.djId === dj.id;
-                      const totalPrice = calculateDjTotalPrice();
+                      // Note: totalPrice variable removed as it's not currently used
+                      // const totalPrice = calculateDjTotalPrice();
                       const offersEventType =
                         !bookingType ||
                         !dj.eventsOffered ||
@@ -2051,7 +1889,8 @@ function BookPageContent() {
                 that you understand:
               </p>
 
-              <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+              {/* Note: Partial booking details section removed as it's not currently used */}
+              {/* <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
                 <ul className="text-yellow-200 text-sm space-y-2">
                   {partialBookingDetails.gaps.length > 0 && (
                     <li>
@@ -2082,7 +1921,7 @@ function BookPageContent() {
                     these time periods
                   </li>
                 </ul>
-              </div>
+              </div> */}
 
               <p className="text-gray-300 text-sm">
                 Do you want to proceed with this partial DJ booking?

@@ -11,9 +11,10 @@ export async function GET(req: Request) {
     const genres = searchParams.get("genres")?.split(",").filter(Boolean) || [];
     const eventTypes =
       searchParams.get("eventTypes")?.split(",").filter(Boolean) || [];
-    const minPrice = parseInt(searchParams.get("minPrice") || "0");
-    const maxPrice = parseInt(searchParams.get("maxPrice") || "1000");
-    const featured = searchParams.get("featured") === "true";
+    // Note: minPrice, maxPrice, and featured filters are not currently implemented
+    // const minPrice = parseInt(searchParams.get("minPrice") || "0");
+    // const maxPrice = parseInt(searchParams.get("maxPrice") || "1000");
+    // const featured = searchParams.get("featured") === "true";
 
     const skip = (page - 1) * limit;
 

@@ -5,15 +5,13 @@ import { useSearchParams } from "next/navigation";
 import Actions from "../app/dashboard/bookings/row-actions";
 import { SocketProvider, useSocketContext } from "./SocketProvider";
 import SuspendedUserGuard from "./SuspendedUserGuard";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 import toast from "react-hot-toast";
 import {
   getStatusColor,
   getStatusText,
-  getPaymentStatusText,
   getStatusIcon,
-  getPaymentStatusIcon,
   getDjPaymentStatusText,
   getDjPaymentStatusColor,
   getDjPaymentStatusIcon,
@@ -56,14 +54,12 @@ interface Booking {
 interface BookingsTableProps {
   initialBookings: Booking[];
   userRole: string;
-  userId?: string;
   view?: string;
 }
 
 function BookingsTableContent({
   initialBookings,
   userRole,
-  userId,
   view,
 }: BookingsTableProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
@@ -153,58 +149,6 @@ function BookingsTableContent({
     } catch {
       return "";
     }
-  };
-
-  // Helper function to calculate timeout information (client-side only)
-  const getTimeoutInfo = (
-    createdAt: string | Date,
-    eventDate: string | Date
-  ) => {
-    if (!isClient) {
-      return {
-        isExpired: false,
-        timeLeftFormatted: "",
-        color: "text-gray-400",
-      };
-    }
-
-    const created = new Date(createdAt);
-    const event = new Date(eventDate);
-    const now = new Date();
-
-    // Calculate days until event
-    const daysUntilEvent = Math.ceil(
-      (event.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Determine timeout hours based on event proximity
-    const timeoutHours = daysUntilEvent <= 7 ? 24 : 48;
-    const timeoutDate = new Date(
-      created.getTime() + timeoutHours * 60 * 60 * 1000
-    );
-    const timeLeft = timeoutDate.getTime() - now.getTime();
-
-    if (timeLeft <= 0) {
-      return {
-        isExpired: true,
-        timeLeftFormatted: "Expired",
-        color: "text-red-400",
-      };
-    }
-
-    const hoursLeft = Math.ceil(timeLeft / (1000 * 60 * 60));
-    const daysLeft = Math.ceil(hoursLeft / 24);
-
-    let color = "text-green-400";
-    if (hoursLeft <= 6) color = "text-red-400";
-    else if (hoursLeft <= 24) color = "text-yellow-400";
-
-    return {
-      isExpired: false,
-      timeLeftFormatted:
-        daysLeft > 1 ? `${daysLeft} days` : `${hoursLeft} hours`,
-      color,
-    };
   };
 
   // Optimistic update when booking status changes
@@ -517,21 +461,6 @@ function BookingsTableContent({
                         ? getClientPaymentStatusText(b.status, b.refundId)
                         : getStatusText(b.status)}
                     </span>
-                    {b.status === "PENDING_ADMIN_REVIEW" && b.createdAt && (
-                      <div className="flex items-center gap-1 text-xs">
-                        <Clock className="w-3 h-3" />
-                        <span
-                          className={
-                            getTimeoutInfo(b.createdAt, b.eventDate).color
-                          }
-                        >
-                          {
-                            getTimeoutInfo(b.createdAt, b.eventDate)
-                              .timeLeftFormatted
-                          }
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </td>
                 {(userRole === "DJ" ||
@@ -629,19 +558,6 @@ function BookingsTableContent({
                     ? getClientPaymentStatusText(b.status, b.refundId)
                     : getStatusText(b.status)}
                 </span>
-                {b.status === "PENDING_ADMIN_REVIEW" && b.createdAt && (
-                  <div className="flex items-center justify-end gap-1 text-xs mt-1">
-                    <Clock className="w-3 h-3" />
-                    <span
-                      className={getTimeoutInfo(b.createdAt, b.eventDate).color}
-                    >
-                      {
-                        getTimeoutInfo(b.createdAt, b.eventDate)
-                          .timeLeftFormatted
-                      }
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -762,7 +678,7 @@ function BookingsTableContent({
 // Wrapper component that provides Socket context
 export default function BookingsTable(props: BookingsTableProps) {
   return (
-    <SocketProvider userId={props.userId} role={props.userRole}>
+    <SocketProvider role={props.userRole}>
       <BookingsTableContent {...props} />
     </SocketProvider>
   );

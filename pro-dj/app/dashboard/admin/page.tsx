@@ -5,8 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 import BookingCalendar from "@/components/BookingCalendar";
-import TimeoutManagement from "@/components/TimeoutManagement";
-import AutomatedTimeoutProcessor from "@/components/AutomatedTimeoutProcessor";
 import { hasAdminPrivileges } from "@/lib/auth-utils";
 import { getDisplayName } from "@/lib/user-utils";
 import {
@@ -135,7 +133,6 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <AutomatedTimeoutProcessor />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -305,99 +302,92 @@ export default async function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               href="/dashboard/admin/bookings"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <ClipboardList className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Manage Bookings</h3>
-              <p className="text-gray-400 text-sm">
+              <ClipboardList className="w-6 h-6 mb-2 text-blue-100" />
+              <h3 className="font-semibold mb-1 text-white">Manage Bookings</h3>
+              <p className="text-blue-100 text-sm">
                 View and manage all booking requests
               </p>
             </Link>
 
             <Link
               href="/dashboard/admin/users"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <Users className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">User Management</h3>
-              <p className="text-gray-400 text-sm">
+              <Users className="w-6 h-6 mb-2 text-purple-100" />
+              <h3 className="font-semibold mb-1 text-white">User Management</h3>
+              <p className="text-purple-100 text-sm">
                 Manage users, roles, and account statuses
               </p>
             </Link>
 
             <Link
               href="/dashboard/admin/djs"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <Music className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">DJ Management</h3>
-              <p className="text-gray-400 text-sm">
+              <Music className="w-6 h-6 mb-2 text-violet-100" />
+              <h3 className="font-semibold mb-1 text-white">DJ Management</h3>
+              <p className="text-violet-100 text-sm">
                 Manage DJ profiles and approvals
               </p>
             </Link>
 
             <Link
-              href="/dashboard/admin/booking-queue"
-              className="bg-gradient-to-r from-violet-700 to-pink-700 hover:from-violet-600 hover:to-pink-600 p-4 rounded-lg text-center transition-colors"
-            >
-              <Calendar className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Booking Queue</h3>
-              <p className="text-gray-200 text-sm">
-                Review and assign DJs to bookings
-              </p>
-            </Link>
-
-            <Link
               href="/dashboard/admin/pricing"
-              className="bg-gradient-to-r from-green-700 to-emerald-700 hover:from-green-600 hover:to-emerald-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <DollarSign className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Pricing Management</h3>
-              <p className="text-gray-200 text-sm">
+              <DollarSign className="w-6 h-6 mb-2 text-green-100" />
+              <h3 className="font-semibold mb-1 text-white">
+                Pricing Management
+              </h3>
+              <p className="text-green-100 text-sm">
                 Manage Pro-DJ service pricing & add-ons
               </p>
             </Link>
 
             <Link
               href="/dashboard/admin/clients"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <Users className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Client Management</h3>
-              <p className="text-gray-400 text-sm">
+              <Users className="w-6 h-6 mb-2 text-orange-100" />
+              <h3 className="font-semibold mb-1 text-white">
+                Client Management
+              </h3>
+              <p className="text-orange-100 text-sm">
                 Manage client accounts and activity
               </p>
             </Link>
 
             <Link
               href="/dashboard/admin/calendar"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <Calendar className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Calendar</h3>
-              <p className="text-gray-400 text-sm">
+              <Calendar className="w-6 h-6 mb-2 text-teal-100" />
+              <h3 className="font-semibold mb-1 text-white">Calendar</h3>
+              <p className="text-teal-100 text-sm">
                 View upcoming bookings and DJ availability
               </p>
             </Link>
 
             <Link
-              href="/dashboard/admin/pricing"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              href="/dashboard/admin/payouts"
+              className="bg-gradient-to-br from-pink-600 to-pink-700 hover:from-pink-500 hover:to-pink-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <DollarSign className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Pricing</h3>
-              <p className="text-gray-400 text-sm">
-                Manage Pro-DJ service pricing & add-ons
+              <DollarSign className="w-6 h-6 mb-2 text-pink-100" />
+              <h3 className="font-semibold mb-1 text-white">DJ Payouts</h3>
+              <p className="text-pink-100 text-sm">
+                Manage manual payouts to DJs
               </p>
             </Link>
 
             <Link
               href="/dashboard/media"
-              className="bg-gray-700 hover:bg-gray-600 p-4 rounded-lg text-center transition-colors"
+              className="bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 p-4 rounded-lg text-center transition-all duration-200 transform hover:scale-105 shadow-lg"
             >
-              <Music className="w-6 h-6 mb-2" />
-              <h3 className="font-semibold mb-1">Upload Mix</h3>
-              <p className="text-gray-400 text-sm">
+              <Music className="w-6 h-6 mb-2 text-indigo-100" />
+              <h3 className="font-semibold mb-1 text-white">Upload Mix</h3>
+              <p className="text-indigo-100 text-sm">
                 Add new music mixes to the platform
               </p>
             </Link>
@@ -550,9 +540,6 @@ export default async function AdminDashboardPage() {
               </div>
             )}
           </div>
-
-          {/* Timeout Management */}
-          <TimeoutManagement />
         </div>
       </div>
     </div>

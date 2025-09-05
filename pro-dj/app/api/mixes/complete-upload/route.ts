@@ -35,6 +35,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate proper album art URL if albumArtS3Key is provided
+    let albumArtUrl = null;
+    if (albumArtS3Key) {
+      // Use the file serving API route which handles presigned URLs
+      albumArtUrl = `/api/files/${albumArtS3Key}`;
+    }
+
     // Update mix record
     const updatedMix = await prisma.djMix.update({
       where: {
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
         uploadedAt: new Date(),
         ...(albumArtS3Key && {
           albumArtS3Key: albumArtS3Key,
-          albumArtUrl: `/api/files/${albumArtS3Key}`,
+          albumArtUrl: albumArtUrl,
         }),
       },
     });
@@ -80,7 +87,6 @@ export async function POST(req: NextRequest) {
         status: updatedMix.uploadStatus,
       },
     });
-
   } catch (error) {
     console.error("Error completing upload:", error);
     return NextResponse.json(

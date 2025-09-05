@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import SocialMediaManager from "@/components/SocialMediaManager";
 import PaymentSetupModal from "@/components/PaymentSetupModal";
+import StripeConnectSetup from "@/components/StripeConnectSetup";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -74,10 +75,13 @@ export default function DjDashboard() {
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [loading, setLoading] = useState(true);
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+  const [showStripeConnectSetup, setShowStripeConnectSetup] = useState(false);
   const [paymentSetupLoading, setPaymentSetupLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [hasCompletedPaymentSetup, setHasCompletedPaymentSetup] =
     useState(false);
+  const [hasCompletedTaxSetup, setHasCompletedTaxSetup] = useState(false);
+  const [hasCompletedStripeSetup, setHasCompletedStripeSetup] = useState(false);
   const [businessType, setBusinessType] = useState<
     "SOLE_PROPRIETOR" | "CORPORATION"
   >("SOLE_PROPRIETOR");
@@ -123,6 +127,8 @@ export default function DjDashboard() {
       if (response.ok) {
         const data = await response.json();
         setHasCompletedPaymentSetup(data.hasCompletedSetup);
+        setHasCompletedTaxSetup(data.hasCompletedTaxSetup);
+        setHasCompletedStripeSetup(data.hasCompletedStripeSetup);
         if (data.businessType) {
           setBusinessType(data.businessType);
         }
@@ -142,19 +148,32 @@ export default function DjDashboard() {
       });
 
       if (response.ok) {
-        toast.success("Payment setup completed successfully!");
+        toast.success("Tax information completed successfully!");
         setShowPaymentSetup(false);
-        setHasCompletedPaymentSetup(true);
+        setHasCompletedTaxSetup(true);
+        // Check if both tax and Stripe setup are complete
+        await checkPaymentSetupStatus();
       } else {
         const data = await response.json();
-        toast.error(data.error || "Failed to complete payment setup");
+        toast.error(data.error || "Failed to complete tax setup");
       }
     } catch (error) {
       console.error("Payment setup error:", error);
-      toast.error("Failed to complete payment setup");
+      toast.error("Failed to complete tax setup");
     } finally {
       setPaymentSetupLoading(false);
     }
+  };
+
+  const handleStripeConnectComplete = () => {
+    setShowStripeConnectSetup(false);
+    toast.success(
+      "Stripe Connect setup initiated! Complete the process in the new tab."
+    );
+    // Refresh the setup status after a delay to allow for Stripe processing
+    setTimeout(() => {
+      checkPaymentSetupStatus();
+    }, 2000);
   };
 
   const handleSocialLinksUpdate = (newSocialLinks: SocialLinks) => {
@@ -200,27 +219,58 @@ export default function DjDashboard() {
 
         {/* Payment Setup Banner */}
         {profile && profile.isApprovedByAdmin && !hasCompletedPaymentSetup && (
-          <div className="mb-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <DollarSign className="w-6 h-6 text-blue-400" />
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-300">
-                    Payment Setup Required
-                  </h3>
-                  <p className="text-blue-200 text-sm">
-                    {getDisplayName()}, to start receiving payments and accept
-                    bookings, you need to complete your tax information setup.
-                  </p>
+          <div className="mb-6 space-y-4">
+            {/* Tax Setup */}
+            {!hasCompletedTaxSetup && (
+              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <DollarSign className="w-6 h-6 text-blue-400" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-blue-300">
+                        Tax Information Required
+                      </h3>
+                      <p className="text-blue-200 text-sm">
+                        Complete your tax information to comply with
+                        subcontractor requirements.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPaymentSetup(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Complete Tax Setup
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => setShowPaymentSetup(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Complete Setup
-              </button>
-            </div>
+            )}
+
+            {/* Stripe Connect Setup */}
+            {hasCompletedTaxSetup && !hasCompletedStripeSetup && (
+              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <CreditCard className="w-6 h-6 text-green-400" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-green-300">
+                        Payment Account Setup Required
+                      </h3>
+                      <p className="text-green-200 text-sm">
+                        Set up your Stripe Connect account to receive payments
+                        from bookings.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowStripeConnectSetup(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Setup Payments
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -581,6 +631,14 @@ export default function DjDashboard() {
         onCancel={() => setShowPaymentSetup(false)}
         isLoading={paymentSetupLoading}
         businessType={businessType}
+      />
+
+      {/* Stripe Connect Setup Modal */}
+      <StripeConnectSetup
+        isOpen={showStripeConnectSetup}
+        onComplete={handleStripeConnectComplete}
+        onCancel={() => setShowStripeConnectSetup(false)}
+        isLoading={paymentSetupLoading}
       />
     </div>
   );

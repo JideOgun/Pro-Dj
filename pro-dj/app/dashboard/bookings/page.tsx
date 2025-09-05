@@ -183,16 +183,16 @@ export default async function BookingsPage({
             </div>
           </Link>
           <Link
-            href="/dashboard/bookings?status=ACCEPTED"
+            href="/dashboard/bookings?status=DJ_ASSIGNED"
             className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
-              searchParams.status === "ACCEPTED" ? "ring-2 ring-blue-500" : ""
+              searchParams.status === "DJ_ASSIGNED" ? "ring-2 ring-blue-500" : ""
             }`}
           >
             <div className="text-2xl font-bold text-blue-400 group-hover:text-blue-300">
-              {bookings.filter((b) => b.status === "ACCEPTED").length}
+              {bookings.filter((b) => b.status === "DJ_ASSIGNED").length}
             </div>
             <div className="text-gray-400 text-sm group-hover:text-gray-300">
-              Accepted
+              DJ Assigned
             </div>
           </Link>
           <Link
@@ -214,7 +214,6 @@ export default async function BookingsPage({
         <BookingsTable
           initialBookings={bookings}
           userRole={session.user.role}
-          userId={session.user.id}
           view={searchParams.view}
         />
       </div>

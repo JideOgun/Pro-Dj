@@ -282,8 +282,6 @@ export async function POST(req: NextRequest) {
             mode: "insensitive",
           },
           uploadStatus: "COMPLETED",
-          // Only check for non-deleted mixes
-          deletedAt: null,
         },
         select: {
           id: true,
@@ -353,7 +351,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
 
       const uploadCommand = new PutObjectCommand({
-                  Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
+        Bucket: process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files",
         Key: s3Key,
         Body: buffer,
         ContentType: file.type,
@@ -421,17 +419,8 @@ export async function POST(req: NextRequest) {
           });
           await s3Client.send(albumArtUploadCommand);
           albumArtS3Key = albumArtS3KeyName;
-          // Generate direct S3 URL if CloudFront is not available
-          if (process.env.AWS_CLOUDFRONT_DOMAIN) {
-            albumArtUrl = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${albumArtS3KeyName}`;
-          } else {
-            // Use direct S3 URL for now (you might want to generate a presigned URL for security)
-            albumArtUrl = `https://${
-              process.env.AWS_S3_BUCKET_NAME || "pro-dj-production-files"
-            }.s3.${
-              process.env.AWS_REGION || "us-east-2"
-            }.amazonaws.com/${albumArtS3KeyName}`;
-          }
+          // Use the file serving API route which handles presigned URLs
+          albumArtUrl = `/api/files/${albumArtS3KeyName}`;
           console.log("Album art uploaded to S3 successfully");
           console.log("Album art URL set to:", albumArtUrl);
         } else {

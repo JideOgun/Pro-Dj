@@ -31,20 +31,50 @@ export async function GET(
     // Join the key parts back together
     const s3Key = resolvedParams.key.join("/");
 
-    // Generate presigned URL for the file
+    // Get the file from S3
     const command = new GetObjectCommand({
       Bucket: S3_BUCKET_NAME,
       Key: s3Key,
     });
 
-    const presignedUrl = await getSignedUrl(s3Client, command, {
-      expiresIn: 3600, // 1 hour
-    });
+    const response = await s3Client.send(command);
 
-    // Redirect to the presigned URL
-    return NextResponse.redirect(presignedUrl);
+    if (!response.Body) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+
+    // Convert the stream to buffer
+    const chunks: Uint8Array[] = [];
+    const reader = response.Body.transformToWebStream().getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const buffer = new Uint8Array(
+      chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    );
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    // Return the image with proper headers
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": response.ContentType || "application/octet-stream",
+        "Content-Length": buffer.length.toString(),
+        "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+        ETag: response.ETag || "",
+        "Last-Modified": response.LastModified?.toUTCString() || "",
+      },
+    });
   } catch (error) {
-    console.error("Error generating presigned URL:", error);
+    console.error("Error serving file:", error);
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 }

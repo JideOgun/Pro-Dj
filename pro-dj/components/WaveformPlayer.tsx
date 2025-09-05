@@ -12,7 +12,6 @@ import {
   Share2,
   X,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 import Image from "next/image";
 import LikeButton from "./LikeButton";
@@ -42,7 +41,6 @@ export default function WaveformPlayer({
   src,
   title,
   artist,
-  duration,
   albumArtUrl,
   className = "",
   mixId,
@@ -56,7 +54,7 @@ export default function WaveformPlayer({
   compact = false,
   mini = false,
 }: WaveformPlayerProps) {
-  const { socket, isConnected, emitMixPlayed } = useSocketContext();
+  const { isConnected, emitMixPlayed } = useSocketContext();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration_, setDuration] = useState(0);
@@ -130,7 +128,7 @@ export default function WaveformPlayer({
         setError("Failed to play audio");
       });
     }
-  }, [isPlaying, onPlayStart, mixId]);
+  }, [isPlaying, onPlayStart]);
 
   const toggleMute = useCallback(() => {
     if (!audioRef.current) return;
@@ -296,7 +294,7 @@ export default function WaveformPlayer({
       audio.removeEventListener("error", handleError);
       audio.removeEventListener("loadstart", handleLoadStart);
     };
-  }, []);
+  }, [emitMixPlayed, hasEmittedPlayCount, initialLikeCount, isConnected, mixId]);
 
   // Volume effect
   useEffect(() => {
@@ -430,9 +428,11 @@ export default function WaveformPlayer({
                 } rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center shadow-lg`}
               >
                 {albumArtUrl ? (
-                  <img
+                  <Image
                     src={albumArtUrl}
                     alt={title}
+                    width={200}
+                    height={200}
                     className="w-full h-full rounded-lg object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;

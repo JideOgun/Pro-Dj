@@ -36,6 +36,18 @@ export default async function BookingDetailPage({
           user: { select: { email: true, name: true } },
         },
       },
+      preferredDj: {
+        select: {
+          stageName: true,
+          user: { select: { email: true, name: true } },
+        },
+      },
+      adminAssignedDj: {
+        select: {
+          stageName: true,
+          user: { select: { email: true, name: true } },
+        },
+      },
     },
   });
 
@@ -194,15 +206,73 @@ export default async function BookingDetailPage({
               </div>
 
               {/* DJ Info */}
-              {booking.dj && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-300 mb-3">DJ</h3>
-                  <div className="bg-gray-700/50 p-4 rounded-lg">
+              <div>
+                <h3 className="text-lg font-medium text-gray-300 mb-3">
+                  DJ Assignment
+                </h3>
+
+                {/* Currently Assigned DJ */}
+                {booking.dj ? (
+                  <div className="bg-green-700/30 border border-green-500/50 p-4 rounded-lg mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                      <p className="font-medium text-green-200">
+                        Currently Assigned
+                      </p>
+                    </div>
                     <p className="font-medium">🎧 {booking.dj.stageName}</p>
                     <p className="text-gray-400">{booking.dj.user?.email}</p>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="bg-yellow-700/30 border border-yellow-500/50 p-4 rounded-lg mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                      <p className="font-medium text-yellow-200">
+                        No DJ Assigned
+                      </p>
+                    </div>
+                    <p className="text-gray-400">Waiting for DJ assignment</p>
+                  </div>
+                )}
+
+                {/* Client Requested DJ */}
+                {booking.preferredDj && (
+                  <div className="bg-blue-700/30 border border-blue-500/50 p-4 rounded-lg mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                      <p className="font-medium text-blue-200">
+                        Client Requested
+                      </p>
+                    </div>
+                    <p className="font-medium">
+                      🎧 {booking.preferredDj.stageName}
+                    </p>
+                    <p className="text-gray-400">
+                      {booking.preferredDj.user?.email}
+                    </p>
+                  </div>
+                )}
+
+                {/* Admin Assigned DJ (if different from current) */}
+                {booking.adminAssignedDj &&
+                  booking.adminAssignedDj.id !== booking.dj?.id &&
+                  booking.adminAssignedDj.id !== booking.preferredDj?.id && (
+                    <div className="bg-purple-700/30 border border-purple-500/50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                        <p className="font-medium text-purple-200">
+                          Admin Override
+                        </p>
+                      </div>
+                      <p className="font-medium">
+                        🎧 {booking.adminAssignedDj.stageName}
+                      </p>
+                      <p className="text-gray-400">
+                        {booking.adminAssignedDj.user?.email}
+                      </p>
+                    </div>
+                  )}
+              </div>
             </div>
           </div>
         </div>

@@ -2,18 +2,25 @@
 
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import { DollarSign } from "lucide-react";
 
 interface Booking {
   id: string;
   status: string;
   eventType: string;
   eventDate: string | Date;
+  djId: string | null;
+  payoutStatus: string | null;
+  payoutAmountCents: number | null;
+  isPaid: boolean;
   user: {
     name: string | null;
     email: string;
   };
   dj: {
     stageName: string | null;
+    stripeConnectAccountId: string | null;
+    stripeConnectAccountEnabled: boolean;
   } | null;
 }
 
@@ -30,6 +37,33 @@ export default function AdminBookingActions({
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState(booking.status);
   const [statusReason, setStatusReason] = useState("");
+  const [processingPayout, setProcessingPayout] = useState(false);
+
+  const handleAcceptBooking = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}/accept`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          djId: booking.djId,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Booking accepted successfully");
+        // Refresh the page to show updated status
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to accept booking");
+      }
+    } catch {
+      toast.error("Failed to accept booking");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStatusOverride = async () => {
     if (!statusReason.trim()) {
@@ -59,7 +93,7 @@ export default function AdminBookingActions({
         const error = await response.json();
         toast.error(error.error || "Failed to update booking status");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update booking status");
     } finally {
       setIsLoading(false);
@@ -77,15 +111,86 @@ export default function AdminBookingActions({
     return options.filter((option) => option.value !== booking.status);
   };
 
+  const handleProcessPayout = async () => {
+    setProcessingPayout(true);
+    try {
+      const response = await fetch(`/api/admin/bookings/${booking.id}/payout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminNotes: `Payout processed from admin bookings page`,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        // Refresh the page to show updated payout status
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to process payout");
+      }
+    } catch (error) {
+      console.error("Error processing payout:", error);
+      toast.error("Failed to process payout");
+    } finally {
+      setProcessingPayout(false);
+    }
+  };
+
+  const canAccept =
+    booking.status === "PENDING_ADMIN_REVIEW" ||
+    booking.status === "DJ_ASSIGNED";
+  const canOverride =
+    booking.status !== "CONFIRMED" && booking.status !== "CANCELLED";
+  const canProcessPayout =
+    (booking.status === "CONFIRMED" || booking.status === "COMPLETED") &&
+    booking.isPaid &&
+    new Date(booking.eventDate) < new Date() &&
+    booking.payoutStatus !== "COMPLETED" &&
+    booking.dj?.stripeConnectAccountId &&
+    booking.dj?.stripeConnectAccountEnabled;
+
   return (
     <>
-      <button
-        onClick={() => setShowStatusModal(true)}
-        disabled={isLoading}
-        className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 px-3 py-1 rounded text-sm font-medium transition-colors"
-      >
-        Override
-      </button>
+      {canAccept && (
+        <button
+          onClick={handleAcceptBooking}
+          disabled={isLoading}
+          className="px-3 py-1 rounded text-sm font-medium transition-colors bg-green-600 hover:bg-green-700 disabled:opacity-50"
+          title="Accept booking"
+        >
+          Accept
+        </button>
+      )}
+      {canOverride && (
+        <button
+          onClick={() => setShowStatusModal(true)}
+          disabled={isLoading}
+          className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 px-3 py-1 rounded text-sm font-medium transition-colors"
+        >
+          Override
+        </button>
+      )}
+
+      {canProcessPayout && (
+        <button
+          onClick={handleProcessPayout}
+          disabled={processingPayout}
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1"
+          title="Process payout to DJ"
+        >
+          <DollarSign className="w-3 h-3" />
+          {processingPayout ? "Processing..." : "Payout"}
+        </button>
+      )}
+
+      {booking.payoutStatus === "COMPLETED" && (
+        <span className="px-2 py-1 rounded text-xs font-medium bg-green-900/30 text-green-200">
+          Paid Out
+        </span>
+      )}
 
       {/* Status Override Modal */}
       {showStatusModal && (

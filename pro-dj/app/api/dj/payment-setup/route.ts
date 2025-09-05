@@ -174,15 +174,36 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const hasCompletedSetup = !!securityClearance?.encryptedTaxId;
+    // Check Stripe Connect status
+    const djProfile = await prisma.djProfile.findUnique({
+      where: { userId: session.user.id },
+      select: {
+        stripeConnectAccountId: true,
+        stripeConnectAccountEnabled: true,
+        stripeConnectAccountStatus: true,
+      },
+    });
+
+    const hasCompletedTaxSetup = !!securityClearance?.encryptedTaxId;
+    const hasCompletedStripeSetup =
+      !!djProfile?.stripeConnectAccountId &&
+      djProfile.stripeConnectAccountEnabled;
+    const hasCompletedSetup = hasCompletedTaxSetup && hasCompletedStripeSetup;
 
     return NextResponse.json({
       hasCompletedSetup,
-      taxIdLastFour: hasCompletedSetup ? securityClearance.taxIdLastFour : null,
-      taxIdType: hasCompletedSetup ? securityClearance.taxIdType : null,
-      businessName: hasCompletedSetup ? securityClearance.businessName : null,
+      hasCompletedTaxSetup,
+      hasCompletedStripeSetup,
+      taxIdLastFour: hasCompletedTaxSetup
+        ? securityClearance.taxIdLastFour
+        : null,
+      taxIdType: hasCompletedTaxSetup ? securityClearance.taxIdType : null,
+      businessName: hasCompletedTaxSetup
+        ? securityClearance.businessName
+        : null,
       isCorporation: securityClearance?.isCorporation || false,
       isSoleProprietor: securityClearance?.isSoleProprietor || false,
+      stripeConnectStatus: djProfile?.stripeConnectAccountStatus || null,
     });
   } catch (error) {
     console.error("Payment setup status check error:", error);

@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     // Check for secret token to prevent unauthorized access
     const { token } = await req.json();
     const expectedToken = process.env.MIGRATION_SECRET_TOKEN;
-    
+
     if (!expectedToken || token !== expectedToken) {
       return NextResponse.json(
         { error: "Invalid migration token." },
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("Starting database migration...");
-    
+
     // Run the specific SQL migrations that are missing
     const migrations = [
       // Update BookingStatus enum to include new values
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           ALTER TYPE "BookingStatus" ADD VALUE 'DISPUTED';
         END IF;
       END $$;`,
-      
+
       // Add stripeConnectAccountId and other missing fields to DjProfile
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "stripeConnectAccountId" TEXT;`,
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "stripeConnectAccountStatus" TEXT;`,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "lastActiveDate" TIMESTAMP(3);`,
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "contractStartDate" TIMESTAMP(3);`,
       `ALTER TABLE "DjProfile" ADD COLUMN IF NOT EXISTS "contractEndDate" TIMESTAMP(3);`,
-      
+
       // Add missing fields to Booking table
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "preferredDjId" TEXT;`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "adminAssignedDjId" TEXT;`,
@@ -91,12 +91,12 @@ export async function POST(req: NextRequest) {
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "escrowStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "payoutStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeStatus" TEXT NOT NULL DEFAULT 'NONE';`,
-      
+
       // Add missing columns to ProDjServicePricing table
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "basePricePerHour" INTEGER;`,
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "regionMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1.0;`,
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "minimumHours" INTEGER NOT NULL DEFAULT 4;`,
-      
+
       // Create ProDjAddon table if it doesn't exist
       `CREATE TABLE IF NOT EXISTS "ProDjAddon" (
         "id" TEXT NOT NULL,
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         "updatedAt" TIMESTAMP(3) NOT NULL,
         CONSTRAINT "ProDjAddon_pkey" PRIMARY KEY ("id")
       );`,
-      
+
       // Create ProDjServicePricing table if it doesn't exist
       `CREATE TABLE IF NOT EXISTS "ProDjServicePricing" (
         "id" TEXT NOT NULL,
@@ -140,10 +140,17 @@ export async function POST(req: NextRequest) {
         results.push(`✅ ${migration}`);
       } catch (error) {
         // Ignore errors for columns that already exist
-        if (error instanceof Error && error.message.includes('already exists')) {
+        if (
+          error instanceof Error &&
+          error.message.includes("already exists")
+        ) {
           results.push(`⏭️ ${migration} (already exists)`);
         } else {
-          results.push(`❌ ${migration}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          results.push(
+            `❌ ${migration}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
         }
       }
     }
@@ -160,7 +167,11 @@ export async function POST(req: NextRequest) {
         const result = await prisma.$executeRawUnsafe(migration);
         results.push(`✅ ${migration} (${result} rows updated)`);
       } catch (error) {
-        results.push(`❌ ${migration}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        results.push(
+          `❌ ${migration}: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }
 
@@ -171,14 +182,14 @@ export async function POST(req: NextRequest) {
       message: "Database migrations completed",
       results: results,
     });
-
   } catch (error) {
     console.error("Migration error:", error);
-    
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       },
       { status: 500 }
     );

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
           where: {
             eventDate: eventDateTime,
             status: {
-              in: ["ACCEPTED", "CONFIRMED"],
+              in: ["DJ_ASSIGNED", "CONFIRMED"],
             },
           },
         },
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
               lt: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000), // Next 7 days
             },
             status: {
-              in: ["ACCEPTED", "CONFIRMED"],
+              in: ["DJ_ASSIGNED", "CONFIRMED"],
             },
           },
           select: {

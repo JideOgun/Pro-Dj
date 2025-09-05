@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import WaveformPlayer from "./WaveformPlayer";
 import Link from "next/link";
@@ -68,10 +68,6 @@ export default function SuggestedMixes({
   const [loading, setLoading] = useState(true);
   const { socket, isConnected } = useSocketContext();
 
-  useEffect(() => {
-    fetchSuggestedMixes();
-  }, [currentMixId]);
-
   // Listen for real-time mix like updates
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -97,7 +93,7 @@ export default function SuggestedMixes({
     };
   }, [socket, isConnected]);
 
-  const fetchSuggestedMixes = async () => {
+  const fetchSuggestedMixes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/mixes?limit=3");
@@ -116,7 +112,12 @@ export default function SuggestedMixes({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMixId]);
+
+  // Load suggested mixes when component mounts or currentMixId changes
+  useEffect(() => {
+    fetchSuggestedMixes();
+  }, [fetchSuggestedMixes]);
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "0:00";
@@ -230,7 +231,7 @@ export default function SuggestedMixes({
                 <div className="flex items-center space-x-2">
                   {/* DJ Profile Photo */}
                   {mix.dj.profileImage ? (
-                    <img
+                    <Image
                       src={mix.dj.profileImage}
                       alt={mix.dj.stageName}
                       width={16}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminOrDj } from "@/lib/auth-guard";
+import { requireAdmin } from "@/lib/auth-guard";
 import Stripe from "stripe";
 import { sendMail } from "@/lib/email";
 import { acceptEmailHtml } from "@/lib/email-templates";
@@ -21,10 +21,10 @@ try {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const gate = await requireAdminOrDj();
+  const { id } = await params;
+  const gate = await requireAdmin();
   if (!gate.ok)
     return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });
 
@@ -44,22 +44,8 @@ export async function PATCH(
       { status: 404 }
     );
 
-  // Check if DJ can access this booking (only if it's their booking)
-  if (gate.session?.user.role === "DJ") {
-    const djProfile = await prisma.djProfile.findUnique({
-      where: { userId: gate.session.user.id },
-    });
-
-    if (!djProfile || booking.djId !== djProfile.id) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Forbidden - You can only accept your own bookings",
-        },
-        { status: 403 }
-      );
-    }
-  }
+  // Only admins can accept bookings in the Pro-DJ model
+  // DJs are subcontractors and don't directly accept bookings
   if (!booking.quotedPriceCents)
     return NextResponse.json(
       { ok: false, error: "No quote on booking" },
@@ -110,7 +96,6 @@ export async function PATCH(
   }
 
   // Get DJ details for subcontractor model (all DJs are now subcontractors)
-  let djConnectAccountId = null;
   let platformFeeCents: number;
   let djPayoutCents: number;
 
@@ -145,26 +130,17 @@ export async function PATCH(
       booking.quotedPriceCents * (contractorSplit.toNumber() / 100)
     );
 
-    // All subcontractors need Stripe Connect for direct payouts
-    if (
-      !djProfile?.stripeConnectAccountId ||
-      !djProfile.stripeConnectAccountEnabled
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "DJ must complete Stripe Connect onboarding to accept bookings",
-        },
-        { status: 400 }
-      );
-    }
-    djConnectAccountId = djProfile.stripeConnectAccountId;
+    // Note: Stripe Connect is no longer required for booking acceptance
+    // Pro-DJ will collect 100% of payment and disburse to DJ later
   } else {
-    // Default subcontractor rates if no DJ assigned yet: 70% Pro-DJ, 30% DJ
-    platformFeeCents = Math.round(booking.quotedPriceCents * 0.7);
-    djPayoutCents = Math.round(booking.quotedPriceCents * 0.3);
+    // Default rates: 100% Pro-DJ, 0% DJ (Pro-DJ will disburse later)
+    platformFeeCents = booking.quotedPriceCents; // Pro-DJ gets 100%
+    djPayoutCents = 0; // DJ gets 0% initially
   }
+
+  // Update: Pro-DJ now collects 100% of payment, no immediate DJ payout
+  platformFeeCents = booking.quotedPriceCents;
+  djPayoutCents = 0;
 
   // Create a Checkout Session for the quoted amount with application fee
   const session = await stripe.checkout.sessions.create({
@@ -193,14 +169,8 @@ export async function PATCH(
       djPayoutCents: djPayoutCents.toString(),
       isSubcontractor: "true", // All DJs are now subcontractors
     },
-    payment_intent_data: djConnectAccountId
-      ? {
-          application_fee_amount: platformFeeCents,
-          transfer_data: {
-            destination: djConnectAccountId,
-          },
-        }
-      : undefined,
+    // No payment_intent_data needed - Pro-DJ collects 100% of payment
+    // DJs will be paid later through manual disbursement
     success_url: `${process.env.APP_URL}/book/success?bid=${booking.id}`,
     cancel_url: `${process.env.APP_URL}/book/cancel?bid=${booking.id}`,
     // optional: expires_at to limit how long they can pay
@@ -209,17 +179,20 @@ export async function PATCH(
   const updated = await prisma.booking.update({
     where: { id: booking.id },
     data: {
-      status: "ACCEPTED",
+      status: "CONFIRMED", // Booking is confirmed and payment session created
       checkoutSessionId: session.id,
       platformFeeCents: platformFeeCents,
       payoutAmountCents: djPayoutCents,
       escrowStatus: "PENDING",
+      adminAssignedDjId: djId, // Track which DJ the admin assigned
+      adminApprovedAt: new Date(),
+      adminApprovedBy: gate.session?.user.id,
       ...(djId && { djId }), // Assign DJ if provided
     },
   });
 
   //send email with session.url to client (below)
-  // ...after creating `session` and updating booking to ACCEPTED:
+  // ...after creating `session` and updating booking to CONFIRMED:
   const payLink = session.url ?? null;
 
   const clientEmail =
@@ -231,7 +204,7 @@ export async function PATCH(
   if (clientEmail && payLink) {
     await sendMail(
       clientEmail,
-      "Your booking was accepted — complete payment",
+      "Your Pro-DJ booking has been approved — complete payment",
       acceptEmailHtml({
         name: booking.user?.name,
         eventType: booking.eventType,

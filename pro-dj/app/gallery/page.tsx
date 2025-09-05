@@ -6,7 +6,16 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
-import { Calendar, MapPin, Camera, ArrowRight, Upload, X } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Camera,
+  ArrowRight,
+  Upload,
+  X,
+  Star,
+  Tag,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -133,7 +142,7 @@ function GalleryContent() {
 
       try {
         const formData = new FormData();
-        formData.append("photo", file);
+        formData.append("file", file);
         formData.append("title", uploadForm.title || file.name);
         formData.append("description", uploadForm.description || "");
         formData.append("eventName", uploadForm.eventName || "");
@@ -144,7 +153,7 @@ function GalleryContent() {
         formData.append("tags", uploadForm.tags || "");
         formData.append("isFeatured", uploadForm.isFeatured.toString());
 
-        const response = await fetch("/api/gallery", {
+        const response = await fetch("/api/dj/event-photos", {
           method: "POST",
           body: formData,
         });
@@ -269,15 +278,6 @@ function GalleryContent() {
                 ? "Start by uploading some event photos to showcase your work."
                 : "No photos have been uploaded yet. Check back soon for amazing event galleries!"}
             </p>
-            {canUpload() && (
-              <button
-                onClick={handleUploadClick}
-                className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center"
-              >
-                <Upload className="w-5 h-5 mr-2" />
-                Upload Photos
-              </button>
-            )}
           </div>
         ) : (
           <div className="space-y-12">
@@ -309,64 +309,83 @@ function GalleryContent() {
                 </div>
 
                 {/* Events Gallery */}
-                <div className="space-y-8">
-                  {dj.events.map((event) => (
-                    <div key={event.eventName} className="space-y-4">
-                      {/* Event Header */}
-                      <div className="border-b border-gray-800 pb-4">
-                        <h3 className="text-xl font-semibold text-white">
-                          {event.eventName}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-400 text-sm">
-                          {event.eventDate && (
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-2" />
-                              {new Date(event.eventDate).toLocaleDateString()}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {dj.events.map((event) => {
+                    // Get the first photo as cover and count total photos
+                    const coverPhoto = event.photos[0];
+                    const photoCount = event.photos.length;
+                    const featuredCount = event.photos.filter(
+                      (p) => p.isFeatured
+                    ).length;
+
+                    return (
+                      <Link
+                        key={event.eventName}
+                        href={`/gallery/${encodeURIComponent(event.eventName)}`}
+                        className="block bg-gray-900/30 rounded-xl overflow-hidden border border-gray-700/50 hover:border-violet-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10 group"
+                      >
+                        {/* Event Cover Image */}
+                        <div className="relative aspect-video bg-gray-800">
+                          {coverPhoto ? (
+                            <Image
+                              src={coverPhoto.url}
+                              alt={coverPhoto.altText || coverPhoto.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <Camera className="w-12 h-12 text-gray-600" />
                             </div>
                           )}
-                          {(event.venue || event.location) && (
-                            <div className="flex items-center">
-                              <MapPin className="w-4 h-4 mr-2" />
-                              {event.venue && event.location
-                                ? `${event.venue}, ${event.location}`
-                                : event.venue || event.location}
+
+                          {/* Photo Count Overlay */}
+                          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white px-2 py-1 rounded-lg text-xs font-medium">
+                            {photoCount} photo{photoCount !== 1 ? "s" : ""}
+                          </div>
+
+                          {/* Featured Badge */}
+                          {featuredCount > 0 && (
+                            <div className="absolute top-3 left-3 bg-yellow-500/90 backdrop-blur-sm text-black px-2 py-1 rounded-lg text-xs font-medium flex items-center">
+                              <Star className="w-3 h-3 mr-1" />
+                              {featuredCount} featured
                             </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* Photos Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {event.photos.map((photo) => (
-                          <div
-                            key={photo.id}
-                            className="group relative bg-gray-800 rounded-lg overflow-hidden hover:shadow-xl hover:shadow-violet-500/20 transition-all duration-300"
-                          >
-                            <div className="aspect-square relative">
-                              <Image
-                                src={photo.url}
-                                alt={photo.altText || photo.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              <div className="absolute bottom-4 left-4 right-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
-                                <h4 className="text-white font-medium text-sm truncate">
-                                  {photo.title}
-                                </h4>
-                                {photo.description && (
-                                  <p className="text-gray-300 text-xs mt-1 line-clamp-2">
-                                    {photo.description}
-                                  </p>
-                                )}
+                        {/* Event Info */}
+                        <div className="p-4">
+                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors">
+                            {event.eventName}
+                          </h3>
+
+                          <div className="space-y-2 text-sm text-gray-400">
+                            {event.eventDate && (
+                              <div className="flex items-center">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                {new Date(event.eventDate).toLocaleDateString()}
                               </div>
-                            </div>
+                            )}
+                            {(event.venue || event.location) && (
+                              <div className="flex items-center">
+                                <MapPin className="w-4 h-4 mr-2" />
+                                {event.venue && event.location
+                                  ? `${event.venue}, ${event.location}`
+                                  : event.venue || event.location}
+                              </div>
+                            )}
+                            {event.eventType && (
+                              <div className="flex items-center">
+                                <Tag className="w-4 h-4 mr-2" />
+                                {event.eventType}
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -380,7 +399,7 @@ function GalleryContent() {
           <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">
-                Upload Event Photos
+                Add Photos to Gallery
               </h3>
               <button
                 onClick={() => setShowUploadModal(false)}

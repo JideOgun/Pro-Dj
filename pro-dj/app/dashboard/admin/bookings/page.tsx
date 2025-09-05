@@ -6,6 +6,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { hasAdminPrivileges } from "@/lib/auth-utils";
 import AdminBookingActions from "./AdminBookingActions";
+import DJAssignmentDropdown from "./DJAssignmentDropdown";
 
 export default async function AdminBookingsPage() {
   const session = await getServerSession(authOptions);
@@ -30,6 +31,18 @@ export default async function AdminBookingsPage() {
       dj: {
         select: {
           stageName: true,
+          stripeConnectAccountId: true,
+          stripeConnectAccountEnabled: true,
+        },
+      },
+      preferredDj: {
+        select: {
+          stageName: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
     },
@@ -92,7 +105,10 @@ export default async function AdminBookingsPage() {
           </div>
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="text-2xl font-bold text-yellow-400">
-              {bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW").length}
+              {
+                bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW")
+                  .length
+              }
             </div>
             <div className="text-gray-400 text-sm">Pending</div>
           </div>
@@ -166,8 +182,21 @@ export default async function AdminBookingsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-gray-300">
-                        {booking.dj?.stageName || "Not assigned"}
+                      <div className="space-y-3">
+                        <div>
+                          <DJAssignmentDropdown
+                            bookingId={booking.id}
+                            currentDjId={booking.djId}
+                            requestedDjId={booking.preferredDjId}
+                          />
+                        </div>
+                        {booking.preferredDj && (
+                          <div className="text-xs text-blue-400 font-medium">
+                            Client requested:{" "}
+                            {booking.preferredDj.stageName ||
+                              booking.preferredDj.user.name}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -202,7 +231,10 @@ export default async function AdminBookingsPage() {
                           View
                         </Link>
                         <AdminBookingActions
-                          booking={booking}
+                          booking={{
+                            ...booking,
+                            djId: booking.djId,
+                          }}
                           currentAdminId={session.user.id}
                         />
                       </div>

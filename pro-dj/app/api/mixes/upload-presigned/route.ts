@@ -41,8 +41,6 @@ export async function POST(req: NextRequest) {
       where: {
         djId: djProfile.id,
         title: title || fileName.replace(/\.[^/.]+$/, ""),
-        // Only check for non-deleted mixes
-        deletedAt: null,
       },
     });
 

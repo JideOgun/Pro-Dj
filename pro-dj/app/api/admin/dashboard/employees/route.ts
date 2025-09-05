@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
               lte: endOfMonth,
             },
             status: {
-              in: ["ACCEPTED", "CONFIRMED"],
+              in: ["DJ_ASSIGNED", "CONFIRMED"],
             },
           },
           select: {
