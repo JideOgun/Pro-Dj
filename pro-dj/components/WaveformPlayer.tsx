@@ -294,7 +294,13 @@ export default function WaveformPlayer({
       audio.removeEventListener("error", handleError);
       audio.removeEventListener("loadstart", handleLoadStart);
     };
-  }, [emitMixPlayed, hasEmittedPlayCount, initialLikeCount, isConnected, mixId]);
+  }, [
+    emitMixPlayed,
+    hasEmittedPlayCount,
+    initialLikeCount,
+    isConnected,
+    mixId,
+  ]);
 
   // Volume effect
   useEffect(() => {

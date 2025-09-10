@@ -177,23 +177,26 @@ function BookPageContent() {
   // const getDjHourlyRate = (dj: {...}, eventType: string): number => { ... };
 
   // Handle package selection with end time calculation
-  const handlePackageSelection = useCallback((pkg: {
-    id: string;
-    packageType: string;
-    packageName: string;
-    basePriceCents: number;
-    durationHours: number;
-    description: string;
-    includedAddons: string[];
-  }) => {
-    console.log("Package selected:", pkg);
-    setSelectedPackage(pkg);
+  const handlePackageSelection = useCallback(
+    (pkg: {
+      id: string;
+      packageType: string;
+      packageName: string;
+      basePriceCents: number;
+      durationHours: number;
+      description: string;
+      includedAddons: string[];
+    }) => {
+      console.log("Package selected:", pkg);
+      setSelectedPackage(pkg);
 
-    // If start time is already set and this is a package-based event, calculate end time
-    if (startTime && pkg.durationHours) {
-      calculateEndTimeFromPackage(startTime, pkg);
-    }
-  }, [startTime]);
+      // If start time is already set and this is a package-based event, calculate end time
+      if (startTime && pkg.durationHours) {
+        calculateEndTimeFromPackage(startTime, pkg);
+      }
+    },
+    [startTime]
+  );
 
   // Load available packages for the selected event type
   const loadAvailablePackages = useCallback(async () => {
@@ -306,7 +309,14 @@ function BookPageContent() {
     } finally {
       setPriceLoading(false);
     }
-  }, [bookingType, selectedPackage, eventDate, startTime, endTime, selectedAddons]);
+  }, [
+    bookingType,
+    selectedPackage,
+    eventDate,
+    startTime,
+    endTime,
+    selectedAddons,
+  ]);
 
   // Load available packages when booking type changes
   useEffect(() => {
