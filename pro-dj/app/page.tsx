@@ -3,7 +3,6 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Music,
   ClipboardList,
@@ -11,17 +10,9 @@ import {
   ArrowRight,
   Target,
   Settings,
-  Lock,
   Zap,
   Camera,
-  Star,
-  Award,
   Users,
-  Calendar,
-  MapPin,
-  Play,
-  Heart,
-  Eye,
 } from "lucide-react";
 import DjShowcase from "@/components/DjShowcase";
 import PWAInfo from "@/components/PWAInfo";
@@ -34,7 +25,12 @@ export default function Home() {
     if (session?.user?.id) {
       // Fetch user profile to get proper display name
       fetch(`/api/profile`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.ok && data.data) {
             const user = data.data;
@@ -46,15 +42,17 @@ export default function Home() {
               setDisplayName(user.djProfile.stageName);
             } else {
               // Fallback to name or email
-              setDisplayName(user.name || user.email.split("@")[0] || "there");
+              setDisplayName(user.name || user.email?.split("@")[0] || "there");
             }
           }
         })
-        .catch(() => {
-          // Fallback to session data
-          setDisplayName(
-            session.user.name || session.user.email?.split("@")[0] || "there"
-          );
+        .catch((error) => {
+          // Silently fallback to session data - don't log errors for expected failures
+          if (session?.user) {
+            setDisplayName(
+              session.user.name || session.user.email?.split("@")[0] || "there"
+            );
+          }
         });
     }
   }, [session]);

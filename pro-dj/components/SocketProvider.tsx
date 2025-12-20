@@ -86,6 +86,9 @@ export function SocketProvider({
 
   useEffect(() => {
     if (!userId || !role) return;
+    
+    // Only run on client side
+    if (typeof window === "undefined") return;
 
     // Check if we're in production (Vercel) where WebSockets aren't supported
     const isProduction = process.env.NODE_ENV === 'production' || 
