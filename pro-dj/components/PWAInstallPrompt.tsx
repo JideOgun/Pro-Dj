@@ -18,8 +18,18 @@ export default function PWAInstallPrompt() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
+    // Check if user previously dismissed the prompt
+    if (localStorage.getItem("pwa-install-dismissed")) {
+      setIsDismissed(true);
+      return;
+    }
+
     // Check if app is already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
@@ -68,16 +78,15 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowInstallPrompt(false);
+    setIsDismissed(true);
     // Store in localStorage to remember user dismissed it
-    localStorage.setItem("pwa-install-dismissed", "true");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pwa-install-dismissed", "true");
+    }
   };
 
   // Don't show if already installed or user dismissed it
-  if (
-    isInstalled ||
-    !showInstallPrompt ||
-    localStorage.getItem("pwa-install-dismissed")
-  ) {
+  if (isInstalled || !showInstallPrompt || isDismissed) {
     return null;
   }
 

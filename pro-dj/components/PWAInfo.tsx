@@ -7,8 +7,29 @@ import ProDJLogo from "@/components/ProDJLogo";
 export default function PWAInfo() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [installInstructions, setInstallInstructions] = useState<string>("");
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
+    // Get platform-specific instructions
+    const getInstallInstructions = () => {
+      const userAgent = navigator.userAgent;
+
+      if (/iPhone|iPad|iPod/.test(userAgent)) {
+        return "Tap Share button → Add to Home Screen";
+      } else if (/Android/.test(userAgent)) {
+        return "Tap menu → Add to Home Screen";
+      } else if (/Chrome/.test(userAgent)) {
+        return "Click install icon (📱) in address bar";
+      } else {
+        return "Look for install icon in address bar";
+      }
+    };
+
+    setInstallInstructions(getInstallInstructions());
+
     // Check if app is running in standalone mode
     const checkStandalone = () => {
       const standalone = window.matchMedia(
@@ -30,21 +51,6 @@ export default function PWAInfo() {
     };
   }, []);
 
-  // Get platform-specific instructions
-  const getInstallInstructions = () => {
-    const userAgent = navigator.userAgent;
-
-    if (/iPhone|iPad|iPod/.test(userAgent)) {
-      return "Tap Share button → Add to Home Screen";
-    } else if (/Android/.test(userAgent)) {
-      return "Tap menu → Add to Home Screen";
-    } else if (/Chrome/.test(userAgent)) {
-      return "Click install icon (📱) in address bar";
-    } else {
-      return "Look for install icon in address bar";
-    }
-  };
-
   if (!showInfo) return null;
 
   return (
@@ -64,7 +70,7 @@ export default function PWAInfo() {
                 <span>⚡ Offline</span>
                 <span>🔒 Secure</span>
                 <span className="text-violet-400 font-medium">
-                  💡 {getInstallInstructions()}
+                  💡 {installInstructions || "Install app"}
                 </span>
               </div>
             </div>
