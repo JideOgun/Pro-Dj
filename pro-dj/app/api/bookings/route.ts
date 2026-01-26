@@ -462,23 +462,46 @@ export async function POST(req: Request) {
       details: bookingDetails,
     });
 
-    const booking = await prisma.booking.create({
-      data: {
-        userId: String(session.user?.id),
-        preferredDjId: djId, // Client's DJ preference (optional)
-        eventType: bookingType,
-        eventDate: eventDateTime,
-        startTime: startDateTime,
-        endTime: endDateTime,
-        message,
-        quotedPriceCents,
-        details: bookingDetails,
-        proDjServicePricingId, // Link to standardized pricing
-        selectedAddons, // Array of Pro-DJ addon IDs
-        // Default to PENDING_ADMIN_REVIEW status for new premium model
-        status: "PENDING_ADMIN_REVIEW",
-      },
+    console.log("Creating booking with data:", {
+      userId: String(session.user?.id),
+      preferredDjId: djId,
+      eventType: bookingType,
+      eventDate: eventDateTime,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      message,
+      quotedPriceCents,
+      proDjServicePricingId,
+      selectedAddons,
+      status: "PENDING_ADMIN_REVIEW",
     });
+
+    let booking;
+    try {
+      booking = await prisma.booking.create({
+        data: {
+          userId: String(session.user?.id),
+          preferredDjId: djId, // Client's DJ preference (optional)
+          eventType: bookingType,
+          eventDate: eventDateTime,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          message,
+          quotedPriceCents,
+          details: bookingDetails,
+          proDjServicePricingId, // Link to standardized pricing
+          selectedAddons, // Array of Pro-DJ addon IDs
+          // Default to PENDING_ADMIN_REVIEW status for new premium model
+          status: "PENDING_ADMIN_REVIEW",
+        },
+      });
+    } catch (prismaError: any) {
+      console.error("Prisma booking.create error:", prismaError);
+      console.error("Prisma error code:", prismaError?.code);
+      console.error("Prisma error message:", prismaError?.message);
+      console.error("Prisma error meta:", JSON.stringify(prismaError?.meta, null, 2));
+      throw prismaError; // Re-throw to be caught by outer catch
+    }
 
     console.log("Booking created:", {
       id: booking.id,
@@ -494,6 +517,11 @@ export async function POST(req: Request) {
     );
   } catch (error: unknown) {
     console.error("POST /api/bookings error:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    console.error("Detailed error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
     // Provide user-friendly error messages
     let errorMessage = "Unable to submit booking request. Please try again.";
