@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Admin user created:", admin.email);
 
-    // Create admin DJ profile if it doesn't exist
+    // Create admin DJ profile if it doesn't exist, or ensure existing one is ACTIVE
     const existingDjProfile = await prisma.djProfile.findFirst({
       where: { userId: admin.id }
     });
@@ -87,9 +87,17 @@ export async function POST(request: NextRequest) {
           isFeatured: false, // Don't feature admin on homepage
           rating: 4.9,
           totalBookings: 150,
+          contractorStatus: "ACTIVE", // Admin DJs are always active
         },
       });
       console.log("✅ Admin DJ profile created:", adminDjProfile.stageName);
+    } else if (existingDjProfile.contractorStatus !== "ACTIVE") {
+      // Ensure existing admin DJ profile is ACTIVE
+      await prisma.djProfile.update({
+        where: { id: existingDjProfile.id },
+        data: { contractorStatus: "ACTIVE" },
+      });
+      console.log("✅ Updated existing admin DJ profile to ACTIVE");
     }
 
     // Grant subscription to admin if it doesn't exist

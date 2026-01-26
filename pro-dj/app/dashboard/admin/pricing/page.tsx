@@ -51,7 +51,9 @@ export default function AdminPricingPage() {
     redirect("/");
   }
 
-  const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>([]);
+  const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>(
+    [],
+  );
   const [proDjAddons, setProDjAddons] = useState<ProDjAddon[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pricing");
@@ -59,9 +61,8 @@ export default function AdminPricingPage() {
   // Modal states
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showAddonModal, setShowAddonModal] = useState(false);
-  const [editingPricing, setEditingPricing] = useState<ProDjServicePricing | null>(
-    null
-  );
+  const [editingPricing, setEditingPricing] =
+    useState<ProDjServicePricing | null>(null);
   const [editingAddon, setEditingAddon] = useState<ProDjAddon | null>(null);
 
   // Form states
@@ -92,12 +93,7 @@ export default function AdminPricingPage() {
     "Club",
   ];
 
-  const packageTypes = [
-    "BASIC",
-    "STANDARD", 
-    "PREMIUM",
-    "HOURLY",
-  ];
+  const packageTypes = ["BASIC", "STANDARD", "PREMIUM", "HOURLY"];
 
   const addonCategories = [
     "Lighting",
@@ -176,11 +172,16 @@ export default function AdminPricingPage() {
         packageType: pricingForm.packageType,
         packageName: pricingForm.packageName,
         basePriceCents: Math.round(
-          parseFloat(pricingForm.basePriceCents) * 100
+          parseFloat(pricingForm.basePriceCents) * 100,
         ),
-        durationHours: pricingForm.durationHours ? parseInt(pricingForm.durationHours) : null,
+        durationHours: pricingForm.durationHours
+          ? parseInt(pricingForm.durationHours)
+          : null,
         description: pricingForm.description || null,
-        includes: pricingForm.includes.split(",").map(s => s.trim()).filter(Boolean),
+        includes: pricingForm.includes
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
       };
 
       const response = await fetch("/api/admin/pricing/service-pricing", {
@@ -206,10 +207,9 @@ export default function AdminPricingPage() {
     if (!confirm("Are you sure you want to delete this pricing?")) return;
 
     try {
-      const response = await fetch(
-        `/api/admin/pricing/service-pricing/${id}`,
-        { method: "DELETE" }
-      );
+      const response = await fetch(`/api/admin/pricing/service-pricing/${id}`, {
+        method: "DELETE",
+      });
 
       if (response.ok) {
         toast.success("Pricing deleted!");
@@ -423,10 +423,15 @@ export default function AdminPricingPage() {
                       </p>
                       {pricing.includes.length > 0 && (
                         <div className="mb-3">
-                          <div className="text-sm text-gray-400 mb-1">Package includes:</div>
+                          <div className="text-sm text-gray-400 mb-1">
+                            Package includes:
+                          </div>
                           <div className="flex flex-wrap gap-1">
                             {pricing.includes.map((item, index) => (
-                              <span key={index} className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs">
+                              <span
+                                key={index}
+                                className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
+                              >
                                 {item}
                               </span>
                             ))}
@@ -483,11 +488,14 @@ export default function AdminPricingPage() {
 
             {/* Group by category */}
             {Object.entries(
-              proDjAddons.reduce((acc, addon) => {
-                if (!acc[addon.category]) acc[addon.category] = [];
-                acc[addon.category].push(addon);
-                return acc;
-              }, {} as Record<string, ProDjAddon[]>)
+              proDjAddons.reduce(
+                (acc, addon) => {
+                  if (!acc[addon.category]) acc[addon.category] = [];
+                  acc[addon.category].push(addon);
+                  return acc;
+                },
+                {} as Record<string, ProDjAddon[]>,
+              ),
             ).map(([category, addons]) => (
               <div key={category} className="mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-violet-400">

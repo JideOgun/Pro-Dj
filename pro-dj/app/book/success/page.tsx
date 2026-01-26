@@ -32,6 +32,8 @@ function SuccessPageContent() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
 
   // Get WebSocket context
   const { socket, isConnected } = useSocketContext();
@@ -62,6 +64,36 @@ function SuccessPageContent() {
 
     fetchBooking();
   }, [bookingId]);
+
+  // Send confirmation email when booking is loaded and paid
+  useEffect(() => {
+    if (!booking || !booking.isPaid || emailSent || emailSending) {
+      return;
+    }
+
+    async function sendConfirmationEmail() {
+      setEmailSending(true);
+      try {
+        const response = await fetch(`/api/bookings/${bookingId}/send-confirmation-email`, {
+          method: "POST",
+        });
+        const data = await response.json();
+        
+        if (data.ok) {
+          console.log("✅ Confirmation email sent from success page");
+          setEmailSent(true);
+        } else {
+          console.error("❌ Failed to send confirmation email:", data.error);
+        }
+      } catch (err) {
+        console.error("❌ Error sending confirmation email:", err);
+      } finally {
+        setEmailSending(false);
+      }
+    }
+
+    sendConfirmationEmail();
+  }, [booking, bookingId, emailSent, emailSending]);
 
   // Listen for real-time booking status changes via WebSocket
   useEffect(() => {
@@ -167,10 +199,6 @@ function SuccessPageContent() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Event Type:</span>
-                  <span className="ml-2 text-white">{booking.eventType}</span>
-                </div>
-                <div>
                   <span className="text-gray-400">Status:</span>
                   <span className="ml-2 text-green-400 font-medium">
                     {booking.status}
@@ -260,7 +288,13 @@ function SuccessPageContent() {
               <Check className="w-4 h-4 inline mr-1" />
               Your payment has been processed successfully
             </p>
-            <p>📧 You&apos;ll receive a confirmation email shortly</p>
+            <p>
+              📧 {emailSent 
+                ? "Confirmation email sent!" 
+                : emailSending 
+                  ? "Sending confirmation email..." 
+                  : "You'll receive a confirmation email shortly"}
+            </p>
             <p>📞 Our DJ will contact you within 24 hours to discuss details</p>
             <p>
               <Calendar className="w-4 h-4 inline mr-1" />

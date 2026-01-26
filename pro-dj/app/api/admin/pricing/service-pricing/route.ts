@@ -22,7 +22,7 @@ export async function GET() {
     console.error("Error fetching service pricing:", error);
     return NextResponse.json(
       { error: "Failed to fetch service pricing" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Event type and valid hourly rate are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     if (!validEventTypes.includes(eventType)) {
       return NextResponse.json(
         { error: "Invalid event type" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     console.error("Error creating/updating service pricing:", error);
     return NextResponse.json(
       { error: "Failed to save service pricing" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -119,7 +119,7 @@ export async function DELETE(req: NextRequest) {
     if (!eventType) {
       return NextResponse.json(
         { error: "Event type is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -130,7 +130,7 @@ export async function DELETE(req: NextRequest) {
     if (!servicePricing) {
       return NextResponse.json(
         { error: "Service pricing not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -146,7 +146,7 @@ export async function DELETE(req: NextRequest) {
     console.error("Error deleting service pricing:", error);
     return NextResponse.json(
       { error: "Failed to delete service pricing" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

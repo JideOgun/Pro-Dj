@@ -16,6 +16,7 @@ export async function GET() {
             name: true,
             email: true,
             status: true,
+            role: true,
           },
         },
       },
@@ -24,21 +25,40 @@ export async function GET() {
       },
     });
 
+    // Ensure admin DJs are always ACTIVE
+    const djsWithActiveAdmins = await Promise.all(
+      djs.map(async (dj) => {
+        if (dj.user?.role === "ADMIN" && dj.user.status !== "ACTIVE") {
+          await prisma.user.update({
+            where: { id: dj.user.id || "" },
+            data: { status: "ACTIVE" },
+          });
+          return { ...dj, user: { ...dj.user, status: "ACTIVE" as const } };
+        }
+        return dj;
+      })
+    );
+
     // Filter and format the DJs
-    const availableDjs = djs.map((dj) => ({
-      id: dj.id,
-      stageName: dj.stageName,
-      user: {
-        name: dj.user.name,
-        email: dj.user.email,
-      },
-      contractorStatus: dj.contractorStatus,
-      stripeConnectAccountEnabled: dj.stripeConnectAccountEnabled,
-      // Include additional useful info for admin
-      isActive: dj.contractorStatus === "ACTIVE",
-      hasStripeConnect: dj.stripeConnectAccountEnabled,
-      isReady: dj.contractorStatus === "ACTIVE", // Stripe Connect no longer required
-    }));
+    // Only include DJs where user.status is ACTIVE (or admin DJs which are always treated as active)
+    const availableDjs = djsWithActiveAdmins
+      .filter((dj) => dj.user?.status === "ACTIVE" || dj.user?.role === "ADMIN")
+      .map((dj) => ({
+        id: dj.id,
+        stageName: dj.stageName,
+        user: {
+          name: dj.user.name,
+          email: dj.user.email,
+          role: dj.user.role,
+          status: dj.user.status,
+        },
+        stripeConnectAccountEnabled: dj.stripeConnectAccountEnabled,
+        // Include additional useful info for admin
+        // Admin DJs are always considered active/ready
+        isActive: dj.user?.status === "ACTIVE" || dj.user?.role === "ADMIN",
+        hasStripeConnect: dj.stripeConnectAccountEnabled,
+        isReady: dj.user?.status === "ACTIVE" || dj.user?.role === "ADMIN",
+      }));
 
     return NextResponse.json({
       ok: true,
@@ -51,7 +71,7 @@ export async function GET() {
     console.error("Error fetching available DJs:", error);
     return NextResponse.json(
       { ok: false, error: "Failed to fetch DJs" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

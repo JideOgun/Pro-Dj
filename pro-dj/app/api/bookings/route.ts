@@ -68,7 +68,7 @@ export async function GET(req: Request) {
     whereClause.eventDate = {};
     if (dateFrom) {
       (whereClause.eventDate as Record<string, unknown>).gte = new Date(
-        dateFrom
+        dateFrom,
       );
     }
     if (dateTo) {
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
     if (!session?.user?.id) {
       return NextResponse.json(
         { ok: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
             ok: false,
             error: "Active subscription required to access bookings",
           },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
@@ -161,7 +161,7 @@ export async function POST(req: Request) {
     if (session.user.role !== "CLIENT") {
       return NextResponse.json(
         { ok: false, error: "Only clients can create booking requests" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -174,7 +174,6 @@ export async function POST(req: Request) {
     const endTime = String(body?.endTime ?? "").trim();
     const message = String(body?.message ?? "").trim();
     const djId = body?.djId ? String(body.djId).trim() : null;
-    const packageId = body?.packageId ? String(body.packageId).trim() : null;
     const extra = body?.extra ?? null; // contains selectedAddons and other details
     const preferredGenres = body?.preferredGenres ?? [];
     const musicStyle = String(body?.musicStyle ?? "").trim();
@@ -195,36 +194,30 @@ export async function POST(req: Request) {
           error:
             "⚠️ Please fill in all required fields to complete your booking request.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Get Pro-DJ standardized pricing for this event type and package
+    // Get Pro-DJ standardized pricing for this event type (no packages)
     let quotedPriceCents = 0;
     let proDjServicePricingId: string | null = null;
     let selectedAddons: string[] = [];
 
-    if (!packageId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "⚠️ Please select a package for your event.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const servicePricing = await prisma.proDjServicePricing.findUnique({
-      where: { id: packageId },
+    // Get pricing by event type
+    const servicePricing = await prisma.proDjServicePricing.findFirst({
+      where: {
+        eventType: bookingType,
+        isActive: true,
+      },
     });
 
-    if (!servicePricing || !servicePricing.isActive) {
+    if (!servicePricing) {
       return NextResponse.json(
         {
           ok: false,
-          error: `🎵 Sorry, the selected package is not available. Please refresh and try again.`,
+          error: `🎵 Sorry, pricing is not available for ${bookingType} events. Please contact support.`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -234,30 +227,26 @@ export async function POST(req: Request) {
     const start = new Date(startTime);
     const end = new Date(endTime);
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const billableHours = Math.max(durationHours, servicePricing.minimumHours);
+    const minimumHours = servicePricing.minimumHours || 4;
+    const billableHours = Math.max(durationHours, minimumHours);
 
-    // Use package-based pricing if available, otherwise fall back to hourly
-    if (servicePricing.basePriceCents) {
-      // Package-based pricing
-      quotedPriceCents = Math.round(
-        servicePricing.basePriceCents * servicePricing.regionMultiplier
-      );
-    } else if (servicePricing.basePricePerHour) {
-      // Hourly-based pricing (fallback)
-      const regionalRate = Math.round(
-        servicePricing.basePricePerHour * servicePricing.regionMultiplier
-      );
-      quotedPriceCents = regionalRate * billableHours;
-    } else {
+    // Calculate base price: hourly rate × billable hours
+    if (!servicePricing.basePricePerHour) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "🎵 Sorry, pricing information is not available for this package.",
+            "🎵 Sorry, pricing information is not available for this event type.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
+
+    const basePriceCents = Math.round(
+      servicePricing.basePricePerHour *
+        billableHours *
+        (servicePricing.regionMultiplier || 1.0),
+    );
 
     // Add Pro-DJ add-on prices if any
     if (extra?.selectedAddons) {
@@ -281,12 +270,18 @@ export async function POST(req: Request) {
         const totalAddonPrice = addonPrices.reduce((sum, addon) => {
           const addonPrice =
             addon.priceFixed ||
-            (addon.pricePerHour ? addon.pricePerHour * billableHours : 0);
+            (addon.pricePerHour
+              ? Math.round(addon.pricePerHour * durationHours)
+              : 0);
           return sum + addonPrice;
         }, 0);
 
-        quotedPriceCents += totalAddonPrice;
+        quotedPriceCents = basePriceCents + totalAddonPrice;
+      } else {
+        quotedPriceCents = basePriceCents;
       }
+    } else {
+      quotedPriceCents = basePriceCents;
     }
 
     // Note: DJ selection is now optional - client can express preference
@@ -321,7 +316,7 @@ export async function POST(req: Request) {
           error:
             "📅 Please check your event date and time format. Make sure to select a valid date and time for your event.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -340,7 +335,7 @@ export async function POST(req: Request) {
     if (!timeValidation.valid) {
       return NextResponse.json(
         { ok: false, error: timeValidation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -351,7 +346,7 @@ export async function POST(req: Request) {
     } = await checkEventTimeConflicts(
       eventDateTime,
       startDateTime,
-      endDateTime
+      endDateTime,
     );
 
     console.log("Event time conflicts:", {
@@ -383,7 +378,7 @@ export async function POST(req: Request) {
             clientName: b.user?.name || b.user?.email,
           })),
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -401,7 +396,7 @@ export async function POST(req: Request) {
             ok: false,
             error: "🎧 The selected DJ profile was not found.",
           },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -411,14 +406,14 @@ export async function POST(req: Request) {
             ok: false,
             error: `🎧 ${djProfile.stageName} is not yet verified and cannot receive bookings. Please select a different DJ.`,
           },
-          { status: 403 }
+          { status: 403 },
         );
       }
 
       const { available, conflictingBookings } = await isDjAvailable(
         djId,
         startDateTime,
-        endDateTime
+        endDateTime,
       );
 
       console.log("DJ availability:", { available, conflictingBookings });
@@ -445,7 +440,7 @@ export async function POST(req: Request) {
               clientName: b.user?.name || b.user?.email,
             })),
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
     }
@@ -497,7 +492,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { ok: true, data: booking, quotedPriceCents },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: unknown) {
     console.error("POST /api/bookings error:", error);
@@ -530,7 +525,7 @@ export async function POST(req: Request) {
         ok: false,
         error: errorMessage,
       },
-      { status: statusCode }
+      { status: statusCode },
     );
   }
 }

@@ -61,27 +61,6 @@ function BookPageContent() {
   } | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
-  // Package selection state
-  const [selectedPackage, setSelectedPackage] = useState<{
-    id: string;
-    packageType: string;
-    packageName: string;
-    basePriceCents: number;
-    durationHours: number;
-    description: string;
-    includedAddons: string[];
-  } | null>(null);
-  const [availablePackages, setAvailablePackages] = useState<
-    Array<{
-      id: string;
-      packageType: string;
-      packageName: string;
-      basePriceCents: number;
-      durationHours: number;
-      description: string;
-      includedAddons: string[];
-    }>
-  >([]);
 
   // DJ preference (optional) - client can express preference but admin assigns
   const [preferredDj, setPreferredDj] = useState<{
@@ -176,102 +155,15 @@ function BookPageContent() {
   // Note: getDjHourlyRate function removed as it's not currently used
   // const getDjHourlyRate = (dj: {...}, eventType: string): number => { ... };
 
-  // Handle package selection with end time calculation
-  const handlePackageSelection = useCallback(
-    (pkg: {
-      id: string;
-      packageType: string;
-      packageName: string;
-      basePriceCents: number;
-      durationHours: number;
-      description: string;
-      includedAddons: string[];
-    }) => {
-      console.log("Package selected:", pkg);
-      setSelectedPackage(pkg);
 
-      // If start time is already set and this is a package-based event, calculate end time
-      if (startTime && pkg.durationHours) {
-        calculateEndTimeFromPackage(startTime, pkg);
-      }
-    },
-    [startTime]
-  );
-
-  // Load available packages for the selected event type
-  const loadAvailablePackages = useCallback(async () => {
-    if (!bookingType) {
-      setAvailablePackages([]);
-      setSelectedPackage(null);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `/api/pricing/pro-dj?eventType=${bookingType}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setAvailablePackages(data.packages || []);
-
-        // Auto-select the first package if none selected
-        if (data.packages && data.packages.length > 0 && !selectedPackage) {
-          handlePackageSelection(data.packages[0]);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading packages:", error);
-    }
-  }, [bookingType, selectedPackage, handlePackageSelection]);
-
-  // Calculate end time based on start time and package duration
-  const calculateEndTimeFromPackage = (
-    startTimeValue: string,
-    pkg: {
-      id: string;
-      packageType: string;
-      packageName: string;
-      basePriceCents: number;
-      durationHours: number;
-      description: string;
-      includedAddons: string[];
-    }
-  ) => {
-    console.log("Calculating end time from package:", {
-      startTime: startTimeValue,
-      packageDuration: pkg.durationHours,
-      packageName: pkg.packageName,
-    });
-
-    // Parse start time (format: HH:MM)
-    const [hours, minutes] = startTimeValue.split(":").map(Number);
-    const startTimeDate = new Date();
-    startTimeDate.setHours(hours, minutes, 0, 0);
-
-    // Add package duration
-    const endTimeDate = new Date(
-      startTimeDate.getTime() + pkg.durationHours * 60 * 60 * 1000
-    );
-
-    // Format as HH:MM
-    const endTimeString = endTimeDate.toTimeString().slice(0, 5);
-    console.log("Calculated end time:", endTimeString);
-    setEndTime(endTimeString);
-  };
-
-  // Handle start time change with end time calculation
+  // Handle start time change
   const handleStartTimeChange = (newStartTime: string) => {
     setStartTime(newStartTime);
-
-    // If a package is selected and it has duration, calculate end time
-    if (selectedPackage && selectedPackage.durationHours) {
-      calculateEndTimeFromPackage(newStartTime, selectedPackage);
-    }
   };
 
   // Calculate Pro-DJ standardized pricing
   const calculateProDjPricing = useCallback(async () => {
-    if (!bookingType || !selectedPackage) {
+    if (!bookingType || !eventDate || !startTime || !endTime) {
       setProDjPricing(null);
       return;
     }
@@ -289,7 +181,6 @@ function BookPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventType: bookingType,
-          packageId: selectedPackage.id,
           startTime: startDateTime,
           endTime: endDateTime,
           selectedAddons,
@@ -311,27 +202,29 @@ function BookPageContent() {
     }
   }, [
     bookingType,
-    selectedPackage,
     eventDate,
     startTime,
     endTime,
     selectedAddons,
   ]);
 
-  // Load available packages when booking type changes
-  useEffect(() => {
-    loadAvailablePackages();
-  }, [loadAvailablePackages]);
 
   // Load Pro-DJ add-ons when booking type and time changes
   useEffect(() => {
     const loadProDjAddons = async () => {
-      if (!bookingType || !startTime || !endTime) return;
+      if (!bookingType) return;
 
       try {
-        const response = await fetch(
-          `/api/pricing/pro-dj?eventType=${bookingType}&startTime=${startTime}&endTime=${endTime}`
-        );
+        const dateToUse = eventDate || new Date().toISOString().split("T")[0];
+        const startDateTime = startTime ? `${dateToUse}T${startTime}:00` : undefined;
+        const endDateTime = endTime ? `${dateToUse}T${endTime}:00` : undefined;
+        
+        const url = new URL("/api/pricing/pro-dj", window.location.origin);
+        url.searchParams.set("eventType", bookingType);
+        if (startDateTime) url.searchParams.set("startTime", startDateTime);
+        if (endDateTime) url.searchParams.set("endTime", endDateTime);
+
+        const response = await fetch(url.toString());
         if (response.ok) {
           const data = await response.json();
           setProDjAddons(data.addons || []);
@@ -342,26 +235,13 @@ function BookPageContent() {
     };
 
     loadProDjAddons();
-  }, [bookingType, startTime, endTime]);
+  }, [bookingType, eventDate, startTime, endTime]);
 
-  // Calculate pricing when form details, package, or add-ons change
+  // Calculate pricing when form details or add-ons change
   useEffect(() => {
     calculateProDjPricing();
   }, [calculateProDjPricing]);
 
-  // Auto-select included add-ons when package changes
-  useEffect(() => {
-    if (selectedPackage && selectedPackage.includedAddons) {
-      setSelectedAddons(selectedPackage.includedAddons);
-    }
-  }, [selectedPackage]);
-
-  // Auto-calculate end time when package or start time changes (only for package-based events)
-  useEffect(() => {
-    if (selectedPackage && startTime && selectedPackage.durationHours) {
-      calculateEndTimeFromPackage(startTime, selectedPackage);
-    }
-  }, [selectedPackage, startTime]);
 
   // Load available DJs when event details change
   useEffect(() => {
@@ -374,7 +254,7 @@ function BookPageContent() {
       setIsLoadingDjs(true);
       try {
         const response = await fetch(
-          `/api/djs?eventType=${bookingType}&date=${eventDate}&startTime=${startTime}&endTime=${endTime}`
+          `/api/djs?eventType=${bookingType}&date=${eventDate}&startTime=${startTime}&endTime=${endTime}`,
         );
 
         if (response.ok) {
@@ -460,7 +340,7 @@ function BookPageContent() {
       const searchMatch =
         dj.stageName.toLowerCase().includes(djSearchTerm.toLowerCase()) ||
         (dj.genres || []).some((genre) =>
-          genre.toLowerCase().includes(djSearchTerm.toLowerCase())
+          genre.toLowerCase().includes(djSearchTerm.toLowerCase()),
         ) ||
         (dj.bio && dj.bio.toLowerCase().includes(djSearchTerm.toLowerCase())) ||
         (dj.specialties &&
@@ -477,8 +357,8 @@ function BookPageContent() {
         preferredGenres.some(
           (preferredGenre) =>
             djGenre.toLowerCase().includes(preferredGenre.toLowerCase()) ||
-            preferredGenre.toLowerCase().includes(djGenre.toLowerCase())
-        )
+            preferredGenre.toLowerCase().includes(djGenre.toLowerCase()),
+        ),
       );
 
       if (!hasMatchingGenre) return false;
@@ -577,7 +457,7 @@ function BookPageContent() {
     start1: string,
     end1: string,
     start2: string,
-    end2: string
+    end2: string,
   ): boolean => {
     const s1 = parseTime(start1);
     const e1 = getAdjustedEndTime(start1, end1);
@@ -615,11 +495,11 @@ function BookPageContent() {
             dj1.startTime,
             dj1.endTime,
             dj2.startTime,
-            dj2.endTime
+            dj2.endTime,
           )
         ) {
           warnings.push(
-            `⚠️ Time overlap detected between ${dj1.dj.stageName} and ${dj2.dj.stageName}`
+            `⚠️ Time overlap detected between ${dj1.dj.stageName} and ${dj2.dj.stageName}`,
           );
         }
       }
@@ -667,7 +547,7 @@ function BookPageContent() {
             preferredGenres,
             musicStyle,
           }),
-        })
+        }),
       );
 
       const responses = await Promise.all(bookingPromises);
@@ -695,7 +575,7 @@ function BookPageContent() {
     setSelectedAddons((prev) =>
       prev.includes(addonId)
         ? prev.filter((id) => id !== addonId)
-        : [...prev, addonId]
+        : [...prev, addonId],
     );
   };
 
@@ -749,7 +629,6 @@ function BookPageContent() {
           endTime: `${eventDate}T${endTime}`,
           message,
           djId: preferredDjId, // Optional preference - admin will make final assignment
-          packageId: selectedPackage?.id, // Include the selected package ID
           extra: {
             contactEmail,
             clientEquipment,
@@ -765,20 +644,20 @@ function BookPageContent() {
 
       if (result.ok) {
         setMsg(
-          "🎉 Booking request submitted successfully! Our team will review and assign the perfect DJ for your event. Redirecting to your bookings..."
+          "🎉 Booking request submitted successfully! Our team will review and assign the perfect DJ for your event. Redirecting to your bookings...",
         );
         setTimeout(() => {
           router.push("/dashboard/bookings");
         }, 1500);
       } else {
         setMsg(
-          `⚠️ Booking request failed: ${result.error || "Please try again"}`
+          `⚠️ Booking request failed: ${result.error || "Please try again"}`,
         );
       }
     } catch (error) {
       console.error("Error submitting booking:", error);
       setMsg(
-        "❌ Unable to submit booking request at this time. Please try again."
+        "❌ Unable to submit booking request at this time. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -860,63 +739,6 @@ function BookPageContent() {
                 </select>
               </div>
 
-              {/* Package Selection */}
-              {bookingType && availablePackages.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Select Package *
-                  </label>
-                  <div className="space-y-3">
-                    {availablePackages.map((pkg) => (
-                      <div
-                        key={pkg.id}
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedPackage?.id === pkg.id
-                            ? "border-violet-500 bg-violet-900/20"
-                            : "border-gray-600 bg-gray-700 hover:border-gray-500"
-                        }`}
-                        onClick={() => handlePackageSelection(pkg)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="font-semibold text-white">
-                                {pkg.packageName}
-                              </div>
-                              <span className="text-xs bg-violet-600 text-violet-100 px-2 py-1 rounded-full font-medium">
-                                {pkg.packageType}
-                              </span>
-                            </div>
-                            <p className="text-gray-300 text-sm mb-3">
-                              {pkg.description}
-                            </p>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <div className="flex items-center gap-1">
-                                <span>⏱️</span>
-                                <span>{pkg.durationHours} hours</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span>🎵</span>
-                                <span>
-                                  {pkg.includedAddons.length} included services
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right ml-4">
-                            <div className="text-2xl font-bold text-violet-400">
-                              ${(pkg.basePriceCents / 100).toFixed(0)}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              package price
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Event Date */}
               <div>
@@ -950,36 +772,17 @@ function BookPageContent() {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     End Time *
-                    {selectedPackage && selectedPackage.durationHours && (
-                      <span className="text-xs text-violet-400 ml-2">
-                        (Auto-calculated from {selectedPackage.durationHours}h
-                        package)
-                      </span>
-                    )}
                   </label>
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     required
-                    disabled={
-                      !!(selectedPackage && selectedPackage.durationHours)
-                    }
-                    className={`w-full border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
-                      selectedPackage && selectedPackage.durationHours
-                        ? "bg-gray-600 border-gray-500 cursor-not-allowed"
-                        : "bg-gray-700 border-gray-600"
-                    }`}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
-                  {selectedPackage && selectedPackage.durationHours && (
+                  {proDjPricing && proDjPricing.minimumHours && (
                     <p className="text-xs text-gray-400 mt-1">
-                      End time automatically set based on{" "}
-                      {selectedPackage.packageName} duration
-                    </p>
-                  )}
-                  {selectedPackage && !selectedPackage.durationHours && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Set your preferred end time for this hourly-based event
+                      Minimum {proDjPricing.minimumHours} hours required for this event type
                     </p>
                   )}
                 </div>
@@ -989,46 +792,48 @@ function BookPageContent() {
               {totalEventDuration > 0 && (
                 <div
                   className={`border rounded-lg p-4 ${
-                    selectedPackage &&
-                    selectedPackage.durationHours &&
-                    totalEventDuration === selectedPackage.durationHours
+                    proDjPricing &&
+                    proDjPricing.minimumHours &&
+                    totalEventDuration >= proDjPricing.minimumHours
                       ? "bg-green-900/20 border-green-500/30"
-                      : "bg-blue-900/20 border-blue-500/30"
+                      : proDjPricing &&
+                        proDjPricing.minimumHours &&
+                        totalEventDuration < proDjPricing.minimumHours
+                        ? "bg-yellow-900/20 border-yellow-500/30"
+                        : "bg-blue-900/20 border-blue-500/30"
                   }`}
                 >
                   <div
                     className={`text-sm ${
-                      selectedPackage &&
-                      selectedPackage.durationHours &&
-                      totalEventDuration === selectedPackage.durationHours
+                      proDjPricing &&
+                      proDjPricing.minimumHours &&
+                      totalEventDuration >= proDjPricing.minimumHours
                         ? "text-green-200"
-                        : "text-blue-200"
+                        : proDjPricing &&
+                          proDjPricing.minimumHours &&
+                          totalEventDuration < proDjPricing.minimumHours
+                          ? "text-yellow-200"
+                          : "text-blue-200"
                     }`}
                   >
                     Event Duration:{" "}
                     <span className="font-semibold">
                       {totalEventDuration} hours
                     </span>
-                    {selectedPackage &&
-                      selectedPackage.durationHours &&
-                      totalEventDuration === selectedPackage.durationHours && (
+                    {proDjPricing &&
+                      proDjPricing.minimumHours &&
+                      totalEventDuration >= proDjPricing.minimumHours && (
                         <span className="text-green-300 ml-2">
-                          ✓ Matches {selectedPackage.packageName} duration
+                          ✓ Meets minimum requirement ({proDjPricing.minimumHours}h)
                         </span>
                       )}
-                    {selectedPackage &&
-                      selectedPackage.durationHours &&
-                      totalEventDuration !== selectedPackage.durationHours && (
+                    {proDjPricing &&
+                      proDjPricing.minimumHours &&
+                      totalEventDuration < proDjPricing.minimumHours && (
                         <span className="text-yellow-300 ml-2">
-                          ⚠️ Does not match package duration (
-                          {selectedPackage.durationHours}h)
+                          ⚠️ Below minimum requirement ({proDjPricing.minimumHours}h required)
                         </span>
                       )}
-                    {selectedPackage && !selectedPackage.durationHours && (
-                      <span className="text-blue-300 ml-2">
-                        Hourly-based event
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
@@ -1040,24 +845,24 @@ function BookPageContent() {
                     {field === "age"
                       ? "Age of Birthday Person"
                       : field === "venueName"
-                      ? "Venue Name"
-                      : field === "guestCount"
-                      ? "Expected Guest Count"
-                      : field === "companyName"
-                      ? "Company Name"
-                      : field === "eventPurpose"
-                      ? "Event Purpose"
-                      : field === "attendeeCount"
-                      ? "Expected Attendee Count"
-                      : field === "partyType"
-                      ? "Party Type"
-                      : field === "venueType"
-                      ? "Venue Type"
-                      : field === "partyTheme"
-                      ? "Party Theme"
-                      : field === "clubName"
-                      ? "Club Name"
-                      : field}
+                        ? "Venue Name"
+                        : field === "guestCount"
+                          ? "Expected Guest Count"
+                          : field === "companyName"
+                            ? "Company Name"
+                            : field === "eventPurpose"
+                              ? "Event Purpose"
+                              : field === "attendeeCount"
+                                ? "Expected Attendee Count"
+                                : field === "partyType"
+                                  ? "Party Type"
+                                  : field === "venueType"
+                                    ? "Venue Type"
+                                    : field === "partyTheme"
+                                      ? "Party Theme"
+                                      : field === "clubName"
+                                        ? "Club Name"
+                                        : field}
                   </label>
                   <input
                     type={
@@ -1069,24 +874,24 @@ function BookPageContent() {
                       field === "age"
                         ? "e.g., 25"
                         : field === "venueName"
-                        ? "e.g., Grand Hotel Ballroom"
-                        : field === "guestCount"
-                        ? "e.g., 150"
-                        : field === "companyName"
-                        ? "e.g., ABC Corporation"
-                        : field === "eventPurpose"
-                        ? "e.g., Annual Conference, Holiday Party"
-                        : field === "attendeeCount"
-                        ? "e.g., 200"
-                        : field === "partyType"
-                        ? "e.g., Anniversary, Graduation"
-                        : field === "venueType"
-                        ? "e.g., Hotel, Restaurant, Private Home"
-                        : field === "partyTheme"
-                        ? "e.g., 80s, Tropical, Superhero"
-                        : field === "clubName"
-                        ? "e.g., Club XYZ"
-                        : field
+                          ? "e.g., Grand Hotel Ballroom"
+                          : field === "guestCount"
+                            ? "e.g., 150"
+                            : field === "companyName"
+                              ? "e.g., ABC Corporation"
+                              : field === "eventPurpose"
+                                ? "e.g., Annual Conference, Holiday Party"
+                                : field === "attendeeCount"
+                                  ? "e.g., 200"
+                                  : field === "partyType"
+                                    ? "e.g., Anniversary, Graduation"
+                                    : field === "venueType"
+                                      ? "e.g., Hotel, Restaurant, Private Home"
+                                      : field === "partyTheme"
+                                        ? "e.g., 80s, Tropical, Superhero"
+                                        : field === "clubName"
+                                          ? "e.g., Club XYZ"
+                                          : field
                     }
                     value={extra[field] ?? ""}
                     onChange={(e) =>
@@ -1138,7 +943,7 @@ function BookPageContent() {
                               setPreferredGenres([...preferredGenres, genre]);
                             } else {
                               setPreferredGenres(
-                                preferredGenres.filter((g) => g !== genre)
+                                preferredGenres.filter((g) => g !== genre),
                               );
                             }
                           }}
@@ -1233,7 +1038,7 @@ function BookPageContent() {
                       <div className="space-y-3">
                         {suggestedDjs.map((dj) => {
                           const isSelected = selectedDjs.some(
-                            (sd) => sd.djId === dj.id
+                            (sd) => sd.djId === dj.id,
                           );
                           // Note: totalPrice variable removed as it's not currently used
                           // const totalPrice = calculateDjTotalPrice();
@@ -1249,8 +1054,8 @@ function BookPageContent() {
                                 isSelected
                                   ? "border-blue-500 bg-blue-900/20"
                                   : !offersEventType
-                                  ? "border-red-500/50 bg-red-900/10 opacity-60"
-                                  : "border-blue-600/50 bg-blue-900/10 hover:border-blue-400"
+                                    ? "border-red-500/50 bg-red-900/10 opacity-60"
+                                    : "border-blue-600/50 bg-blue-900/10 hover:border-blue-400"
                               }`}
                               onClick={() => selectPreferredDj(dj)}
                             >
@@ -1356,8 +1161,8 @@ function BookPageContent() {
                             isSelected
                               ? "border-violet-500 bg-violet-900/20"
                               : !offersEventType
-                              ? "border-red-500/50 bg-red-900/10 opacity-60"
-                              : "border-gray-600 bg-gray-700 hover:border-gray-500"
+                                ? "border-red-500/50 bg-red-900/10 opacity-60"
+                                : "border-gray-600 bg-gray-700 hover:border-gray-500"
                           }`}
                           onClick={() => selectPreferredDj(dj)}
                         >
@@ -1585,11 +1390,15 @@ function BookPageContent() {
                       ) : (
                         /* Group add-ons by category */
                         Object.entries(
-                          proDjAddons.reduce((acc, addon) => {
-                            if (!acc[addon.category]) acc[addon.category] = [];
-                            acc[addon.category].push(addon);
-                            return acc;
-                          }, {} as Record<string, typeof proDjAddons>)
+                          proDjAddons.reduce(
+                            (acc, addon) => {
+                              if (!acc[addon.category])
+                                acc[addon.category] = [];
+                              acc[addon.category].push(addon);
+                              return acc;
+                            },
+                            {} as Record<string, typeof proDjAddons>,
+                          ),
                         ).map(([category, addons]) => (
                           <div key={category} className="space-y-3">
                             {/* Category Header */}
@@ -1641,7 +1450,7 @@ function BookPageContent() {
                                         <div className="text-xs text-gray-400">
                                           $
                                           {(addon.pricePerHour / 100).toFixed(
-                                            2
+                                            2,
                                           )}
                                           /hour
                                         </div>
@@ -1665,10 +1474,10 @@ function BookPageContent() {
                   <div className="bg-violet-900/20 border border-violet-500/30 rounded-lg p-6">
                     <h3 className="text-lg font-semibold text-violet-300 mb-4 flex items-center gap-2">
                       <DollarSign className="w-5 h-5" />
-                      Pro-DJ Service Package
+                      Pro-DJ Service Pricing
                     </h3>
 
-                    {/* Package Details */}
+                    {/* Service Details */}
                     <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
@@ -1678,46 +1487,16 @@ function BookPageContent() {
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Package Duration</div>
+                          <div className="text-gray-400">Event Duration</div>
                           <div className="font-medium text-white">
-                            {proDjPricing.durationHours || 5} hours
+                            {proDjPricing.durationHours || totalEventDuration} hours
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-400">Package Type</div>
+                          <div className="text-gray-400">Hourly Rate</div>
                           <div className="font-medium text-white">
-                            {bookingType === "Wedding"
-                              ? "Basic Package"
-                              : "Standard Package"}
+                            ${((proDjPricing.basePricePerHour || 0) / 100).toFixed(2)}/hour
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Package Includes */}
-                      <div className="mt-4 pt-4 border-t border-gray-600/30">
-                        <div className="text-gray-400 text-sm mb-2">
-                          Package Includes:
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs text-gray-300">
-                          {bookingType === "Wedding" ? (
-                            <>
-                              <div>• Ceremony, cocktail hour & reception</div>
-                              <div>• Microphones for officiant & toasts</div>
-                              <div>• Reception coordination as MC</div>
-                              <div>• Planning consultation</div>
-                              <div>• Professional sound system</div>
-                              <div>• Basic lighting setup</div>
-                            </>
-                          ) : (
-                            <>
-                              <div>• Professional DJ service</div>
-                              <div>• Premium sound system</div>
-                              <div>• Microphones included</div>
-                              <div>• Event coordination</div>
-                              <div>• Music consultation</div>
-                              <div>• Setup & breakdown</div>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1741,7 +1520,7 @@ function BookPageContent() {
                           </div>
                           <div className="text-right">
                             <div className="text-sm text-gray-400">
-                              Package Price
+                              Service Price
                             </div>
                             <div className="text-violet-400 font-semibold">
                               $
@@ -1754,20 +1533,26 @@ function BookPageContent() {
                           </div>
                         </div>
 
-                        {/* Package Price */}
+                        {/* Base Service Price */}
                         <div className="flex justify-between items-center mb-3">
                           <div className="text-sm text-gray-300">
-                            {bookingType === "Wedding"
-                              ? "Wedding Basic Package"
-                              : `${bookingType} Standard Package`}
+                            {bookingType} Service
                             <div className="text-xs text-gray-400">
-                              ({proDjPricing.durationHours || 5} hours coverage)
+                              {proDjPricing.basePricePerHour ? 
+                                `$${((proDjPricing.basePricePerHour || 0) / 100).toFixed(2)}/hour × ${proDjPricing.billableHours || proDjPricing.durationHours || totalEventDuration} hours` :
+                                `${proDjPricing.durationHours || totalEventDuration} hours coverage`
+                              }
+                              {proDjPricing.minimumHours && (
+                                <span className="text-yellow-400 ml-1">
+                                  (min {proDjPricing.minimumHours}h)
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-sm text-violet-400">
                             $
                             {((proDjPricing.basePriceCents || 0) / 100).toFixed(
-                              2
+                              2,
                             )}
                           </div>
                         </div>
@@ -1780,7 +1565,7 @@ function BookPageContent() {
                             </div>
                             {proDjAddons
                               .filter((addon) =>
-                                selectedAddons.includes(addon.id)
+                                selectedAddons.includes(addon.id),
                               )
                               .map((addon) => (
                                 <div
@@ -1830,7 +1615,7 @@ function BookPageContent() {
                         <span className="text-violet-400 text-2xl">
                           $
                           {((proDjPricing.totalPriceCents || 0) / 100).toFixed(
-                            2
+                            2,
                           )}
                         </span>
                       </div>
@@ -1868,8 +1653,8 @@ function BookPageContent() {
                 {loading
                   ? "Submitting..."
                   : priceLoading
-                  ? "Loading Pricing..."
-                  : "Submit Pro-DJ Booking Request"}
+                    ? "Loading Pricing..."
+                    : "Submit Pro-DJ Booking Request"}
               </button>
             </form>
           </div>

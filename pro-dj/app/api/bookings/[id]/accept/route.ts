@@ -21,7 +21,7 @@ try {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const gate = await requireAdmin();
@@ -41,7 +41,7 @@ export async function PATCH(
   if (!booking)
     return NextResponse.json(
       { ok: false, error: "Not found" },
-      { status: 404 }
+      { status: 404 },
     );
 
   // Only admins can accept bookings in the Pro-DJ model
@@ -49,7 +49,7 @@ export async function PATCH(
   if (!booking.quotedPriceCents)
     return NextResponse.json(
       { ok: false, error: "No quote on booking" },
-      { status: 400 }
+      { status: 400 },
     );
 
   // If DJ is being assigned, check for conflicts
@@ -58,7 +58,7 @@ export async function PATCH(
       djId,
       booking.startTime,
       booking.endTime,
-      booking.id // Exclude current booking from conflict check
+      booking.id, // Exclude current booking from conflict check
     );
 
     if (!available) {
@@ -82,7 +82,7 @@ export async function PATCH(
             clientName: b.user?.name || b.user?.email,
           })),
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
   }
@@ -91,7 +91,7 @@ export async function PATCH(
   if (!stripe) {
     return NextResponse.json(
       { ok: false, error: "Payment processing not configured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -115,7 +115,7 @@ export async function PATCH(
     if (!djProfile) {
       return NextResponse.json(
         { ok: false, error: "DJ not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -124,10 +124,10 @@ export async function PATCH(
     const contractorSplit = djProfile.contractorSplitPercentage || 30; // Default 30%
 
     platformFeeCents = Math.round(
-      booking.quotedPriceCents * (platformSplit.toNumber() / 100)
+      booking.quotedPriceCents * (platformSplit.toNumber() / 100),
     );
     djPayoutCents = Math.round(
-      booking.quotedPriceCents * (contractorSplit.toNumber() / 100)
+      booking.quotedPriceCents * (contractorSplit.toNumber() / 100),
     );
 
     // Note: Stripe Connect is no longer required for booking acceptance
@@ -210,12 +210,12 @@ export async function PATCH(
         eventType: booking.eventType,
         eventDateISO: booking.eventDate.toISOString().slice(0, 10),
         payLink,
-      })
+      }),
     );
   }
 
   return NextResponse.json(
     { ok: true, data: updated, checkoutUrl: session.url },
-    { status: 200 }
+    { status: 200 },
   );
 }

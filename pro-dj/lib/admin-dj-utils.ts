@@ -1,6 +1,29 @@
 import { prisma } from "@/lib/prisma";
 
 /**
+ * Ensures an admin DJ user is always ACTIVE
+ * Call this whenever an admin DJ profile is accessed
+ */
+export async function ensureAdminDjIsActive(djProfileId: string): Promise<void> {
+  try {
+    const djProfile = await prisma.djProfile.findUnique({
+      where: { id: djProfileId },
+      include: { user: { select: { role: true, status: true, id: true } } },
+    });
+
+    if (djProfile && djProfile.user.role === "ADMIN" && djProfile.user.status !== "ACTIVE") {
+      await prisma.user.update({
+        where: { id: djProfile.user.id },
+        data: { status: "ACTIVE" },
+      });
+    }
+  } catch (error) {
+    console.error("Error ensuring admin DJ is active:", error);
+    // Don't throw - this is a background maintenance operation
+  }
+}
+
+/**
  * Ensures an admin user has a DJ profile, creating one if it doesn't exist
  */
 export async function ensureAdminDjProfile(userId: string) {
@@ -21,6 +44,17 @@ export async function ensureAdminDjProfile(userId: string) {
     });
 
     if (existingProfile) {
+      // Ensure admin DJ user is always ACTIVE
+      const userWithStatus = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { status: true },
+      });
+      if (userWithStatus && userWithStatus.status !== "ACTIVE") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { status: "ACTIVE" },
+        });
+      }
       return existingProfile;
     }
 
@@ -30,9 +64,27 @@ export async function ensureAdminDjProfile(userId: string) {
       include: { djProfile: true },
     });
 
-    // If user already has a DJ profile, use their existing stage name
+    // If user already has a DJ profile, ensure user is ACTIVE
     if (userAsDj?.djProfile) {
+      if (userAsDj.status !== "ACTIVE") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { status: "ACTIVE" },
+        });
+      }
       return userAsDj.djProfile;
+    }
+
+    // Ensure admin user is ACTIVE before creating DJ profile
+    const userWithStatus = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    if (userWithStatus && userWithStatus.status !== "ACTIVE") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: "ACTIVE" },
+      });
     }
 
     // Create DJ profile for admin using only user data, no hardcoded defaults
@@ -48,7 +100,6 @@ export async function ensureAdminDjProfile(userId: string) {
       },
     });
 
-    console.log(`Created DJ profile for admin user: ${user.email}`);
     return djProfile;
   } catch (error) {
     console.error("Error ensuring admin DJ profile:", error);
@@ -61,11 +112,32 @@ export async function ensureAdminDjProfile(userId: string) {
  */
 export async function getOrCreateAdminDjProfile(userId: string) {
   try {
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== "ADMIN") {
+      throw new Error("User is not an admin");
+    }
+
     const djProfile = await prisma.djProfile.findFirst({
       where: { userId },
     });
 
     if (djProfile) {
+      // Ensure admin DJ user is always ACTIVE
+      const userWithStatus = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { status: true },
+      });
+      if (userWithStatus && userWithStatus.status !== "ACTIVE") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { status: "ACTIVE" },
+        });
+      }
       return djProfile;
     }
 

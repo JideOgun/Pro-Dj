@@ -267,12 +267,12 @@ export default function AdminDjsPage() {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${
-                          dj.djProfile?.isAcceptingBookings
+                          dj.status === "ACTIVE"
                             ? "bg-green-900/40 text-green-200 border-green-700/30"
                             : "bg-red-900/40 text-red-200 border-red-700/30"
                         }`}
                       >
-                        {dj.djProfile?.isAcceptingBookings
+                        {dj.status === "ACTIVE"
                           ? "Active"
                           : "Inactive"}
                       </span>

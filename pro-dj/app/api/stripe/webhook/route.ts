@@ -2,23 +2,20 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/email";
-import { clientConfirmedHtml, djConfirmedHtml } from "@/lib/email-templates";
+import { paymentConfirmationEmailHtml, djConfirmedHtml } from "@/lib/email-templates";
 import { emitBookingUpdate } from "@/lib/socket-server";
 import { stripe, webhookConfig, handleStripeError } from "@/lib/stripe-config";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  console.log("🔍 Webhook request received");
-
   const sig = req.headers.get("stripe-signature");
-  console.log("📝 Signature header present:", !!sig);
 
   if (!sig) {
-    console.log("❌ Missing signature header");
+    console.error("Stripe webhook: Missing signature header");
     return NextResponse.json(
       { ok: false, error: "Missing signature" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -26,46 +23,37 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event;
   try {
-    console.log("🔐 Attempting to verify webhook signature...");
-    console.log(
-      "🔑 Webhook secret length:",
-      process.env.STRIPE_WEBHOOK_SECRET?.length || 0
-    );
-
     event = stripe.webhooks.constructEvent(
       Buffer.from(buf),
       sig,
-      webhookConfig.endpointSecret
+      webhookConfig.endpointSecret,
     );
-    console.log("✅ Webhook signature verified successfully");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    console.error("❌ Webhook signature verification failed:", errorMessage);
+    console.error("Stripe webhook signature verification failed:", errorMessage);
     return NextResponse.json(
       { ok: false, error: `Webhook Error: ${errorMessage}` },
-      { status: 400 }
+      { status: 400 },
     );
   }
-
-  console.log("📨 Stripe webhook received:", event.type);
 
   try {
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(
-          event.data.object as Stripe.Checkout.Session
+          event.data.object as Stripe.Checkout.Session,
         );
         break;
 
       case "payment_intent.succeeded":
         await handlePaymentIntentSucceeded(
-          event.data.object as Stripe.PaymentIntent
+          event.data.object as Stripe.PaymentIntent,
         );
         break;
 
       case "payment_intent.payment_failed":
         await handlePaymentIntentFailed(
-          event.data.object as Stripe.PaymentIntent
+          event.data.object as Stripe.PaymentIntent,
         );
         break;
 
@@ -94,15 +82,12 @@ export async function POST(req: Request) {
 }
 
 async function handleCheckoutSessionCompleted(
-  session: Stripe.Checkout.Session
+  session: Stripe.Checkout.Session,
 ) {
-  console.log("🔄 Stripe webhook: checkout.session.completed received");
   const bookingId = session.metadata?.bookingId;
-  console.log("📋 Booking ID from metadata:", bookingId);
 
   if (bookingId) {
     try {
-      console.log("🔄 Updating booking status to CONFIRMED...");
       const booking = await prisma.booking.update({
         where: { id: bookingId },
         data: {
@@ -111,31 +96,35 @@ async function handleCheckoutSessionCompleted(
           paidAt: new Date(),
           checkoutSessionId: session.id,
         },
-        include: { user: { select: { email: true, name: true } } },
+        include: {
+          user: { select: { email: true, name: true } },
+          dj: { select: { stageName: true } },
+          proDjServicePricing: { select: { eventType: true, minimumHours: true } },
+          proDjAddons: { select: { name: true, priceFixed: true, pricePerHour: true } },
+        },
       });
-      console.log(
-        "✅ Booking updated successfully:",
-        booking.id,
-        booking.status
-      );
 
       // Emit WebSocket event for real-time updates
-      console.log("📡 Emitting WebSocket event for booking:", booking.id);
       emitBookingUpdate(booking.id, "CONFIRMED", true);
 
       // Send confirmation emails
-      await sendConfirmationEmails(booking, session);
+      try {
+        await sendConfirmationEmails(booking, session);
+      } catch (emailError) {
+        console.error("Error sending confirmation emails:", emailError);
+        // Don't throw - we don't want email failures to fail the webhook
+      }
     } catch (error) {
-      console.error("❌ Error updating booking:", error);
+      console.error("Error updating booking in webhook:", error);
       throw error;
     }
   } else {
-    console.log("⚠️ No booking ID found in session metadata");
+    console.warn("Stripe webhook: No booking ID found in session metadata");
   }
 }
 
 async function handlePaymentIntentSucceeded(
-  paymentIntent: Stripe.PaymentIntent
+  paymentIntent: Stripe.PaymentIntent,
 ) {
   console.log("🔄 Payment intent succeeded:", paymentIntent.id);
   // Additional payment success handling if needed
@@ -168,7 +157,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
         await sendMail(
           booking.user.email,
           "Payment Failed - Pro-DJ Booking",
-          `Your payment for booking ${bookingId} has failed. Please try again or contact support.`
+          `Your payment for booking ${bookingId} has failed. Please try again or contact support.`,
         );
       }
     } catch (error) {
@@ -206,8 +195,8 @@ async function handleRefundCreated(refund: Stripe.Refund) {
           booking.user.email,
           "Refund Processed - Pro-DJ Booking",
           `Your refund of $${(refund.amount / 100).toFixed(
-            2
-          )} has been processed for booking ${bookingId}.`
+            2,
+          )} has been processed for booking ${bookingId}.`,
         );
       }
     } catch (error) {
@@ -245,40 +234,77 @@ async function handleDisputeClosed(dispute: Stripe.Dispute) {
 
 async function sendConfirmationEmails(
   booking: {
+    id: string;
     details: unknown;
-    user?: { email?: string };
+    user?: { email?: string; name?: string | null };
     eventType: string;
     eventDate: Date;
+    startTime: Date | null;
+    endTime: Date | null;
+    quotedPriceCents: number;
+    message?: string | null;
+    dj?: { stageName: string | null } | null;
+    proDjServicePricing?: { minimumHours: number | null } | null;
+    proDjAddons?: Array<{ name: string; priceFixed: number | null; pricePerHour: number | null }>;
   },
-  session: Stripe.Checkout.Session
+  session: Stripe.Checkout.Session,
 ) {
-  // Send email to client
-  const clientEmail =
-    ((booking.details as Record<string, unknown>)?.contactEmail as string) ||
-    booking.user?.email ||
-    "";
-  if (clientEmail) {
-    await sendMail(
+  // Send comprehensive email to client
+  // Priority: 1) contactEmail from booking form, 2) user account email
+  const bookingFormEmail = (booking.details as Record<string, unknown>)?.contactEmail as string | undefined;
+  const userAccountEmail = booking.user?.email;
+  
+  const clientEmail = bookingFormEmail || userAccountEmail || "";
+  const clientName = booking.user?.name || "Valued Client";
+  
+  if (!clientEmail) {
+    console.error("No email address found for booking:", booking.id);
+    return;
+  }
+
+  try {
+    const emailResult = await sendMail(
       clientEmail,
       "Payment received — booking confirmed 🎉",
-      clientConfirmedHtml({
+      paymentConfirmationEmailHtml({
+        bookingId: booking.id,
+        clientName,
         eventType: booking.eventType,
-        eventDateISO: booking.eventDate.toISOString().slice(0, 10),
-      })
+        eventDate: booking.eventDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        quotedPriceCents: booking.quotedPriceCents,
+        djName: booking.dj?.stageName || null,
+        minimumHours: booking.proDjServicePricing?.minimumHours || null,
+        addons: booking.proDjAddons || [],
+        details: (booking.details as Record<string, unknown>) || {},
+        message: booking.message || null,
+      }),
     );
+    
+    if (!emailResult.ok) {
+      console.error("Failed to send payment confirmation email:", emailResult.error);
+    }
+  } catch (error) {
+    console.error("Exception while sending payment confirmation email:", error);
   }
 
   // Send email to DJ
   const djEmail = process.env.DJ_NOTIFY_EMAIL || "";
   if (djEmail) {
-    await sendMail(
-      djEmail,
-      "New confirmed booking",
-      djConfirmedHtml({
-        eventType: booking.eventType,
-        eventDateISO: booking.eventDate.toISOString().slice(0, 10),
-        clientEmail,
-      })
-    );
+    try {
+      await sendMail(
+        djEmail,
+        "New confirmed booking",
+        djConfirmedHtml({
+          eventType: booking.eventType,
+          eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+          clientEmail,
+        }),
+      );
+      console.log("✅ DJ notification email sent to:", djEmail);
+    } catch (error) {
+      console.error("❌ Error sending DJ notification email:", error);
+    }
   }
 }

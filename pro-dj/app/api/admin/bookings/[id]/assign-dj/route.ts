@@ -5,15 +5,27 @@ import { isDjAvailable } from "@/lib/booking-utils";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const gate = await requireAdmin();
-  if (!gate.ok)
-    return NextResponse.json({ ok: false, error: gate.error }, { status: 400 });
+  if (!gate.ok) {
+    console.error("Admin auth failed:", gate.error);
+    return NextResponse.json({ ok: false, error: gate.error }, { status: gate.status || 400 });
+  }
 
-  const body = await req.json().catch(() => ({}));
-  const djId = body.djId ? String(body.djId).trim() : null;
+  let body;
+  try {
+    body = await req.json();
+  } catch (error) {
+    console.error("Error parsing request body:", error);
+    return NextResponse.json(
+      { ok: false, error: "Invalid request body" },
+      { status: 400 },
+    );
+  }
+  
+  const djId = body?.djId ? String(body.djId).trim() : null;
 
   const booking = await prisma.booking.findUnique({
     where: { id },
@@ -26,7 +38,7 @@ export async function PATCH(
   if (!booking) {
     return NextResponse.json(
       { ok: false, error: "Booking not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -36,7 +48,7 @@ export async function PATCH(
       djId,
       booking.startTime,
       booking.endTime,
-      booking.id // Exclude current booking from conflict check
+      booking.id, // Exclude current booking from conflict check
     );
 
     if (!available) {
@@ -60,31 +72,44 @@ export async function PATCH(
             clientName: b.user?.name || b.user?.email,
           })),
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
-    // Verify DJ is active (Stripe Connect no longer required for assignment)
+    // Verify DJ is active - check user.status (not contractorStatus)
     const djProfile = await prisma.djProfile.findUnique({
       where: { id: djId },
       select: {
-        contractorStatus: true,
         stageName: true,
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, role: true, status: true } },
       },
     });
 
     if (!djProfile) {
       return NextResponse.json(
         { ok: false, error: "DJ not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    if (djProfile.contractorStatus !== "ACTIVE") {
+    // Ensure admin DJs are always ACTIVE
+    if (djProfile.user?.role === "ADMIN" && djProfile.user.status !== "ACTIVE") {
+      await prisma.user.update({
+        where: { id: djProfile.user.id || "" },
+        data: { status: "ACTIVE" },
+      });
+      djProfile.user.status = "ACTIVE";
+    }
+
+    // Check if DJ user is active (admin DJs are always allowed)
+    if (djProfile.user?.status !== "ACTIVE" && djProfile.user?.role !== "ADMIN") {
       return NextResponse.json(
-        { ok: false, error: "DJ is not active" },
-        { status: 400 }
+        { 
+          ok: false, 
+          error: `DJ ${djProfile.stageName || djProfile.user?.name} is not active. Only active DJs can be assigned to bookings.`,
+          djStatus: djProfile.user?.status,
+        },
+        { status: 400 },
       );
     }
 

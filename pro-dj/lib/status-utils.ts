@@ -84,7 +84,7 @@ export const getPaymentStatusIcon = (status: string) => {
 // Payment status utilities for DJ view (based on isPaid field and refund status)
 export const getDjPaymentStatusText = (
   isPaid: boolean,
-  refundId?: string | null
+  refundId?: string | null,
 ) => {
   if (refundId) return "REFUNDED";
   return isPaid ? "PAID" : "NOT PAID";
@@ -92,7 +92,7 @@ export const getDjPaymentStatusText = (
 
 export const getDjPaymentStatusColor = (
   isPaid: boolean,
-  refundId?: string | null
+  refundId?: string | null,
 ) => {
   if (refundId) return "bg-orange-900/40 text-orange-200 border-orange-700/30";
   return isPaid
@@ -102,70 +102,35 @@ export const getDjPaymentStatusColor = (
 
 export const getDjPaymentStatusIcon = (
   isPaid: boolean,
-  refundId?: string | null
+  refundId?: string | null,
 ) => {
   if (refundId) return "🔄";
   return isPaid ? "✅" : "❌";
 };
 
-// Client payment status utilities (for refunded bookings)
+// Client payment status utilities (based on isPaid field from Stripe, not status)
 export const getClientPaymentStatusText = (
-  status: string,
-  refundId?: string | null
+  isPaid: boolean,
+  refundId?: string | null,
 ) => {
   if (refundId) return "PAYMENT REFUNDED";
-  switch (status) {
-    case "PENDING_ADMIN_REVIEW":
-      return "NOT PAID";
-    case "DJ_ASSIGNED":
-      return "NOT PAID";
-    case "CONFIRMED":
-      return "PAID";
-    case "CANCELLED":
-      return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
-    default:
-      return refundId ? "PAYMENT REFUNDED" : "NOT PAID";
-  }
+  return isPaid ? "PAID" : "NOT PAID";
 };
 
 export const getClientPaymentStatusColor = (
-  status: string,
-  refundId?: string | null
+  isPaid: boolean,
+  refundId?: string | null,
 ) => {
   if (refundId) return "bg-orange-900/40 text-orange-200 border-orange-700/30";
-  switch (status) {
-    case "PENDING_ADMIN_REVIEW":
-      return "bg-red-900/40 text-red-200 border-red-700/30";
-    case "DJ_ASSIGNED":
-      return "bg-red-900/40 text-red-200 border-red-700/30";
-    case "CONFIRMED":
-      return "bg-green-900/40 text-green-200 border-green-700/30";
-    case "CANCELLED":
-      return refundId
-        ? "bg-orange-900/40 text-orange-200 border-orange-700/30"
-        : "bg-red-900/40 text-red-200 border-red-700/30";
-    default:
-      return refundId
-        ? "bg-orange-900/40 text-orange-200 border-orange-700/30"
-        : "bg-red-900/40 text-red-200 border-red-700/30";
-  }
+  return isPaid
+    ? "bg-green-900/40 text-green-200 border-green-700/30"
+    : "bg-red-900/40 text-red-200 border-red-700/30";
 };
 
 export const getClientPaymentStatusIcon = (
-  status: string,
-  refundId?: string | null
+  isPaid: boolean,
+  refundId?: string | null,
 ) => {
   if (refundId) return "🔄";
-  switch (status) {
-    case "PENDING_ADMIN_REVIEW":
-      return "❌";
-    case "DJ_ASSIGNED":
-      return "❌";
-    case "CONFIRMED":
-      return "✅";
-    case "CANCELLED":
-      return refundId ? "🔄" : "❌";
-    default:
-      return refundId ? "🔄" : "❌";
-  }
+  return isPaid ? "✅" : "❌";
 };

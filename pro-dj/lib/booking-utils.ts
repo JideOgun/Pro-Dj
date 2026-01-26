@@ -19,7 +19,7 @@ export async function isDjAvailable(
   djId: string,
   startTime: Date,
   endTime: Date,
-  excludeBookingId?: string
+  excludeBookingId?: string,
 ): Promise<{ available: boolean; conflictingBookings: unknown[] }> {
   console.log("🔍 Checking DJ availability:", {
     djId,
@@ -32,7 +32,12 @@ export async function isDjAvailable(
     where: {
       djId,
       status: {
-        in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"], // Only check active bookings
+        in: [
+          "PENDING_ADMIN_REVIEW",
+          "ADMIN_REVIEWING",
+          "DJ_ASSIGNED",
+          "CONFIRMED",
+        ], // Only check active bookings
       },
       ...(excludeBookingId && { id: { not: excludeBookingId } }),
       OR: [
@@ -58,7 +63,7 @@ export async function isDjAvailable(
         endTime: b.endTime.toISOString(),
         status: b.status,
         eventType: b.eventType,
-      }))
+      })),
     );
   }
 
@@ -76,7 +81,7 @@ export async function checkEventTimeConflicts(
   eventDate: Date,
   startTime: Date,
   endTime: Date,
-  excludeBookingId?: string
+  excludeBookingId?: string,
 ): Promise<{ hasConflicts: boolean; conflictingBookings: unknown[] }> {
   console.log("🔍 Checking event time conflicts:", {
     eventDate: eventDate.toISOString(),
@@ -92,16 +97,21 @@ export async function checkEventTimeConflicts(
         gte: new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
-          eventDate.getDate()
+          eventDate.getDate(),
         ),
         lt: new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
-          eventDate.getDate() + 1
+          eventDate.getDate() + 1,
         ),
       },
       status: {
-        in: ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED"],
+        in: [
+          "PENDING_ADMIN_REVIEW",
+          "ADMIN_REVIEWING",
+          "DJ_ASSIGNED",
+          "CONFIRMED",
+        ],
       },
       ...(excludeBookingId && { id: { not: excludeBookingId } }),
       OR: [
@@ -129,7 +139,7 @@ export async function checkEventTimeConflicts(
         endTime: b.endTime.toISOString(),
         status: b.status,
         eventType: b.eventType,
-      }))
+      })),
     );
   }
 
@@ -144,7 +154,7 @@ export async function checkEventTimeConflicts(
  */
 export async function getAvailableDjs(
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ): Promise<
   Array<{
     id: string;
@@ -203,7 +213,7 @@ export async function getAvailableDjs(
  */
 export function validateBookingTime(
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ): { valid: boolean; error?: string } {
   const now = new Date();
 

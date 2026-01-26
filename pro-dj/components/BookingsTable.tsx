@@ -81,7 +81,7 @@ function BookingsTableContent({
 
     if (success === "true") {
       toast.success(
-        "Subscription created successfully! Welcome to Pro-DJ Premium!"
+        "Subscription created successfully! Welcome to Pro-DJ Premium!",
       );
 
       // Clear URL parameters to prevent multiple toasts
@@ -111,8 +111,8 @@ function BookingsTableContent({
                 isPaid:
                   data.isPaid !== undefined ? data.isPaid : booking.isPaid,
               }
-            : booking
-        )
+            : booking,
+        ),
       );
     };
 
@@ -155,8 +155,8 @@ function BookingsTableContent({
   const updateBookingStatus = (bookingId: string, newStatus: string) => {
     setBookings((prev) =>
       prev.map((booking) =>
-        booking.id === bookingId ? { ...booking, status: newStatus } : booking
-      )
+        booking.id === bookingId ? { ...booking, status: newStatus } : booking,
+      ),
     );
   };
 
@@ -283,17 +283,17 @@ function BookingsTableContent({
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${
                       userRole === "CLIENT"
-                        ? getClientPaymentStatusColor(b.status, b.refundId)
+                        ? getClientPaymentStatusColor(b.isPaid || false, b.refundId)
                         : getStatusColor(b.status)
                     }`}
                   >
                     <span>
                       {userRole === "CLIENT"
-                        ? getClientPaymentStatusIcon(b.status, b.refundId)
+                        ? getClientPaymentStatusIcon(b.isPaid || false, b.refundId)
                         : getStatusIcon(b.status)}
                     </span>
                     {userRole === "CLIENT"
-                      ? getClientPaymentStatusText(b.status, b.refundId)
+                      ? getClientPaymentStatusText(b.isPaid || false, b.refundId)
                       : getStatusText(b.status)}
                   </span>
                 </td>
@@ -303,7 +303,7 @@ function BookingsTableContent({
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border whitespace-nowrap ${getDjPaymentStatusColor(
                         b.isPaid || false,
-                        b.refundId
+                        b.refundId,
                       )}`}
                     >
                       <span>
@@ -448,17 +448,17 @@ function BookingsTableContent({
                     <span
                       className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${
                         userRole === "CLIENT"
-                          ? getClientPaymentStatusColor(b.status, b.refundId)
+                          ? getClientPaymentStatusColor(b.isPaid || false, b.refundId)
                           : getStatusColor(b.status)
                       }`}
                     >
                       <span>
                         {userRole === "CLIENT"
-                          ? getClientPaymentStatusIcon(b.status, b.refundId)
+                          ? getClientPaymentStatusIcon(b.isPaid || false, b.refundId)
                           : getStatusIcon(b.status)}
                       </span>
                       {userRole === "CLIENT"
-                        ? getClientPaymentStatusText(b.status, b.refundId)
+                        ? getClientPaymentStatusText(b.isPaid || false, b.refundId)
                         : getStatusText(b.status)}
                     </span>
                   </div>
@@ -469,7 +469,7 @@ function BookingsTableContent({
                     <span
                       className={`inline-flex items-center gap-1 px-1 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${getDjPaymentStatusColor(
                         b.isPaid || false,
-                        b.refundId
+                        b.refundId,
                       )}`}
                     >
                       <span>
@@ -545,17 +545,17 @@ function BookingsTableContent({
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${
                     userRole === "CLIENT"
-                      ? getClientPaymentStatusColor(b.status, b.refundId)
+                      ? getClientPaymentStatusColor(b.isPaid || false, b.refundId)
                       : getStatusColor(b.status)
                   }`}
                 >
                   <span>
                     {userRole === "CLIENT"
-                      ? getClientPaymentStatusIcon(b.status, b.refundId)
+                      ? getClientPaymentStatusIcon(b.isPaid || false, b.refundId)
                       : getStatusIcon(b.status)}
                   </span>
                   {userRole === "CLIENT"
-                    ? getClientPaymentStatusText(b.status, b.refundId)
+                    ? getClientPaymentStatusText(b.isPaid || false, b.refundId)
                     : getStatusText(b.status)}
                 </span>
               </div>
@@ -585,7 +585,7 @@ function BookingsTableContent({
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getDjPaymentStatusColor(
                       b.isPaid || false,
-                      b.refundId
+                      b.refundId,
                     )}`}
                   >
                     <span>

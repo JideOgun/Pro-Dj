@@ -34,17 +34,21 @@ export async function GET(
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
-    // Get all active subcontractor DJs
+    // Get all active DJs (where user.status is ACTIVE)
     const allDjs = await prisma.djProfile.findMany({
       where: {
-        contractorStatus: "ACTIVE",
         isAcceptingBookings: true,
+        user: {
+          status: "ACTIVE",
+        },
       },
       include: {
         user: {
           select: {
             name: true,
             email: true,
+            role: true,
+            status: true,
           },
         },
         reviews: {

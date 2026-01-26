@@ -492,11 +492,12 @@ export default function Actions({
                 Waiting for DJ
               </span>
             )}
-            {status === "DJ_ASSIGNED" && (
+            {/* Show "Booking Accepted" if booking is accepted but not paid */}
+            {(status === "DJ_ASSIGNED" || status === "CONFIRMED") && !isPaid && (
               <div className="flex flex-col gap-1">
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-900/40 text-blue-200 border border-blue-700/30">
-                  <CreditCard size={10} />
-                  Complete payment
+                  <Check size={10} />
+                  Booking Accepted
                 </span>
                 <div className="flex gap-1">
                   <button
@@ -535,10 +536,11 @@ export default function Actions({
                 </div>
               </div>
             )}
-            {status === "CONFIRMED" && (
+            {/* Show "Booking Confirmed" if booking is accepted and paid */}
+            {(status === "DJ_ASSIGNED" || status === "CONFIRMED") && isPaid && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-900/40 text-green-200 border border-green-700/30">
                 <Check size={10} />
-                Booking confirmed
+                Booking Confirmed
               </span>
             )}
             {status === "CANCELLED" && (

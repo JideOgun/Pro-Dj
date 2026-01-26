@@ -21,8 +21,14 @@ export async function GET(req: Request) {
     }
 
     // Get all DJs with their profiles and stats
+    // Include admin users who also have DJ profiles
     const djs = await prisma.user.findMany({
-      where: { role: "DJ" },
+      where: {
+        OR: [
+          { role: "DJ" },
+          { role: "ADMIN" }, // Include admins who may have DJ profiles
+        ],
+      },
       include: {
         djProfile: true,
         bookings: {
@@ -41,9 +47,26 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
     });
 
+    // Filter to only users who have DJ profiles
+    const djsWithProfiles = djs.filter((user) => user.djProfile !== null);
+
+    // Ensure admin DJs are always ACTIVE (update user.status, not contractorStatus)
+    await Promise.all(
+      djsWithProfiles.map(async (user) => {
+        if (user.role === "ADMIN" && user.status !== "ACTIVE") {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { status: "ACTIVE" },
+          });
+          // Update the local object
+          user.status = "ACTIVE";
+        }
+      })
+    );
+
     return NextResponse.json({
-      djs,
-      total: djs.length,
+      djs: djsWithProfiles,
+      total: djsWithProfiles.length,
     });
   } catch (error) {
     console.error("Error fetching DJs:", error);

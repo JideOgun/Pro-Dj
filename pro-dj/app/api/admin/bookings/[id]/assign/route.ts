@@ -43,30 +43,30 @@ export async function POST(
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
-    // Validate DJ assignment
-    if (djId) {
-      const djProfile = await prisma.djProfile.findUnique({
-        where: { id: djId },
-        include: {
-          user: {
-            select: { name: true, email: true },
+      // Validate DJ assignment
+      if (djId) {
+        const djProfile = await prisma.djProfile.findUnique({
+          where: { id: djId },
+          include: {
+            user: {
+              select: { name: true, email: true, status: true, role: true },
+            },
           },
-        },
-      });
+        });
 
-      if (!djProfile) {
-        return NextResponse.json({ error: "DJ not found" }, { status: 404 });
-      }
+        if (!djProfile) {
+          return NextResponse.json({ error: "DJ not found" }, { status: 404 });
+        }
 
-      // Check if DJ is active subcontractor
-      if (djProfile.contractorStatus !== "ACTIVE") {
-        return NextResponse.json(
-          {
-            error: `DJ is not an active subcontractor (status: ${djProfile.contractorStatus})`,
-          },
-          { status: 400 }
-        );
-      }
+        // Check if DJ user is active (admin DJs are always allowed)
+        if (djProfile.user?.status !== "ACTIVE" && djProfile.user?.role !== "ADMIN") {
+          return NextResponse.json(
+            {
+              error: `DJ is not active (user status: ${djProfile.user?.status})`,
+            },
+            { status: 400 }
+          );
+        }
 
       // Check DJ availability for this booking
       const { available, conflictingBookings } = await isDjAvailable(

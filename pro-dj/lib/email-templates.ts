@@ -155,7 +155,7 @@ export function bookingRequestEmailTemplate(
   eventDate: string,
   eventTime: string,
   venue: string,
-  guestCount: number
+  guestCount: number,
 ) {
   const content = `
     <h2>New Booking Request 📅</h2>
@@ -182,7 +182,7 @@ export function bookingAcceptedEmailTemplate(
   djName: string,
   eventType: string,
   eventDate: string,
-  payLink: string
+  payLink: string,
 ) {
   const content = `
     <h2>Booking Accepted! ✅</h2>
@@ -220,7 +220,7 @@ export function acceptEmailHtml(opts: {
     <p><a href="${payLink}" class="button">Pay now</a></p>
     <p>— Jay Baba</p>
   `,
-    "Booking Accepted"
+    "Booking Accepted",
   );
 }
 
@@ -236,7 +236,155 @@ export function clientConfirmedHtml(opts: {
     <p>Thanks! See you there.</p>
     <p>— Jay Baba</p>
   `,
-    "Payment Received"
+    "Payment Received",
+  );
+}
+
+// Comprehensive payment confirmation email with all booking details
+export function paymentConfirmationEmailHtml(opts: {
+  bookingId: string;
+  clientName: string;
+  eventType: string;
+  eventDate: Date;
+  startTime: Date | null;
+  endTime: Date | null;
+  quotedPriceCents: number;
+  djName?: string | null;
+  minimumHours?: number | null;
+  addons?: Array<{ name: string; priceFixed: number | null; pricePerHour: number | null }>;
+  details: Record<string, unknown>;
+  message?: string | null;
+}) {
+  const {
+    bookingId,
+    clientName,
+    eventType,
+    eventDate,
+    startTime,
+    endTime,
+    quotedPriceCents,
+    djName,
+    minimumHours,
+    addons = [],
+    details,
+    message,
+  } = opts;
+
+  // Format dates and times
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatPrice = (cents: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(cents / 100);
+  };
+
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    return Math.round(hours * 10) / 10;
+  };
+
+  const duration = calculateDuration();
+  const eventDateFormatted = formatDate(eventDate);
+  const startTimeFormatted = startTime ? formatTime(startTime) : "TBD";
+  const endTimeFormatted = endTime ? formatTime(endTime) : "TBD";
+  const totalPrice = formatPrice(quotedPriceCents);
+
+  // Extract additional details
+  const venue = (details.venue as string) || "TBD";
+  const contactEmail = (details.contactEmail as string) || "";
+  const contactPhone = (details.contactPhone as string) || "";
+  const guestCount = (details.guestCount as number) || null;
+
+  return baseEmailTemplate(
+    `
+    <h2>🎉 Payment Received — Your Booking is Confirmed!</h2>
+    <p>Hi ${clientName},</p>
+    <p>Thank you for your payment! Your booking has been confirmed and you're all set for your event.</p>
+    
+    <div class="highlight">
+      <h3 style="margin-top: 0; color: #667eea;">Booking Summary</h3>
+      <p style="margin: 8px 0;"><strong>Booking ID:</strong> ${bookingId}</p>
+      <p style="margin: 8px 0;"><strong>Event Type:</strong> ${eventType}</p>
+      <p style="margin: 8px 0;"><strong>Date:</strong> ${eventDateFormatted}</p>
+      ${startTime && endTime ? `<p style="margin: 8px 0;"><strong>Time:</strong> ${startTimeFormatted} - ${endTimeFormatted}</p>` : ""}
+      ${duration ? `<p style="margin: 8px 0;"><strong>Duration:</strong> ${duration} hours${minimumHours ? ` (Minimum ${minimumHours}h required)` : ""}</p>` : ""}
+      ${venue !== "TBD" ? `<p style="margin: 8px 0;"><strong>Venue:</strong> ${venue}</p>` : ""}
+      ${guestCount ? `<p style="margin: 8px 0;"><strong>Expected Guests:</strong> ${guestCount}</p>` : ""}
+      ${djName ? `<p style="margin: 8px 0;"><strong>Assigned DJ:</strong> ${djName}</p>` : `<p style="margin: 8px 0;"><strong>DJ Assignment:</strong> Will be assigned soon</p>`}
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #667eea;">Payment Details</h3>
+      <p style="margin: 8px 0; font-size: 24px; font-weight: bold; color: #10b981;">Total Paid: ${totalPrice}</p>
+      <p style="margin: 8px 0; color: #666; font-size: 14px;">Payment Status: ✅ Paid</p>
+      <p style="margin: 8px 0; color: #666; font-size: 14px;">Payment Date: ${formatDate(new Date())}</p>
+    </div>
+
+    ${addons.length > 0 ? `
+    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #856404;">Selected Add-ons</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        ${addons.map(addon => {
+          const price = addon.priceFixed 
+            ? formatPrice(addon.priceFixed)
+            : addon.pricePerHour 
+            ? `${formatPrice(addon.pricePerHour)}/hour`
+            : "Included";
+          return `<li style="margin: 5px 0;">${addon.name} - ${price}</li>`;
+        }).join("")}
+      </ul>
+    </div>
+    ` : ""}
+
+    ${message ? `
+    <div style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #0066cc;">Your Message</h3>
+      <p style="margin: 0; white-space: pre-wrap;">${message}</p>
+    </div>
+    ` : ""}
+
+    <div style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #0066cc;">What's Next?</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        <li style="margin: 5px 0;">📧 You'll receive a confirmation email with all details</li>
+        <li style="margin: 5px 0;">📞 Your assigned DJ will contact you within 24 hours to discuss event details</li>
+        <li style="margin: 5px 0;">📅 We'll send you a reminder 1 week before your event</li>
+        <li style="margin: 5px 0;">🎵 Feel free to share your music preferences and special requests</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${EMAIL_CONFIG.APP.URL}/dashboard/bookings" class="button">View Your Booking</a>
+    </div>
+
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+      <strong>Need to make changes?</strong> Contact us at <a href="mailto:${EMAIL_CONFIG.APP.SUPPORT_EMAIL}">${EMAIL_CONFIG.APP.SUPPORT_EMAIL}</a> or reply to this email.
+    </p>
+
+    <p>We're excited to make your event unforgettable!</p>
+    <p>Best regards,<br>The ${EMAIL_CONFIG.APP.NAME} Team</p>
+  `,
+    "Payment Confirmed - Booking Details",
   );
 }
 
@@ -252,7 +400,7 @@ export function djConfirmedHtml(opts: {
     <p>${eventType} on <b>${eventDateISO}</b> is paid and confirmed.</p>
     ${clientEmail ? `<p>Client: ${clientEmail}</p>` : ""}
   `,
-    "New Confirmed Booking"
+    "New Confirmed Booking",
   );
 }
 
@@ -262,7 +410,7 @@ export function bookingConfirmedEmailTemplate(
   eventType: string,
   eventDate: string,
   eventTime: string,
-  venue: string
+  venue: string,
 ) {
   const content = `
     <h2>Booking Confirmed! 🎉</h2>
@@ -289,7 +437,7 @@ export function bookingCancelledEmailTemplate(
   userName: string,
   eventType: string,
   eventDate: string,
-  reason?: string
+  reason?: string,
 ) {
   const content = `
     <h2>Booking Cancelled</h2>
@@ -314,7 +462,7 @@ export function paymentReceivedEmailTemplate(
   userName: string,
   amount: string,
   eventType: string,
-  eventDate: string
+  eventDate: string,
 ) {
   const content = `
     <h2>Payment Received! 💰</h2>
@@ -338,7 +486,7 @@ export function paymentFailedEmailTemplate(
   userName: string,
   eventType: string,
   eventDate: string,
-  retryLink: string
+  retryLink: string,
 ) {
   const content = `
     <h2>Payment Failed ⚠️</h2>
@@ -361,7 +509,7 @@ export function paymentFailedEmailTemplate(
 // Account Templates
 export function passwordResetEmailTemplate(
   userName: string,
-  resetLink: string
+  resetLink: string,
 ) {
   const content = `
     <h2>Password Reset Request</h2>
@@ -395,7 +543,7 @@ export function accountActivatedEmailTemplate(userName: string) {
 export function accountSuspendedEmailTemplate(
   userName: string,
   reason: string,
-  duration?: string
+  duration?: string,
 ) {
   const content = `
     <h2>Account Suspended ⚠️</h2>
@@ -435,7 +583,7 @@ export function djApprovedEmailTemplate(stageName: string) {
 export function djRejectedEmailTemplate(
   stageName: string,
   reason: string,
-  nextSteps: string
+  nextSteps: string,
 ) {
   const content = `
     <h2>DJ Profile Review</h2>
@@ -456,7 +604,7 @@ export function djRejectedEmailTemplate(
 // Notification Templates
 export function newFollowerEmailTemplate(
   userName: string,
-  followerName: string
+  followerName: string,
 ) {
   const content = `
     <h2>New Follower! 👥</h2>
@@ -473,7 +621,7 @@ export function newFollowerEmailTemplate(
 export function newLikeEmailTemplate(
   userName: string,
   likerName: string,
-  mixTitle: string
+  mixTitle: string,
 ) {
   const content = `
     <h2>New Like! ❤️</h2>
@@ -489,7 +637,7 @@ export function newLikeEmailTemplate(
 export function newRepostEmailTemplate(
   userName: string,
   reposterName: string,
-  mixTitle: string
+  mixTitle: string,
 ) {
   const content = `
     <h2>Your Mix Was Reposted! 🔄</h2>
@@ -508,7 +656,7 @@ export function securityAlertEmailTemplate(
   userName: string,
   alertType: string,
   details: string,
-  actionRequired: boolean = false
+  actionRequired: boolean = false,
 ) {
   const content = `
     <h2>Security Alert! 🔒</h2>
@@ -539,7 +687,7 @@ export function loginAlertEmailTemplate(
   userName: string,
   loginTime: string,
   location: string,
-  device: string
+  device: string,
 ) {
   const content = `
     <h2>New Login Detected 🔐</h2>

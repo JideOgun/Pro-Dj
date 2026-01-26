@@ -9,8 +9,8 @@ interface DJ {
   user: {
     name: string | null;
     email: string;
+    status: string;
   };
-  contractorStatus: string;
   stripeConnectAccountEnabled: boolean;
 }
 
@@ -81,7 +81,7 @@ export default function DJAssignmentDropdown({
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ djId: requestedDjId }),
-            }
+            },
           );
 
           if (response.ok) {
@@ -89,7 +89,7 @@ export default function DJAssignmentDropdown({
             setSelectedDjId(requestedDjId);
             const assignedDJ = djs.find((dj) => dj.id === requestedDjId);
             setAssignedDjName(
-              assignedDJ?.stageName || assignedDJ?.user.name || null
+              assignedDJ?.stageName || assignedDJ?.user.name || null,
             );
             onAssignmentChange?.(requestedDjId);
 
@@ -102,7 +102,7 @@ export default function DJAssignmentDropdown({
                   background: "#8B5CF6",
                   color: "white",
                 },
-              }
+              },
             );
 
             // Show status update if it changed
@@ -116,7 +116,7 @@ export default function DJAssignmentDropdown({
                       background: "#3B82F6",
                       color: "white",
                     },
-                  }
+                  },
                 );
               }, 1000);
             }
@@ -152,7 +152,7 @@ export default function DJAssignmentDropdown({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ djId }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -163,7 +163,7 @@ export default function DJAssignmentDropdown({
         if (djId) {
           const assignedDJ = djs.find((dj) => dj.id === djId);
           setAssignedDjName(
-            assignedDJ?.stageName || assignedDJ?.user.name || null
+            assignedDJ?.stageName || assignedDJ?.user.name || null,
           );
 
           // Enhanced success message with assignment details
@@ -190,7 +190,7 @@ export default function DJAssignmentDropdown({
                     background: "#3B82F6",
                     color: "white",
                   },
-                }
+                },
               );
             }, 1000);
           }
@@ -255,14 +255,14 @@ export default function DJAssignmentDropdown({
               className={`${
                 isRequestedDJ(dj.id)
                   ? "bg-blue-900 text-blue-100"
-                  : dj.contractorStatus === "ACTIVE"
-                  ? "bg-gray-800 text-white"
-                  : "bg-gray-700 text-gray-400"
+                  : dj.user.status === "ACTIVE"
+                    ? "bg-gray-800 text-white"
+                    : "bg-gray-700 text-gray-400"
               }`}
             >
               {getDJDisplayName(dj)}
               {isRequestedDJ(dj.id) ? " (Requested)" : ""}
-              {dj.contractorStatus !== "ACTIVE" ? " (Inactive)" : ""}
+              {dj.user.status !== "ACTIVE" ? " (Inactive)" : ""}
             </option>
           ))}
         </select>
@@ -278,7 +278,7 @@ export default function DJAssignmentDropdown({
       {/* Status indicator */}
       {selectedDjId && (
         <div className="mt-2 text-xs text-gray-400">
-          {djs.find((dj) => dj.id === selectedDjId)?.contractorStatus ===
+          {djs.find((dj) => dj.id === selectedDjId)?.user.status ===
           "ACTIVE"
             ? "Ready for assignment"
             : "Needs activation"}

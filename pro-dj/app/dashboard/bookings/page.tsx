@@ -33,7 +33,14 @@ export default async function BookingsPage({
   let whereClause: {
     djId?: string | null;
     userId?: string;
-    status?: "PENDING_ADMIN_REVIEW" | "ADMIN_REVIEWING" | "DJ_ASSIGNED" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "DISPUTED";
+    status?:
+      | "PENDING_ADMIN_REVIEW"
+      | "ADMIN_REVIEWING"
+      | "DJ_ASSIGNED"
+      | "CONFIRMED"
+      | "COMPLETED"
+      | "CANCELLED"
+      | "DISPUTED";
   } = {};
 
   // Check if user is a DJ (including admin users who are also DJs)
@@ -67,9 +74,15 @@ export default async function BookingsPage({
   // Add status filter if provided
   if (
     searchParams.status &&
-    ["PENDING_ADMIN_REVIEW", "ADMIN_REVIEWING", "DJ_ASSIGNED", "CONFIRMED", "COMPLETED", "CANCELLED", "DISPUTED"].includes(
-      searchParams.status
-    )
+    [
+      "PENDING_ADMIN_REVIEW",
+      "ADMIN_REVIEWING",
+      "DJ_ASSIGNED",
+      "CONFIRMED",
+      "COMPLETED",
+      "CANCELLED",
+      "DISPUTED",
+    ].includes(searchParams.status)
   ) {
     whereClause.status = searchParams.status as
       | "PENDING_ADMIN_REVIEW"
@@ -106,6 +119,55 @@ export default async function BookingsPage({
     },
   });
 
+  // Verify payment status from Stripe for bookings with checkout sessions
+  // This ensures we have accurate payment status even if webhook didn't fire
+  if (process.env.STRIPE_SECRET_KEY) {
+    const { stripe } = await import("@/lib/stripe-config");
+    
+    // Only verify bookings that have checkoutSessionId but isPaid is false
+    const bookingsToVerify = bookings.filter(
+      (b) => b.checkoutSessionId && !b.isPaid,
+    );
+    
+    // Verify in parallel (but limit concurrency to avoid rate limits)
+    const verificationPromises = bookingsToVerify.map(async (booking) => {
+      if (!booking.checkoutSessionId || !stripe) return;
+      
+      try {
+        // Check Stripe session status as source of truth
+        const session = await stripe.checkout.sessions.retrieve(
+          booking.checkoutSessionId,
+        );
+        
+        // If Stripe says paid but database says not paid, update database
+        if (session.payment_status === "paid") {
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data: {
+              isPaid: true,
+              paidAt: booking.paidAt || new Date(),
+              status: booking.status === "DJ_ASSIGNED" ? "CONFIRMED" : booking.status,
+            },
+          });
+          // Update the booking object in memory
+          booking.isPaid = true;
+          if (!booking.paidAt) {
+            booking.paidAt = new Date();
+          }
+          if (booking.status === "DJ_ASSIGNED") {
+            booking.status = "CONFIRMED";
+          }
+        }
+      } catch (error) {
+        // Silently fail - don't break the page if Stripe check fails
+        console.error(`Error verifying payment for booking ${booking.id}:`, error);
+      }
+    });
+    
+    // Wait for all verifications to complete (but don't block if they're slow)
+    await Promise.allSettled(verificationPromises);
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="w-full mx-auto">
@@ -117,19 +179,19 @@ export default async function BookingsPage({
                 {hasAdminPrivileges(session.user) && djProfile && isDjView
                   ? "My DJ Bookings"
                   : hasAdminPrivileges(session.user) && !djProfile
-                  ? "All Bookings"
-                  : session.user.role === "CLIENT"
-                  ? "My Bookings"
-                  : "My Bookings"}
+                    ? "All Bookings"
+                    : session.user.role === "CLIENT"
+                      ? "My Bookings"
+                      : "My Bookings"}
               </h1>
               <p className="text-gray-300">
                 {hasAdminPrivileges(session.user) && djProfile && isDjView
                   ? "View and manage your DJ booking requests"
                   : hasAdminPrivileges(session.user) && !djProfile
-                  ? "Manage all booking requests across the platform"
-                  : session.user.role === "CLIENT"
-                  ? "View and track your booking requests"
-                  : "View and manage your booking requests"}
+                    ? "Manage all booking requests across the platform"
+                    : session.user.role === "CLIENT"
+                      ? "View and track your booking requests"
+                      : "View and manage your booking requests"}
               </p>
             </div>
             <Link
@@ -137,10 +199,10 @@ export default async function BookingsPage({
                 hasAdminPrivileges(session.user) && djProfile && isDjView
                   ? "/dashboard/dj"
                   : hasAdminPrivileges(session.user) && !djProfile
-                  ? "/dashboard/admin"
-                  : session.user.role === "CLIENT"
-                  ? "/dashboard/client"
-                  : "/dashboard/dj"
+                    ? "/dashboard/admin"
+                    : session.user.role === "CLIENT"
+                      ? "/dashboard/client"
+                      : "/dashboard/dj"
               }
               className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             >
@@ -161,7 +223,7 @@ export default async function BookingsPage({
               {
                 bookings.filter(
                   (b) =>
-                    !searchParams.status || b.status === searchParams.status
+                    !searchParams.status || b.status === searchParams.status,
                 ).length
               }
             </div>
@@ -172,11 +234,16 @@ export default async function BookingsPage({
           <Link
             href="/dashboard/bookings?status=PENDING_ADMIN_REVIEW"
             className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
-              searchParams.status === "PENDING_ADMIN_REVIEW" ? "ring-2 ring-yellow-500" : ""
+              searchParams.status === "PENDING_ADMIN_REVIEW"
+                ? "ring-2 ring-yellow-500"
+                : ""
             }`}
           >
             <div className="text-2xl font-bold text-yellow-400 group-hover:text-yellow-300">
-              {bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW").length}
+              {
+                bookings.filter((b) => b.status === "PENDING_ADMIN_REVIEW")
+                  .length
+              }
             </div>
             <div className="text-gray-400 text-sm group-hover:text-gray-300">
               Pending
@@ -185,7 +252,9 @@ export default async function BookingsPage({
           <Link
             href="/dashboard/bookings?status=DJ_ASSIGNED"
             className={`bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer group ${
-              searchParams.status === "DJ_ASSIGNED" ? "ring-2 ring-blue-500" : ""
+              searchParams.status === "DJ_ASSIGNED"
+                ? "ring-2 ring-blue-500"
+                : ""
             }`}
           >
             <div className="text-2xl font-bold text-blue-400 group-hover:text-blue-300">
