@@ -9,22 +9,16 @@ import {
   Plus,
   Edit,
   Trash,
-  Settings,
-  TrendingUp,
-  Package,
   Clock,
-  MapPin,
+  Package,
 } from "lucide-react";
 
 interface ProDjServicePricing {
   id: string;
   eventType: string;
-  packageType: string;
-  packageName: string;
-  basePriceCents: number;
-  durationHours: number | null;
+  basePricePerHour: number;
+  minimumHours: number;
   description: string | null;
-  includes: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -51,9 +45,7 @@ export default function AdminPricingPage() {
     redirect("/");
   }
 
-  const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>(
-    [],
-  );
+  const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>([]);
   const [proDjAddons, setProDjAddons] = useState<ProDjAddon[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pricing");
@@ -68,12 +60,9 @@ export default function AdminPricingPage() {
   // Form states
   const [pricingForm, setPricingForm] = useState({
     eventType: "",
-    packageType: "",
-    packageName: "",
-    basePriceCents: "",
-    durationHours: "",
+    basePricePerHour: "",
+    minimumHours: "",
     description: "",
-    includes: "",
   });
 
   const [addonForm, setAddonForm] = useState({
@@ -91,9 +80,10 @@ export default function AdminPricingPage() {
     "Birthday",
     "Private Party",
     "Club",
+    "Graduation",
+    "Anniversary",
+    "Holiday Party",
   ];
-
-  const packageTypes = ["BASIC", "STANDARD", "PREMIUM", "HOURLY"];
 
   const addonCategories = [
     "Lighting",
@@ -140,12 +130,9 @@ export default function AdminPricingPage() {
   const handleCreatePricing = () => {
     setPricingForm({
       eventType: "",
-      packageType: "",
-      packageName: "",
-      basePriceCents: "",
-      durationHours: "",
+      basePricePerHour: "",
+      minimumHours: "",
       description: "",
-      includes: "",
     });
     setEditingPricing(null);
     setShowPricingModal(true);
@@ -154,12 +141,9 @@ export default function AdminPricingPage() {
   const handleEditPricing = (pricing: ProDjServicePricing) => {
     setPricingForm({
       eventType: pricing.eventType,
-      packageType: pricing.packageType,
-      packageName: pricing.packageName,
-      basePriceCents: (pricing.basePriceCents / 100).toString(),
-      durationHours: pricing.durationHours?.toString() || "",
+      basePricePerHour: (pricing.basePricePerHour / 100).toString(),
+      minimumHours: pricing.minimumHours.toString(),
       description: pricing.description || "",
-      includes: pricing.includes.join(", "),
     });
     setEditingPricing(pricing);
     setShowPricingModal(true);
@@ -169,19 +153,11 @@ export default function AdminPricingPage() {
     try {
       const body = {
         eventType: pricingForm.eventType,
-        packageType: pricingForm.packageType,
-        packageName: pricingForm.packageName,
-        basePriceCents: Math.round(
-          parseFloat(pricingForm.basePriceCents) * 100,
+        basePricePerHour: Math.round(
+          parseFloat(pricingForm.basePricePerHour) * 100,
         ),
-        durationHours: pricingForm.durationHours
-          ? parseInt(pricingForm.durationHours)
-          : null,
+        minimumHours: parseInt(pricingForm.minimumHours) || 4,
         description: pricingForm.description || null,
-        includes: pricingForm.includes
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
       };
 
       const response = await fetch("/api/admin/pricing/service-pricing", {
@@ -203,13 +179,16 @@ export default function AdminPricingPage() {
     }
   };
 
-  const handleDeletePricing = async (id: string) => {
+  const handleDeletePricing = async (pricing: ProDjServicePricing) => {
     if (!confirm("Are you sure you want to delete this pricing?")) return;
 
     try {
-      const response = await fetch(`/api/admin/pricing/service-pricing/${id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/pricing/service-pricing?eventType=${encodeURIComponent(pricing.eventType)}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         toast.success("Pricing deleted!");
@@ -404,50 +383,28 @@ export default function AdminPricingPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-semibold">
-                          {pricing.eventType} - {pricing.packageName}
+                          {pricing.eventType}
                         </h3>
                         <span className="bg-violet-600 text-violet-100 px-2 py-1 rounded text-sm">
-                          {formatPrice(pricing.basePriceCents)}
+                          ${(pricing.basePricePerHour / 100).toLocaleString()}/hour
                         </span>
-                        <span className="bg-blue-600 text-blue-100 px-2 py-1 rounded text-sm">
-                          {pricing.packageType}
+                        <span className="bg-green-600 text-green-100 px-2 py-1 rounded text-sm">
+                          Min: {pricing.minimumHours}h
                         </span>
-                        {pricing.durationHours && (
-                          <span className="bg-green-600 text-green-100 px-2 py-1 rounded text-sm">
-                            {pricing.durationHours}h package
-                          </span>
-                        )}
                       </div>
-                      <p className="text-gray-300 mb-3">
-                        {pricing.description}
-                      </p>
-                      {pricing.includes.length > 0 && (
-                        <div className="mb-3">
-                          <div className="text-sm text-gray-400 mb-1">
-                            Package includes:
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {pricing.includes.map((item, index) => (
-                              <span
-                                key={index}
-                                className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                      {pricing.description && (
+                        <p className="text-gray-300 mb-3">
+                          {pricing.description}
+                        </p>
                       )}
                       <div className="flex items-center gap-4 text-sm text-gray-400">
-                        {pricing.durationHours && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{pricing.durationHours} hours</span>
-                          </div>
-                        )}
                         <div className="flex items-center gap-1">
-                          <Package className="w-4 h-4" />
-                          <span>{pricing.packageType} package</span>
+                          <Clock className="w-4 h-4" />
+                          <span>Minimum {pricing.minimumHours} hours</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" />
+                          <span>${(pricing.basePricePerHour / 100).toLocaleString()} per hour</span>
                         </div>
                       </div>
                     </div>
@@ -459,7 +416,7 @@ export default function AdminPricingPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeletePricing(pricing.id)}
+                        onClick={() => handleDeletePricing(pricing)}
                         className="bg-red-600 hover:bg-red-700 p-2 rounded-lg"
                       >
                         <Trash className="w-4 h-4" />
@@ -602,84 +559,53 @@ export default function AdminPricingPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Package Type
-                  </label>
-                  <select
-                    value={pricingForm.packageType}
-                    onChange={(e) =>
-                      setPricingForm({
-                        ...pricingForm,
-                        packageType: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                  >
-                    <option value="">Select package type</option>
-                    {packageTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Package Name
-                  </label>
-                  <input
-                    type="text"
-                    value={pricingForm.packageName}
-                    onChange={(e) =>
-                      setPricingForm({
-                        ...pricingForm,
-                        packageName: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                    placeholder="Basic Wedding Package"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Base Price ($)
+                    Hourly Rate ($)
                   </label>
                   <input
                     type="number"
-                    value={pricingForm.basePriceCents}
+                    step="0.01"
+                    value={pricingForm.basePricePerHour}
                     onChange={(e) =>
                       setPricingForm({
                         ...pricingForm,
-                        basePriceCents: e.target.value,
+                        basePricePerHour: e.target.value,
                       })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                    placeholder="2500"
+                    placeholder="250.00"
+                    required
                   />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Price per hour for this event type
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Duration Hours (optional)
+                    Minimum Hours
                   </label>
                   <input
                     type="number"
-                    value={pricingForm.durationHours}
+                    value={pricingForm.minimumHours}
                     onChange={(e) =>
                       setPricingForm({
                         ...pricingForm,
-                        durationHours: e.target.value,
+                        minimumHours: e.target.value,
                       })
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                    placeholder="5"
+                    placeholder="4"
+                    min="1"
+                    required
                   />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Minimum booking duration in hours
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Description
+                    Description (optional)
                   </label>
                   <textarea
                     value={pricingForm.description}
@@ -691,24 +617,7 @@ export default function AdminPricingPage() {
                     }
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
                     rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Package Includes (comma-separated)
-                  </label>
-                  <textarea
-                    value={pricingForm.includes}
-                    onChange={(e) =>
-                      setPricingForm({
-                        ...pricingForm,
-                        includes: e.target.value,
-                      })
-                    }
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
-                    rows={3}
-                    placeholder="Professional sound system, Basic lighting, Microphones, Event coordination"
+                    placeholder="Description of this event type pricing"
                   />
                 </div>
               </div>

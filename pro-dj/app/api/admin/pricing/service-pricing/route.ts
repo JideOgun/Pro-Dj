@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
     const {
       eventType,
       basePricePerHour,
-      regionMultiplier,
       minimumHours,
       description,
     } = await req.json();
@@ -79,14 +78,12 @@ export async function POST(req: NextRequest) {
       where: { eventType },
       update: {
         basePricePerHour,
-        regionMultiplier: regionMultiplier || 1.0,
         minimumHours: minimumHours || 4,
         description,
       },
       create: {
         eventType,
         basePricePerHour,
-        regionMultiplier: regionMultiplier || 1.0,
         minimumHours: minimumHours || 4,
         description,
       },

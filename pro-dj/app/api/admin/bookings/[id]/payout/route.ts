@@ -58,7 +58,6 @@ export async function POST(
           select: {
             eventType: true,
             basePricePerHour: true,
-            regionMultiplier: true,
             minimumHours: true,
           },
         },
@@ -336,7 +335,6 @@ export async function GET(
           select: {
             eventType: true,
             basePricePerHour: true,
-            regionMultiplier: true,
             minimumHours: true,
           },
         },

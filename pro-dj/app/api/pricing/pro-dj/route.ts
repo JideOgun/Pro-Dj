@@ -51,7 +51,6 @@ export async function GET(req: NextRequest) {
         eventType: servicePricing.eventType,
         basePricePerHour: servicePricing.basePricePerHour,
         minimumHours: servicePricing.minimumHours || 4,
-        regionMultiplier: servicePricing.regionMultiplier || 1.0,
       },
       addons: addons.map((addon) => ({
         id: addon.id,
@@ -168,7 +167,6 @@ export async function POST(req: NextRequest) {
         basePriceCents,
         addonPriceCents,
         totalPriceCents,
-        regionMultiplier: servicePricing.regionMultiplier || 1.0,
       },
       selectedAddons: addonDetails,
     });

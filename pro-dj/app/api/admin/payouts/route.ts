@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
           select: {
             eventType: true,
             basePricePerHour: true,
-            regionMultiplier: true,
             minimumHours: true,
           },
         },

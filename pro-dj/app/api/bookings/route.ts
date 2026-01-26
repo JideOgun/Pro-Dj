@@ -243,9 +243,7 @@ export async function POST(req: Request) {
     }
 
     const basePriceCents = Math.round(
-      servicePricing.basePricePerHour *
-        billableHours *
-        (servicePricing.regionMultiplier || 1.0),
+      servicePricing.basePricePerHour * billableHours,
     );
 
     // Add Pro-DJ add-on prices if any

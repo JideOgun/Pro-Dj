@@ -232,7 +232,6 @@ packageType String @default("BASIC") // "BASIC", "PREMIUM", "CUSTOM"
 packageName String?
 basePricePerHour Int? // For backward compatibility
 basePriceCents Int? // Package-based pricing
-regionMultiplier Float @default(1.0)
 minimumHours Int @default(4)
 durationHours Int? // Package duration
 description String?

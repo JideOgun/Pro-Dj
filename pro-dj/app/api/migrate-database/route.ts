@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
 
       // Add missing columns to ProDjServicePricing table
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "basePricePerHour" INTEGER;`,
-      `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "regionMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1.0;`,
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "minimumHours" INTEGER NOT NULL DEFAULT 4;`,
 
       // Create ProDjAddon table if it doesn't exist
@@ -120,7 +119,6 @@ export async function POST(req: NextRequest) {
         "packageName" TEXT NOT NULL,
         "basePricePerHour" INTEGER,
         "basePriceCents" INTEGER NOT NULL,
-        "regionMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1.0,
         "minimumHours" INTEGER NOT NULL DEFAULT 4,
         "durationHours" INTEGER,
         "description" TEXT,

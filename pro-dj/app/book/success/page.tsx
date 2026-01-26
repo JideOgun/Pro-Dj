@@ -80,13 +80,10 @@ function SuccessPageContent() {
         const data = await response.json();
         
         if (data.ok) {
-          console.log("✅ Confirmation email sent from success page");
           setEmailSent(true);
-        } else {
-          console.error("❌ Failed to send confirmation email:", data.error);
         }
       } catch (err) {
-        console.error("❌ Error sending confirmation email:", err);
+        // Silently handle email errors - don't disrupt user experience
       } finally {
         setEmailSending(false);
       }

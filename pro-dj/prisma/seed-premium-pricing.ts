@@ -146,7 +146,6 @@ async function seedPremiumPricing() {
       packageType: "BASIC",
       packageName: "Wedding Basic Package",
       basePriceCents: 200000, // $2,000 - 5-hour package
-      regionMultiplier: 1.3,
       durationHours: 5,
       description:
         "Complete wedding coverage including ceremony, cocktail hour, and reception. Includes microphones for officiant and toasts, reception coordination as MC, and planning consultation.",
@@ -165,7 +164,6 @@ async function seedPremiumPricing() {
       packageType: "PREMIUM",
       packageName: "Wedding Premium Package",
       basePriceCents: 320000, // $3,200 - 8-hour package
-      regionMultiplier: 1.3,
       durationHours: 8,
       description:
         "Full-day wedding experience with extended coverage and premium services. Perfect for larger weddings and those wanting extra time for setup and coordination.",
@@ -189,7 +187,6 @@ async function seedPremiumPricing() {
       packageType: "BASIC",
       packageName: "Corporate Standard Package",
       basePricePerHour: 35000, // $350/hour - Competitive corporate pricing
-      regionMultiplier: 1.2,
       minimumHours: 4,
       durationHours: 4,
       description:
@@ -207,7 +204,6 @@ async function seedPremiumPricing() {
       packageType: "BASIC",
       packageName: "Birthday Standard Package",
       basePricePerHour: 25000, // $250/hour - Competitive birthday pricing
-      regionMultiplier: 1.0,
       minimumHours: 4,
       durationHours: 4,
       description:
@@ -225,7 +221,6 @@ async function seedPremiumPricing() {
       packageType: "BASIC",
       packageName: "Private Party Standard Package",
       basePricePerHour: 30000, // $300/hour - Competitive private party pricing
-      regionMultiplier: 1.1,
       minimumHours: 4,
       durationHours: 4,
       description:
@@ -243,7 +238,6 @@ async function seedPremiumPricing() {
       packageType: "BASIC",
       packageName: "Club Standard Package",
       basePricePerHour: 25000, // $250/hour - Base rate for clubs (they have their own equipment)
-      regionMultiplier: 1.0,
       minimumHours: 3,
       durationHours: 3,
       description:
