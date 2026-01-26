@@ -53,6 +53,9 @@ export default function AdminPricingPage() {
   // Modal states
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showAddonModal, setShowAddonModal] = useState(false);
+  const [showDeletePricingModal, setShowDeletePricingModal] = useState(false);
+  const [deletingPricing, setDeletingPricing] =
+    useState<ProDjServicePricing | null>(null);
   const [editingPricing, setEditingPricing] =
     useState<ProDjServicePricing | null>(null);
   const [editingAddon, setEditingAddon] = useState<ProDjAddon | null>(null);
@@ -179,25 +182,34 @@ export default function AdminPricingPage() {
     }
   };
 
-  const handleDeletePricing = async (pricing: ProDjServicePricing) => {
-    if (!confirm("Are you sure you want to delete this pricing?")) return;
+  const handleDeletePricing = (pricing: ProDjServicePricing) => {
+    setDeletingPricing(pricing);
+    setShowDeletePricingModal(true);
+  };
+
+  const confirmDeletePricing = async () => {
+    if (!deletingPricing) return;
 
     try {
-      const response = await fetch(
-        `/api/admin/pricing/service-pricing?eventType=${encodeURIComponent(pricing.eventType)}`,
-        {
-          method: "DELETE",
-        }
-      );
+      // Use id for more reliable deletion
+      const url = `/api/admin/pricing/service-pricing?id=${encodeURIComponent(deletingPricing.id)}`;
+      const response = await fetch(url, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
 
       if (response.ok) {
         toast.success("Pricing deleted!");
+        setShowDeletePricingModal(false);
+        setDeletingPricing(null);
         loadPricingData();
       } else {
-        toast.error("Failed to delete pricing");
+        toast.error(data.error || "Failed to delete pricing");
       }
     } catch (error) {
-      toast.error("Failed to delete pricing");
+      console.error("Error deleting pricing:", error);
+      toast.error("Failed to delete pricing. Please try again.");
     }
   };
 
@@ -634,6 +646,61 @@ export default function AdminPricingPage() {
                   className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg"
                 >
                   Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Pricing Confirmation Modal */}
+        {showDeletePricingModal && deletingPricing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4 text-red-400">
+                Delete Pricing
+              </h3>
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to delete the pricing for{" "}
+                <span className="font-semibold text-white">
+                  {deletingPricing.eventType}
+                </span>
+                ? This action cannot be undone.
+              </p>
+              <div className="bg-gray-700 rounded-lg p-4 mb-4">
+                <div className="text-sm text-gray-400 space-y-1">
+                  <div>
+                    <span className="text-gray-500">Event Type:</span>{" "}
+                    <span className="text-white">{deletingPricing.eventType}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Hourly Rate:</span>{" "}
+                    <span className="text-white">
+                      ${(deletingPricing.basePricePerHour / 100).toLocaleString()}/hour
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Minimum Hours:</span>{" "}
+                    <span className="text-white">
+                      {deletingPricing.minimumHours}h
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeletePricingModal(false);
+                    setDeletingPricing(null);
+                  }}
+                  className="px-4 py-2 text-gray-300 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeletePricing}
+                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+                >
+                  Delete
                 </button>
               </div>
             </div>

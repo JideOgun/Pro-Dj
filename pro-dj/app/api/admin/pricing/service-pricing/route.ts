@@ -111,16 +111,42 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
     const eventType = searchParams.get("eventType");
+
+    // Prefer id if provided, otherwise use eventType (for backward compatibility)
+    if (id) {
+      const servicePricing = await prisma.proDjServicePricing.findUnique({
+        where: { id },
+      });
+
+      if (!servicePricing) {
+        return NextResponse.json(
+          { error: "Service pricing not found" },
+          { status: 404 },
+        );
+      }
+
+      await prisma.proDjServicePricing.delete({
+        where: { id },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Service pricing deleted successfully",
+      });
+    }
 
     if (!eventType) {
       return NextResponse.json(
-        { error: "Event type is required" },
+        { error: "ID or event type is required" },
         { status: 400 },
       );
     }
 
-    const servicePricing = await prisma.proDjServicePricing.findUnique({
+    // For eventType, find the first matching record (since unique constraint includes packageType)
+    // In practice, with the new hourly model, there should only be one per eventType
+    const servicePricing = await prisma.proDjServicePricing.findFirst({
       where: { eventType },
     });
 
@@ -131,18 +157,28 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Delete by id to avoid unique constraint issues
     await prisma.proDjServicePricing.delete({
-      where: { eventType },
+      where: { id: servicePricing.id },
     });
 
     return NextResponse.json({
       success: true,
       message: "Service pricing deleted successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting service pricing:", error);
+    
+    // Provide more specific error messages
+    if (error.code === "P2003") {
+      return NextResponse.json(
+        { error: "Cannot delete pricing that is associated with existing bookings" },
+        { status: 400 },
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to delete service pricing" },
+      { error: error.message || "Failed to delete service pricing" },
       { status: 500 },
     );
   }
