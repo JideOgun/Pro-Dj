@@ -183,7 +183,6 @@ export async function PATCH(
       checkoutSessionId: session.id,
       platformFeeCents: platformFeeCents,
       payoutAmountCents: djPayoutCents,
-      escrowStatus: "PENDING",
       adminAssignedDjId: djId, // Track which DJ the admin assigned
       adminApprovedAt: new Date(),
       adminApprovedBy: gate.session?.user.id,

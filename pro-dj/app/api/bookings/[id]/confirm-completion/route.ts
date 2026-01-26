@@ -64,10 +64,10 @@ export async function POST(
       );
     }
 
-    // Check if booking is paid and in escrow
-    if (!booking.isPaid || booking.escrowStatus !== "HELD") {
+    // Check if booking is paid
+    if (!booking.isPaid) {
       return NextResponse.json(
-        { error: "Booking must be paid and in escrow to confirm completion" },
+        { error: "Booking must be paid to confirm completion" },
         { status: 400 }
       );
     }
@@ -91,11 +91,10 @@ export async function POST(
 
     // Check if both parties have confirmed
     if (updatedBooking.clientConfirmed && updatedBooking.djConfirmed) {
-      // Both confirmed - release escrow and payout DJ
+      // Both confirmed - mark as completed and payout DJ
       await prisma.booking.update({
         where: { id },
         data: {
-          escrowStatus: "RELEASED",
           eventCompletedAt: new Date(),
           payoutStatus: "COMPLETED",
           payoutAt: new Date(),
@@ -112,10 +111,9 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        message: "Event completion confirmed by both parties. DJ payout has been released.",
+        message: "Event completion confirmed by both parties. DJ payout has been processed.",
         booking: {
           id: updatedBooking.id,
-          escrowStatus: "RELEASED",
           payoutStatus: "COMPLETED",
           payoutAmount: updatedBooking.payoutAmountCents,
         },
@@ -163,7 +161,6 @@ export async function GET(
       select: {
         id: true,
         status: true,
-        escrowStatus: true,
         clientConfirmed: true,
         djConfirmed: true,
         eventCompletedAt: true,
@@ -198,7 +195,6 @@ export async function GET(
       booking: {
         id: booking.id,
         status: booking.status,
-        escrowStatus: booking.escrowStatus,
         clientConfirmed: booking.clientConfirmed,
         djConfirmed: booking.djConfirmed,
         eventCompletedAt: booking.eventCompletedAt,

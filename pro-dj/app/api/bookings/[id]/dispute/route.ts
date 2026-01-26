@@ -60,10 +60,10 @@ export async function POST(
       );
     }
 
-    // Check if booking is in escrow
-    if (booking.escrowStatus !== "HELD") {
+    // Check if booking is paid
+    if (!booking.isPaid) {
       return NextResponse.json(
-        { error: "Booking must be in escrow to file a dispute" },
+        { error: "Booking must be paid to file a dispute" },
         { status: 400 }
       );
     }
@@ -75,7 +75,6 @@ export async function POST(
         disputeStatus: "OPEN",
         disputeReason: reason,
         disputeCreatedAt: new Date(),
-        escrowStatus: "DISPUTED",
       },
     });
 
@@ -85,7 +84,6 @@ export async function POST(
       booking: {
         id: updatedBooking.id,
         disputeStatus: updatedBooking.disputeStatus,
-        escrowStatus: updatedBooking.escrowStatus,
         requestedAction,
       },
     });
@@ -122,7 +120,7 @@ export async function GET(
         disputeReason: true,
         disputeCreatedAt: true,
         disputeResolvedAt: true,
-        escrowStatus: true,
+        isPaid: true,
         user: { select: { id: true, name: true } },
         dj: { select: { id: true, userId: true, stageName: true } },
       },
@@ -154,8 +152,7 @@ export async function GET(
         disputeReason: booking.disputeReason,
         disputeCreatedAt: booking.disputeCreatedAt,
         disputeResolvedAt: booking.disputeResolvedAt,
-        escrowStatus: booking.escrowStatus,
-        canDispute: booking.disputeStatus === "NONE" && booking.escrowStatus === "HELD",
+        canDispute: booking.disputeStatus === "NONE" && booking.isPaid,
         userRole: isClient ? "client" : "dj",
       },
     });

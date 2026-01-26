@@ -87,14 +87,12 @@ export async function POST(
           }
         }
         
-        updateData.escrowStatus = "REFUNDED";
         updateData.refundAmountCents = booking.quotedPriceCents;
         updateData.refundedAt = new Date();
         break;
 
       case "pay_dj":
         // Pay DJ the full amount (minus platform fee)
-        updateData.escrowStatus = "RELEASED";
         updateData.payoutStatus = "COMPLETED";
         updateData.payoutAt = new Date();
         break;
@@ -123,7 +121,6 @@ export async function POST(
         }
 
         const djAmount = booking.quotedPriceCents - refundAmountCents;
-        updateData.escrowStatus = "RELEASED";
         updateData.refundAmountCents = refundAmountCents;
         updateData.refundedAt = new Date();
         updateData.payoutAmountCents = djAmount;
@@ -149,7 +146,6 @@ export async function POST(
           }
         }
 
-        updateData.escrowStatus = "RELEASED";
         updateData.refundAmountCents = splitAmount;
         updateData.refundedAt = new Date();
         updateData.payoutAmountCents = splitAmount;
@@ -176,7 +172,6 @@ export async function POST(
       booking: {
         id: updatedBooking.id,
         disputeStatus: updatedBooking.disputeStatus,
-        escrowStatus: updatedBooking.escrowStatus,
         refundAmountCents: updatedBooking.refundAmountCents,
         payoutAmountCents: updatedBooking.payoutAmountCents,
       },
@@ -228,7 +223,6 @@ export async function GET(
         disputeStatus: booking.disputeStatus,
         disputeReason: booking.disputeReason,
         disputeCreatedAt: booking.disputeCreatedAt,
-        escrowStatus: booking.escrowStatus,
         quotedPriceCents: booking.quotedPriceCents,
         platformFeeCents: booking.platformFeeCents,
         payoutAmountCents: booking.payoutAmountCents,

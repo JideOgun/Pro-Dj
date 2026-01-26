@@ -18,6 +18,22 @@ export async function POST(req: NextRequest) {
 
     // Run the specific SQL migrations that are missing
     const migrations = [
+      // Create PayoutStatus enum if it doesn't exist
+      `DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PayoutStatus') THEN
+          CREATE TYPE "public"."PayoutStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED');
+        END IF;
+      END $$;`,
+
+      // Create DisputeStatus enum if it doesn't exist
+      `DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'DisputeStatus') THEN
+          CREATE TYPE "public"."DisputeStatus" AS ENUM ('NONE', 'OPEN', 'RESOLVED', 'ESCALATED');
+        END IF;
+      END $$;`,
+
       // Update BookingStatus enum to include new values
       `DO $$ 
       BEGIN
@@ -88,9 +104,52 @@ export async function POST(req: NextRequest) {
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeCreatedAt" TIMESTAMP(3);`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeReason" TEXT;`,
       `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeResolvedAt" TIMESTAMP(3);`,
-      `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "escrowStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
-      `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "payoutStatus" TEXT NOT NULL DEFAULT 'PENDING';`,
-      `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "disputeStatus" TEXT NOT NULL DEFAULT 'NONE';`,
+      // Update payoutStatus column to use enum type if it exists as TEXT
+      `DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'Booking' AND column_name = 'payoutStatus' AND data_type = 'text'
+        ) THEN
+          ALTER TABLE "Booking" ALTER COLUMN "payoutStatus" TYPE "public"."PayoutStatus" USING "payoutStatus"::"public"."PayoutStatus";
+        ELSIF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'Booking' AND column_name = 'payoutStatus'
+        ) THEN
+          ALTER TABLE "Booking" ADD COLUMN "payoutStatus" "public"."PayoutStatus" NOT NULL DEFAULT 'PENDING';
+        END IF;
+      END $$;`,
+
+      // Update disputeStatus column to use enum type if it exists as TEXT
+      `DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'Booking' AND column_name = 'disputeStatus' AND data_type = 'text'
+        ) THEN
+          ALTER TABLE "Booking" ALTER COLUMN "disputeStatus" TYPE "public"."DisputeStatus" USING "disputeStatus"::"public"."DisputeStatus";
+        ELSIF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'Booking' AND column_name = 'disputeStatus'
+        ) THEN
+          ALTER TABLE "Booking" ADD COLUMN "disputeStatus" "public"."DisputeStatus" NOT NULL DEFAULT 'NONE';
+        END IF;
+      END $$;`,
+
+      // Remove escrowStatus column and enum
+      `DROP INDEX IF EXISTS "public"."Booking_escrowStatus_idx";`,
+      `ALTER TABLE "public"."Booking" DROP COLUMN IF EXISTS "escrowStatus";`,
+      `DO $$ 
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EscrowStatus') THEN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE udt_name = 'EscrowStatus'
+          ) THEN
+            DROP TYPE "public"."EscrowStatus";
+          END IF;
+        END IF;
+      END $$;`,
 
       // Add missing columns to ProDjServicePricing table
       `ALTER TABLE "ProDjServicePricing" ADD COLUMN IF NOT EXISTS "basePricePerHour" INTEGER;`,

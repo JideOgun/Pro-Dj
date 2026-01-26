@@ -90,9 +90,8 @@ refundAmount Int?
 refundId String?
 refundedAt DateTime?
 totalAmount Int?
-// Escrow and fee fields
+// Fee fields
 platformFeeCents Int? // 70% platform fee for subcontractor model
-escrowStatus EscrowStatus @default(PENDING)
 clientConfirmed Boolean @default(false)
 djConfirmed Boolean @default(false)
 eventCompletedAt DateTime?
@@ -130,7 +129,6 @@ adminActions AdminBookingAction[]
 @@index([djId])
 @@index([preferredDjId])
 @@index([adminAssignedDjId])
-@@index([escrowStatus])
 @@index([payoutStatus])
 @@index([adminApprovedBy])
 }
@@ -727,14 +725,6 @@ UPLOADING
 COMPLETED
 FAILED
 CANCELLED
-}
-
-enum EscrowStatus {
-PENDING
-HELD
-RELEASED
-DISPUTED
-REFUNDED
 }
 
 enum PayoutStatus {
