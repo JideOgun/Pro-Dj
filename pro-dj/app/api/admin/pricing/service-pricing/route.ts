@@ -136,15 +136,29 @@ export async function POST(req: NextRequest) {
           });
         } else {
           // Create new pricing with default packageType
+          // Provide all fields to avoid null constraint violations
+          const minHours = minimumHours || 4;
           servicePricing = await prisma.proDjServicePricing.create({
             data: {
-              eventType,
-              packageType: "BASIC", // Default required for unique constraint
-              packageName: `${eventType} - Basic Package`, // Required field
-              basePricePerHour,
-              minimumHours: minimumHours || 4,
-              description,
-              includes: [], // Required array field
+              // Required fields
+              eventType, // NOT NULL
+              packageType: "BASIC", // NOT NULL (default, but required for unique constraint)
+              
+              // Fields that database requires (even though schema shows optional)
+              packageName: `${eventType} - Basic Package`, // Required by DB
+              basePricePerHour, // Required (was NOT NULL originally)
+              basePriceCents: basePricePerHour * minHours, // Required by DB
+              minimumHours: minHours, // NOT NULL (has default)
+              
+              // Optional fields
+              description: description || null,
+              durationHours: null, // Optional
+              includes: [], // Required array field (cannot be null)
+              
+              // Auto-managed fields (don't need to provide)
+              // isActive: true (has default)
+              // createdAt: auto-generated
+              // updatedAt: auto-generated
             },
           });
         }
