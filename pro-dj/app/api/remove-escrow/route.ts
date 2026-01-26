@@ -44,13 +44,25 @@ export async function POST(req: NextRequest) {
       END $$;`,
 
       // Update payoutStatus column to use enum type if it exists as TEXT
+      // First update any invalid values to valid enum values, then convert
       `DO $$ 
       BEGIN
         IF EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'Booking' AND column_name = 'payoutStatus' AND data_type = 'text'
         ) THEN
-          ALTER TABLE "Booking" ALTER COLUMN "payoutStatus" TYPE "public"."PayoutStatus" USING "payoutStatus"::"public"."PayoutStatus";
+          -- Update any invalid values to 'PENDING' before converting
+          UPDATE "Booking" SET "payoutStatus" = 'PENDING' 
+          WHERE "payoutStatus" IS NOT NULL 
+          AND "payoutStatus" NOT IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED');
+          
+          -- Now convert to enum
+          ALTER TABLE "Booking" ALTER COLUMN "payoutStatus" TYPE "public"."PayoutStatus" 
+          USING CASE 
+            WHEN "payoutStatus" IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED') 
+            THEN "payoutStatus"::"public"."PayoutStatus"
+            ELSE 'PENDING'::"public"."PayoutStatus"
+          END;
         ELSIF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'Booking' AND column_name = 'payoutStatus'
@@ -66,7 +78,18 @@ export async function POST(req: NextRequest) {
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'Booking' AND column_name = 'disputeStatus' AND data_type = 'text'
         ) THEN
-          ALTER TABLE "Booking" ALTER COLUMN "disputeStatus" TYPE "public"."DisputeStatus" USING "disputeStatus"::"public"."DisputeStatus";
+          -- Update any invalid values to 'NONE' before converting
+          UPDATE "Booking" SET "disputeStatus" = 'NONE' 
+          WHERE "disputeStatus" IS NOT NULL 
+          AND "disputeStatus" NOT IN ('NONE', 'OPEN', 'RESOLVED', 'ESCALATED');
+          
+          -- Now convert to enum
+          ALTER TABLE "Booking" ALTER COLUMN "disputeStatus" TYPE "public"."DisputeStatus" 
+          USING CASE 
+            WHEN "disputeStatus" IN ('NONE', 'OPEN', 'RESOLVED', 'ESCALATED') 
+            THEN "disputeStatus"::"public"."DisputeStatus"
+            ELSE 'NONE'::"public"."DisputeStatus"
+          END;
         ELSIF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'Booking' AND column_name = 'disputeStatus'

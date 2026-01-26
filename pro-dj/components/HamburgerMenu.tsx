@@ -54,11 +54,11 @@ export default function HamburgerMenu() {
 
   const handleSignOut = async () => {
     try {
-      await signOut({ callbackUrl: "http://localhost:3000" });
+      await signOut({ callbackUrl: "/auth" });
     } catch (error) {
       console.error("Sign out error:", error);
       // Fallback navigation
-      router.push("/");
+      router.push("/auth");
     }
   };
 

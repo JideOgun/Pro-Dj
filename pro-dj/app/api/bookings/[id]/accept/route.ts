@@ -201,16 +201,47 @@ export async function PATCH(
 
   // Email the client (soft-fail if not configured)
   if (clientEmail && payLink) {
-    await sendMail(
-      clientEmail,
-      "Your Pro-DJ booking has been approved — complete payment",
-      acceptEmailHtml({
-        name: booking.user?.name,
-        eventType: booking.eventType,
-        eventDateISO: booking.eventDate.toISOString().slice(0, 10),
-        payLink,
-      }),
-    );
+    try {
+      console.log("📧 Sending booking acceptance email to:", clientEmail);
+      console.log("📧 Email provider:", process.env.EMAIL_PROVIDER || "smtp (default)");
+      console.log("📧 SMTP configured:", !!(process.env.SMTP_USER && process.env.SMTP_PASS));
+      console.log("📧 Resend configured:", !!process.env.RESEND_API_KEY);
+      
+      const emailResult = await sendMail(
+        clientEmail,
+        "Your Pro-DJ booking has been approved — complete payment",
+        acceptEmailHtml({
+          name: booking.user?.name,
+          eventType: booking.eventType,
+          eventDateISO: booking.eventDate.toISOString().slice(0, 10),
+          payLink,
+        }),
+      );
+      
+      if (emailResult.ok) {
+        console.log("✅ Booking acceptance email sent successfully:", {
+          provider: emailResult.provider,
+          id: emailResult.id || emailResult.messageId,
+        });
+      } else {
+        console.error("❌ Failed to send booking acceptance email:", {
+          error: emailResult.error,
+          provider: emailResult.provider,
+        });
+      }
+    } catch (emailError) {
+      console.error("❌ Error sending booking acceptance email:", emailError);
+      if (emailError instanceof Error) {
+        console.error("❌ Error stack:", emailError.stack);
+      }
+      // Don't fail the request if email fails
+    }
+  } else {
+    console.warn("⚠️ Skipping email - missing clientEmail or payLink:", {
+      clientEmail: !!clientEmail,
+      payLink: !!payLink,
+      clientEmailValue: clientEmail,
+    });
   }
 
   return NextResponse.json(
