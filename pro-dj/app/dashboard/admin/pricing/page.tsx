@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
   DollarSign,
@@ -38,12 +38,8 @@ interface ProDjAddon {
 }
 
 export default function AdminPricingPage() {
-  const { data: session } = useSession();
-
-  // Check admin access
-  if (!session || session.user.role !== "ADMIN") {
-    redirect("/");
-  }
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
   const [servicePricing, setServicePricing] = useState<ProDjServicePricing[]>([]);
   const [proDjAddons, setProDjAddons] = useState<ProDjAddon[]>([]);
@@ -99,10 +95,23 @@ export default function AdminPricingPage() {
     "Videography",
   ];
 
+  // Check admin access and redirect if needed
+  useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
+    
+    if (!session || session.user.role !== "ADMIN") {
+      router.push("/");
+      return;
+    }
+  }, [session, status, router]);
+
   // Load data
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
+    if (!session || session.user.role !== "ADMIN") return; // Don't load if not admin
+    
     loadPricingData();
-  }, []);
+  }, [session, status]);
 
   const loadPricingData = async () => {
     setLoading(true);
@@ -343,7 +352,8 @@ export default function AdminPricingPage() {
     return `$${(cents / 100).toLocaleString()}`;
   };
 
-  if (loading) {
+  // Show loading state while session is loading or if not admin
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
         <div className="text-center">
@@ -352,6 +362,11 @@ export default function AdminPricingPage() {
         </div>
       </div>
     );
+  }
+
+  // Don't render if not admin (redirect will happen)
+  if (!session || session.user.role !== "ADMIN") {
+    return null;
   }
 
   return (

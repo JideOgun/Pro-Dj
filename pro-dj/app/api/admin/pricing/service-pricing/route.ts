@@ -140,6 +140,7 @@ export async function POST(req: NextRequest) {
             data: {
               eventType,
               packageType: "BASIC", // Default required for unique constraint
+              packageName: `${eventType} - Basic Package`, // Required field
               basePricePerHour,
               minimumHours: minimumHours || 4,
               description,
