@@ -153,8 +153,25 @@ export default function AdminPricingPage() {
   };
 
   const handleSavePricing = async () => {
+    // Validate form
+    if (!pricingForm.eventType) {
+      toast.error("Please select an event type");
+      return;
+    }
+
+    if (!pricingForm.basePricePerHour || parseFloat(pricingForm.basePricePerHour) <= 0) {
+      toast.error("Please enter a valid hourly rate");
+      return;
+    }
+
+    if (!pricingForm.minimumHours || parseInt(pricingForm.minimumHours) < 1) {
+      toast.error("Please enter a valid minimum hours (at least 1)");
+      return;
+    }
+
     try {
       const body = {
+        ...(editingPricing && { id: editingPricing.id }), // Include id when editing
         eventType: pricingForm.eventType,
         basePricePerHour: Math.round(
           parseFloat(pricingForm.basePricePerHour) * 100,
@@ -169,16 +186,18 @@ export default function AdminPricingPage() {
         body: JSON.stringify(body),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         toast.success(editingPricing ? "Pricing updated!" : "Pricing created!");
         setShowPricingModal(false);
         loadPricingData();
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to save pricing");
+        toast.error(data.error || "Failed to save pricing");
       }
     } catch (error) {
-      toast.error("Failed to save pricing");
+      console.error("Error saving pricing:", error);
+      toast.error("Failed to save pricing. Please try again.");
     }
   };
 
